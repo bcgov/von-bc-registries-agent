@@ -1,0 +1,83 @@
+@startuml
+
+folder BC_Registries {
+  database BC_Registries_DB
+  database BC_Registries_Log
+}
+
+database Event_Monitor
+
+BC_Registries_DB -down-> BC_Registries_Log
+BC_Registries_Log -down-> Event_Monitor
+BC_Registries_DB -down-> Event_Monitor
+
+note bottom of Event_Monitor
+Monitor log file and generate Events
+Event_Monitor fetches data from Registries DB
+end note
+
+folder Event_Processor {
+  folder Event_API {
+    node REST_API
+    node File_API
+    node Batch_API
+  }
+
+  REST_API -[hidden]left-> File_API
+  File_API -[hidden]left-> Batch_API
+
+  node Event_JSON
+  node Event_Transform
+  node Claim_JSON
+  node Django_Background_Tasks
+  node Schema_Transformer
+  database Event_DB
+}
+
+Event_Transform -down-> Schema_Transformer
+Event_API -down-> Event_DB
+Batch_API --> Django_Background_Tasks
+Batch_API -left-> Event_Monitor
+
+folder VON_X {
+  node VON_API
+  database VON_Wallet
+}
+
+note top of Event_Processor
+For each input Event:
+  - Identify Event Type
+  - Identify the corresponding Credential Type(s)
+  - Fetch all Credential attributes from source database ***
+  - Create output Credential(s) and send to Von_X
+  - Track issued Credentials to support future re-issue, revocation, etc.
+end note
+
+
+VON_API -down-> VON_Wallet
+
+folder T_O_B {
+  node TOB_API
+  database TOB_Wallet
+}
+
+TOB_API -down-> TOB_Wallet
+
+Event_Monitor -[hidden]right-> REST_API
+Event_API -down-> Event_JSON
+Event_JSON -down-> Event_Transform
+Event_Transform -up-> Claim_JSON
+Event_JSON -[hidden]right-> Claim_JSON
+Claim_JSON -right-> VON_API
+
+folder Sovrin_Network {
+  node Distributed_Ledger
+}
+
+VON_API -down-> Distributed_Ledger
+VON_API -right-> TOB_API
+TOB_API -down-> Distributed_Ledger
+VON_Wallet -[hidden]down-> Distributed_Ledger
+TOB_Wallet -[hidden]down-> Distributed_Ledger
+
+@enduml

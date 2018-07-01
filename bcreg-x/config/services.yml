@@ -1,0 +1,104 @@
+issuers:
+  BC-REG:
+    name: BC Corporate Registry
+    abbreviation: BCReg
+    url: "https://www2.gov.bc.ca/gov/content/governments/organizational-structure/\
+      ministries-organizations/ministries/citizens-services/bc-registries-online-services"
+    email: bcreg.test.issuer@example.ca
+    url: $APPLICATION_URL
+
+    wallet:
+      seed: $WALLET_SEED_BCREG
+
+    credential_types:
+      - description: Incorporation
+        schema: incorporation.bc_registries
+        issuer_url: $APPLICATION_URL_INCORP
+        source_claim: legal_entity_id
+        mapping:
+          - model: name
+            cardinality_fields:
+              - type
+            fields:
+              text:
+                input: legal_name
+                from: claim
+              type:
+                input: legal_name
+                from: value
+
+      - description: Doing Business As
+        schema: doing_business_as.bc_registries
+        issuer_url: $APPLICATION_URL_DBA
+        source_claim: legal_entity_id
+        mapping:
+          - model: name
+            cardinality_fields:
+              - type
+            fields:
+              text:
+                input: dba_name
+                from: claim
+              type:
+                input: dba_name
+                from: value
+
+      - description: Corporate Address
+        schema: address.bc_registries
+        issuer_url: $APPLICATION_URL_ADDRESS
+        source_claim: legal_entity_id
+        mapping:
+          - model: address
+            cardinality_fields:
+              - type
+            fields:
+              addressee:
+                input: addressee
+                from: claim
+              civic_address:
+                input: local_address
+                from: claim
+              city:
+                input: municipality
+                from: claim
+              province:
+                input: province
+                from: claim
+              postal_code:
+                input: postal_code
+                from: claim
+              country:
+                input: country
+                from: claim
+              type:
+                input: addr_type
+                from: claim
+              end_date:
+                input: end_date
+                from: claim
+
+proof_requests:
+  registration:
+    version: '1.0.0'
+    schemas:
+      - key:
+          # did: DtjQTjwNq7ZyStCE7zwL4r
+          name: incorporation.bc_registries
+          version: '1.0.31'
+        attributes:
+          - legal_entity_id
+          - corp_num
+          - legal_name
+          - legal_name_effective
+          - org_name_assumed
+          - org_name_assumed_effective
+          - org_name_trans
+          - org_name_trans_effective
+          - org_reg_status
+          - org_status_effective
+          - org_type
+          - registered_jurisdiction
+          - registration_type
+          - home_jurisdiction
+          - effective_date
+          - end_date

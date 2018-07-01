@@ -1,0 +1,115 @@
+version: '3'
+services:
+
+  caddy:
+    build:
+      context: ../bcreg-x
+      dockerfile: Dockerfile.caddy
+    environment:
+      TOB_API_URL: ${TOB_API_URL:-}
+      WEB_BASE_HREF: ${WEB_BASE_HREF:-/}
+      WEB_HOST_NAME: ${WEB_HOST_NAME:-localhost}
+    links:
+      - bcreg-agent:agent
+    networks:
+      - vonx
+    ports:
+      - ${WEB_HTTP_PORT:-5000}:80
+      - ${WEB_HTTPS_PORT:-5443}:443
+    volumes:
+      - caddy-data:/root/.caddy
+      - caddy-logs:/srv/logs
+
+  bcreg-agent:
+    build:
+      context: ../bcreg-x
+      dockerfile: Dockerfile
+    environment:
+      APPLICATION_URL: ${APPLICATION_URL:-http://localhost:5000}
+      CONFIG_ROOT: ../config
+      ENVIRONMENT: ${ENVIRONMENT:-default}
+      ENABLE_GUNICORN: ${ENABLE_GUNICORN:-1}
+      INDY_LEDGER_URL: ${LEDGER_URL:-http://localhost:9000}
+      FORMS: ${FORMS:-}
+      ISSUERS: ${ISSUERS:-}
+      LOG_LEVEL: ${LOG_LEVEL:-}
+      PYTHON_ENV: ${PYTHON_ENV:-development}
+      TOB_API_URL: ${TOB_API_URL:-}
+      TOB_APP_URL: ${TOB_APP_URL:-}
+      TOB_INDY_DID: ${TOB_INDY_DID:-}
+      TOB_INDY_SEED: ${TOB_INDY_SEED:-}
+      WALLET_SEED_BCREG: ${WALLET_SEED_BCREG:-}
+    external_links:
+       - tob_tob-api_1:tob-api
+    networks:
+      - orgbook
+      - vonx
+    volumes:
+      - bcreg-agent-wallet:/home/indy/.indy_client/wallet
+
+  bcregmara:
+    build:
+      context: ../data-pipeline
+      dockerfile: docker/mara-app/Dockerfile
+    environment:
+      - VONX_API_URL=${VONX_API_URL:-http://bcreg-agent:8000/bcreg}
+      # [bc_registries]
+      - BC_REG_DB_HOST=${BC_REG_DB_HOST:-host.docker.internal}
+      - BC_REG_DB_PORT=${BC_REG_DB_PORT:-5454}
+      - BC_REG_DB_DATABASE=${BC_REG_DB_DATABASE:-BC_REGISTRIES}
+      - BC_REG_DB_USER=${BC_REG_DB_USER}
+      - BC_REG_DB_PASSWORD=${BC_REG_DB_PASSWORD}
+      # [event_processor]
+      - EVENT_PROC_DB_HOST=${EVENT_PROC_DB_HOST:-bcregdb}
+      - EVENT_PROC_DB_PORT=${EVENT_PROC_DB_PORT:-5432}
+      - EVENT_PROC_DB_DATABASE=${EVENT_PROC_DB_DATABASE:-bc_reg_db}
+      - EVENT_PROC_DB_USER=${EVENT_PROC_DB_USER:-bc_reg_db}
+      - EVENT_PROC_DB_PASSWORD=
+      # [mara_db]
+      - MARA_DB_HOST=${MARA_DB_HOST:-bcregdb}
+      - MARA_DB_DATABASE=${MARA_DB_DATABASE:-mara_db}
+      - MARA_DB_USER=${MARA_DB_USER:-mara_db}
+    networks:
+      - orgbook
+    ports:
+      - "5050:5000"
+    depends_on:
+      - bcregdb
+    command: >
+      /bin/bash -c "
+        echo sleeping ...;
+        sleep 5;
+        cd data-pipeline/;
+        make;
+        source .venv/bin/activate;
+        flask run --host=0.0.0.0 --with-threads --reload --eager-loading;"
+
+  bcregdb:
+    build:
+      context: ../data-pipeline
+      dockerfile: docker/postgres/Dockerfile
+    environment:
+      - POSTGRESQL_USER=${POSTGRESQL_USER}
+      - POSTGRESQL_PASSWORD=${POSTGRESQL_PASSWORD}
+      - POSTGRESQL_DATABASE=${POSTGRESQL_DATABASE}
+    networks:
+      - orgbook
+    ports:
+      #- 5432:5432
+      - 5444:5432
+    volumes:
+      - mara-data:/var/lib/pgsql/data
+
+volumes:
+  caddy-data:
+  caddy-logs:
+  bcreg-agent-wallet:
+  mara-data:
+
+networks:
+  vonx:
+  orgbook:
+    external:
+      name: tob_tob
+
+
