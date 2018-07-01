@@ -1,0 +1,12 @@
+
+/packages
+/data
+/.venv
+/app/bigquery_downloader/bigquery-credentials.json
+database.ini
+
+*.pyc
+/.idea
+/.vscode
+/.project
+.DS_Store
