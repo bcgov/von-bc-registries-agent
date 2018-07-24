@@ -37,8 +37,9 @@ ENV INDY_GENESIS_PATH "${HOME}/genesis"
 ENV RUST_LOG warning
 ENV RUST_BACKTRACE full
 
-HEALTHCHECK --interval=60s --timeout=5s --start-period=120s \
-    CMD wget -q --spider http://localhost:${HOST_PORT}/health || exit 1
+# HEALTHCHECK is unnecessary when hosted in OpenShift
+# HEALTHCHECK --interval=60s --timeout=5s --start-period=120s \
+#     CMD wget -q --spider http://localhost:${HOST_PORT}/health || exit 1
 
 WORKDIR $HOME/src
 ENTRYPOINT ["bash", "../docker-entrypoint.sh"]
