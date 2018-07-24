@@ -9,15 +9,26 @@ WORKDIR $HOME
 RUN pip install gunicorn
 RUN pip install git+https://github.com/PSPC-SPAC-buyandsell/von-x.git@api-v2
 
-ADD --chown=indy:indy . $HOME
+# `ADD --chown=` is not available in OpenShift yet.
+# ADD --chown=indy:indy . $HOME
+ADD . $HOME
 
 USER root
+
+# `ADD --chown=` is not available in OpenShift yet.
+RUN chown -R indy:indy "${HOME}/config" \
+                       "${HOME}/src" \
+                       "${HOME}/src" \
+                       "${HOME}/templates" \
+                       "${HOME}/test"
+
 ARG client_path="${HOME}/.indy_client"
 ARG entrypoint="${HOME}/docker-entrypoint.sh"
 RUN mkdir -p "${client_path}/wallet" \
     && chown -R indy:indy "${client_path}" \
     && chmod -R ug+rw "${client_path}" \
     && chmod ug+x "${entrypoint}"
+
 USER indy
 
 ENV HOST_IP 0.0.0.0
