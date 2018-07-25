@@ -18,6 +18,9 @@ ENV LC_ALL=C.UTF-8
 ENV LANG=C.UTF-8
 
 ADD . /data-pipeline
+
+RUN ls -last "/data-pipeline"
+RUN ls -last "/data-pipeline/.scripts/mara-app"
 RUN chown -R 1001:0 "/data-pipeline" \
     && chmod -R ug+rw "/data-pipeline" \
     && chmod ug+x "/data-pipeline/.scripts/mara-app/*.sh" \
