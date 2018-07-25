@@ -20,5 +20,8 @@ ENV LANG=C.UTF-8
 RUN git clone https://github.com/ianco/von-bc-registries-agent.git
 RUN mv /von-bc-registries-agent/data-pipeline /
 
+# Debugging
+RUN ls -last .scripts/mara-app
+
 RUN cd data-pipeline/ && make install-packages
 
