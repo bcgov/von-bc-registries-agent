@@ -21,6 +21,8 @@ RUN git clone https://github.com/bcgov/von-bc-registries-agent.git
 RUN mv /von-bc-registries-agent/data-pipeline /
 
 # Debugging
+RUN pwd
+RUN ls -last
 RUN cd data-pipeline/ \
 		&& ls -last .scripts/mara-app \
 		&& make install-packages
