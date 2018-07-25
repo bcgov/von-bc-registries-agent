@@ -20,8 +20,8 @@ ENV LANG=C.UTF-8
 ADD . /data-pipeline
 RUN chown -R 1001:0 "/data-pipeline" \
     && chmod -R ug+rw "/data-pipeline" \
-    && chmod ug+x "/data-pipeline/.scripts/*.sh" \
-    && chmod ug+x "/data-pipeline/.scripts/makeshell"
+    && chmod ug+x "/data-pipeline/.scripts/mara-app/*.sh" \
+    && chmod ug+x "/data-pipeline/.scripts/mara-app/makeshell"
 
 # Debugging
 RUN pwd
