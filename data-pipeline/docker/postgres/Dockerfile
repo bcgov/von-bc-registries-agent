@@ -4,6 +4,6 @@ from postgres:10
 COPY docker/postgres/1-init-dbs.sh /docker-entrypoint-initdb.d/
 
 # Set permissions on the data folder
-RUN mkdir /var/lib/pgsql/data \
+RUN mkdir -p /var/lib/pgsql/data \
     && chown -R 1001:0 /var/lib/pgsql/data \
     && chmod -R ug+rw /var/lib/pgsql/data
