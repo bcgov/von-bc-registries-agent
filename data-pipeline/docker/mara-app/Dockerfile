@@ -26,14 +26,22 @@ ENV LANG=C.UTF-8
 
 # Copy source code
 ADD . /data-pipeline
+ADD ./docker/mara-app/docker-entrypoint.sh /data-pipeline
+ARG entrypoint="/data-pipeline/docker-entrypoint.sh"
+
+WORKDIR /data-pipeline
+
+RUN cd data-pipeline/ \
+    && make install-packages
 
 # Set ownership and permissions
 # Set scripts as executable (make files and python files do not have to be marked)
 RUN chown -R 1001:0 /data-pipeline \
     && chmod -R ug+rw /data-pipeline \
     && chmod ug+x /data-pipeline/.scripts/mara-app/*.sh \
-    && chmod ug+x /data-pipeline/.scripts/mara-app/makeshell
+    && chmod ug+x /data-pipeline/.scripts/mara-app/makeshell \
+    && chmod ug+x "${entrypoint}"
 
-RUN cd data-pipeline/ \
-    && make install-packages
+USER 1001
+ENTRYPOINT ["bash", "docker-entrypoint.sh"]
 
