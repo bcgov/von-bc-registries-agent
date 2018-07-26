@@ -1,0 +1,416 @@
+{
+  "kind": "Template",
+  "apiVersion": "v1",
+  "metadata": {
+    "name": "${NAME}-deployment-template",
+    "annotations": {
+      "description": "Deployment template for a ${NAME} instance."
+    }
+  },
+  "objects": [
+    {
+      "kind": "Service",
+      "apiVersion": "v1",
+      "metadata": {
+        "name": "${NAME}"
+      },
+      "spec": {
+        "ports": [
+          {
+            "name": "8080-tcp",
+            "protocol": "TCP",
+            "port": 8080,
+            "targetPort": 8080
+          }
+        ],
+        "selector": {
+          "name": "${NAME}"
+        }
+      }
+    },
+    {
+      "kind": "Route",
+      "apiVersion": "v1",
+      "metadata": {
+        "name": "${NAME}"
+      },
+      "spec": {
+        "host": "${NAME}-${APPLICATION_DOMAIN}",
+        "tls": {
+          "insecureEdgeTerminationPolicy": "Redirect",
+          "termination": "edge"
+        },
+        "to": {
+          "kind": "Service",
+          "name": "${NAME}"
+        }
+      }
+    },
+    {
+      "kind": "DeploymentConfig",
+      "apiVersion": "v1",
+      "metadata": {
+        "name": "${NAME}",
+        "annotations": {
+          "description": "Defines how to deploy the container."
+        }
+      },
+      "spec": {
+        "strategy": {
+          "type": "Rolling",
+          "rollingParams": {
+            "updatePeriodSeconds": 1,
+            "intervalSeconds": 1,
+            "timeoutSeconds": 600,
+            "maxUnavailable": "25%",
+            "maxSurge": "25%"
+          }
+        },
+        "triggers": [
+          {
+            "type": "ConfigChange"
+          },
+          {
+            "type": "ImageChange",
+            "imageChangeParams": {
+              "automatic": true,
+              "containerNames": [
+                "${NAME}"
+              ],
+              "from": {
+                "kind": "ImageStreamTag",
+                "namespace": "${IMAGE_NAMESPACE}",
+                "name": "${NAME}:${TAG_NAME}"
+              }
+            }
+          }
+        ],
+        "replicas": 1,
+        "selector": {
+          "name": "${NAME}"
+        },
+        "template": {
+          "metadata": {
+            "name": "${NAME}",
+            "labels": {
+              "name": "${NAME}"
+            }
+          },
+          "spec": {
+            "volumes": [
+              {
+                "name": "${NAME}-data",
+                "persistentVolumeClaim": {
+                  "claimName": "${NAME}"
+                }
+              }
+            ],
+            "containers": [
+              {
+                "name": "${NAME}",
+                "image": " ",
+                "ports": [
+                  {
+                    "containerPort": 8080,
+                    "protocol": "TCP"
+                  }
+                ],
+                "env": [
+                  {
+                    "name": "APPLICATION_URL",
+                    "value": "${APPLICATION_URL}"
+                  },
+                  {
+                    "name": "CONFIG_ROOT",
+                    "value": "${CONFIG_ROOT}"
+                  },
+                  {
+                    "name": "HOST_PORT",
+                    "value": "${HOST_PORT}"
+                  },
+                  {
+                    "name": "ENVIRONMENT",
+                    "value": "${ENVIRONMENT}"
+                  },
+                  {
+                    "name": "ENABLE_GUNICORN",
+                    "value": "${ENABLE_GUNICORN}"
+                  },
+                  {
+                    "name": "INDY_LEDGER_URL",
+                    "value": "${INDY_LEDGER_URL}"
+                  },
+                  {
+                    "name": "FORMS",
+                    "value": "${FORMS}"
+                  },
+                  {
+                    "name": "ISSUERS",
+                    "value": "${ISSUERS}"
+                  },
+                  {
+                    "name": "LOG_LEVEL",
+                    "value": "${LOG_LEVEL}"
+                  },
+                  {
+                    "name": "PYTHON_ENV",
+                    "value": "${PYTHON_ENV}"
+                  },
+                  {
+                    "name": "TOB_API_URL",
+                    "value": "${TOB_API_URL}"
+                  },
+                  {
+                    "name": "TOB_APP_URL",
+                    "value": "${TOB_APP_URL}"
+                  },
+                  {
+                    "name": "TOB_INDY_DID",
+                    "value": "${TOB_INDY_DID}"
+                  },
+                  {
+                    "name": "TOB_INDY_SEED",
+                    "value": "${TOB_INDY_SEED}"
+                  },
+                  {
+                    "name": "WALLET_SEED_BCREG",
+                    "value": "${WALLET_SEED_BCREG}"
+                  }
+                ],
+                "readinessProbe": {
+                  "timeoutSeconds": 30,
+                  "initialDelaySeconds": 3,
+                  "httpGet": {
+                    "path": "/health",
+                    "port": 8080
+                  }
+                },
+                "livenessProbe": {
+                  "timeoutSeconds": 30,
+                  "initialDelaySeconds": 300,
+                  "httpGet": {
+                    "path": "/health",
+                    "port": 8080
+                  }
+                },
+                "resources": {
+                  "requests": {
+                    "cpu": "${CPU_REQUEST}",
+                    "memory": "${MEMORY_REQUEST}"
+                  },
+                  "limits": {
+                    "cpu": "${CPU_LIMIT}",
+                    "memory": "${MEMORY_LIMIT}"
+                  }
+                },
+                "volumeMounts": [
+                  {
+                    "name": "${NAME}-data",
+                    "mountPath": "${MOUNT_PATH}"
+                  }
+                ]
+              }
+            ]
+          }
+        }
+      }
+    },
+    {
+      "kind": "PersistentVolumeClaim",
+      "apiVersion": "v1",
+      "metadata": {
+        "name": "${NAME}",
+        "labels": {
+          "app": "${NAME}",
+          "template": "${NAME}-deployment-template"
+        }
+      },
+      "spec": {
+        "accessModes": [
+          "ReadWriteOnce"
+        ],
+        "resources": {
+          "requests": {
+            "storage": "${PERSISTENT_VOLUME_SIZE}"
+          }
+        }
+      }
+    }
+  ],
+  "parameters": [
+    {
+      "name": "NAME",
+      "displayName": "Name",
+      "description": "The name assigned to all of the objects defined in this template.",
+      "required": true,
+      "value": "bcreg-x-proxy"
+    },
+    {
+      "name": "IMAGE_NAMESPACE",
+      "displayName": "Image Namespace",
+      "required": true,
+      "description": "The namespace of the OpenShift project containing the imagestream for the application.",
+      "value": "devex-von-tools"
+    },
+    {
+      "name": "TAG_NAME",
+      "displayName": "Environment TAG name",
+      "description": "The TAG name for this environment, e.g., dev, test, prod",
+      "required": true,
+      "value": "dev"
+    },
+    {
+      "name": "APPLICATION_DOMAIN",
+      "displayName": "Application Hostname",
+      "description": "The exposed hostname that will route to the service, if left blank a value will be defaulted.",
+      "value": ""
+    },
+    {
+      "name": "APPLICATION_URL",
+      "displayName": "Application Url",
+      "description": "The application URL.",
+      "required": true,
+      "value": "https://bcreg-x-proxy.devex-von-bc-registries-agent-dev.pathfinder.gov.bc.ca/"
+    },
+    {
+      "name": "CONFIG_ROOT",
+      "displayName": "Config Root",
+      "description": "The root directory containing the application configuration.",
+      "required": true,
+      "value": "../config"
+    },
+    {
+      "name": "HOST_PORT",
+      "displayName": "Host Port",
+      "description": "The port on which the agent service will listen.",
+      "required": true,
+      "value": "8080"
+    },
+    {
+      "name": "ENVIRONMENT",
+      "displayName": "Environment",
+      "description": "The application environment.",
+      "required": true,
+      "value": "default"
+    },
+    {
+      "name": "ENABLE_GUNICORN",
+      "displayName": "Enable gunicorn",
+      "description": "A flag to indicate whether or not to use the gunicorn server.",
+      "required": true,
+      "value": "1"
+    },
+    {
+      "name": "INDY_LEDGER_URL",
+      "displayName": "Indy Ledger URL",
+      "description": "The URL for the Indy ledger.",
+      "required": true,
+      "value": "http://159.89.115.24"
+    },
+    {
+      "name": "FORMS",
+      "displayName": "Forms",
+      "description": "Forms.",
+      "required": false,
+      "value": ""
+    },
+    {
+      "name": "ISSUERS",
+      "displayName": "Issuers",
+      "description": "Issuers.",
+      "required": false,
+      "value": ""
+    },
+    {
+      "name": "LOG_LEVEL",
+      "displayName": "Log Level",
+      "description": "Log Level.",
+      "required": false,
+      "value": ""
+    },
+    {
+      "name": "PYTHON_ENV",
+      "displayName": "Python Environment",
+      "description": "Python Environment.",
+      "required": true,
+      "value": "development"
+    },
+    {
+      "name": "TOB_API_URL",
+      "displayName": "TOB API URL",
+      "description": "The URL of the TOB API.",
+      "required": true,
+      "value": "https://angular-on-nginx-devex-von-bc-tob-dev.pathfinder.gov.bc.ca/api/"
+    },
+    {
+      "name": "TOB_APP_URL",
+      "displayName": "TOB Application URL",
+      "description": "The URL of the TOB application.",
+      "required": true,
+      "value": "https://angular-on-nginx-devex-von-bc-tob-dev.pathfinder.gov.bc.ca/"
+    },
+    {
+      "name": "TOB_INDY_DID",
+      "displayName": "TOB Indy DID",
+      "description": "The DID for the TOB application.",
+      "required": false,
+      "value": ""
+    },
+    {
+      "name": "TOB_INDY_SEED",
+      "displayName": "TOB Indy SEED",
+      "description": "The SEED for the TOB application.",
+      "required": true,
+      "value": "the_org_book_dev_000000000000000"
+    },
+    {
+      "name": "WALLET_SEED_BCREG",
+      "displayName": "BC Reg Wallet Seed",
+      "description": "The SEED for the BC Reg Agent.",
+      "required": true,
+      "value": "bc_reg_agent_dev_000000000000000"
+    },
+    {
+      "name": "MOUNT_PATH",
+      "displayName": "Mount Path",
+      "description": "The path to mount the persistent volume.",
+      "required": true,
+      "value": "/home/indy/.indy_client/wallet"
+    },
+    {
+      "name": "PERSISTENT_VOLUME_SIZE",
+      "displayName": "Persistent Volume Size",
+      "description": "The size of the persistent volume , e.g. 512Mi, 1Gi, 2Gi.",
+      "required": true,
+      "value": "1Gi"
+    },
+    {
+      "name": "CPU_LIMIT",
+      "displayName": "Resources CPU Limit",
+      "description": "The resources CPU limit (in cores) for this build.",
+      "required": true,
+      "value": "0"
+    },
+    {
+      "name": "MEMORY_LIMIT",
+      "displayName": "Resources Memory Limit",
+      "description": "The resources Memory limit (in Mi, Gi, etc) for this build.",
+      "required": true,
+      "value": "0Mi"
+    },
+    {
+      "name": "CPU_REQUEST",
+      "displayName": "Resources CPU Request",
+      "description": "The resources CPU request (in cores) for this build.",
+      "required": true,
+      "value": "0"
+    },
+    {
+      "name": "MEMORY_REQUEST",
+      "displayName": "Resources Memory Request",
+      "description": "The resources Memory request (in Mi, Gi, etc) for this build.",
+      "required": true,
+      "value": "0Mi"
+    }
+  ]
+}
