@@ -30,9 +30,7 @@ ADD ./docker/mara-app/docker-entrypoint.sh /data-pipeline
 ARG entrypoint="/data-pipeline/docker-entrypoint.sh"
 
 WORKDIR /data-pipeline
-
-RUN cd data-pipeline/ \
-    && make install-packages
+RUN make install-packages
 
 # Set ownership and permissions
 # Set scripts as executable (make files and python files do not have to be marked)
