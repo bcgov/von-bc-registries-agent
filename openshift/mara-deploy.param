@@ -1,0 +1,23 @@
+#=========================================================
+# OpenShift template parameters for:
+# Component: .
+# Template File: templates/mara/mara-deploy.json
+#=========================================================
+NAME=mara
+IMAGE_NAMESPACE=devex-von-bc-registries-agent-tools
+TAG_NAME=dev
+APPLICATION_DOMAIN=mara-devex-von-bc-registries-agent-dev.pathfinder.gov.bc.ca
+VONX_API_URL=http://bcreg-x-agent:8000/bcreg
+BC_REG_DB_HOST=postgresql-oracle-fdw
+BC_REG_DB_PORT=5432
+BC_REG_DB_DATABASE=BC_REGISTRIES
+EVENT_PROC_DB_HOST=event-db
+EVENT_PROC_DB_PORT=5432
+EVENT_PROC_DB_DATABASE=bc_reg_db
+MARA_DB_HOST=mara-db
+MARA_DB_PORT=5432
+MARA_DB_DATABASE=mara_db
+CPU_LIMIT=0
+MEMORY_LIMIT=0Mi
+CPU_REQUEST=0
+MEMORY_REQUEST=0Mi

@@ -1,0 +1,362 @@
+{
+  "kind": "Template",
+  "apiVersion": "v1",
+  "metadata": {
+    "name": "${NAME}-deployment-template",
+    "annotations": {
+      "description": "Deployment template for a ${NAME} instance."
+    }
+  },
+  "objects": [
+    {
+      "kind": "Service",
+      "apiVersion": "v1",
+      "metadata": {
+        "name": "${NAME}"
+      },
+      "spec": {
+        "ports": [
+          {
+            "name": "8080-tcp",
+            "protocol": "TCP",
+            "port": 8080,
+            "targetPort": 8080
+          }
+        ],
+        "selector": {
+          "name": "${NAME}"
+        }
+      }
+    },
+    {
+      "kind": "Route",
+      "apiVersion": "v1",
+      "metadata": {
+        "name": "${NAME}"
+      },
+      "spec": {
+        "host": "${NAME}-${APPLICATION_DOMAIN}",
+        "tls": {
+          "insecureEdgeTerminationPolicy": "Redirect",
+          "termination": "edge"
+        },
+        "to": {
+          "kind": "Service",
+          "name": "${NAME}"
+        }
+      }
+    },
+    {
+      "kind": "DeploymentConfig",
+      "apiVersion": "v1",
+      "metadata": {
+        "name": "${NAME}",
+        "annotations": {
+          "description": "Defines how to deploy the container."
+        }
+      },
+      "spec": {
+        "strategy": {
+          "type": "Rolling",
+          "rollingParams": {
+            "updatePeriodSeconds": 1,
+            "intervalSeconds": 1,
+            "timeoutSeconds": 600,
+            "maxUnavailable": "25%",
+            "maxSurge": "25%"
+          }
+        },
+        "triggers": [
+          {
+            "type": "ConfigChange"
+          },
+          {
+            "type": "ImageChange",
+            "imageChangeParams": {
+              "automatic": true,
+              "containerNames": [
+                "${NAME}"
+              ],
+              "from": {
+                "kind": "ImageStreamTag",
+                "namespace": "${IMAGE_NAMESPACE}",
+                "name": "${NAME}:${TAG_NAME}"
+              }
+            }
+          }
+        ],
+        "replicas": 1,
+        "selector": {
+          "name": "${NAME}"
+        },
+        "template": {
+          "metadata": {
+            "name": "${NAME}",
+            "labels": {
+              "name": "${NAME}"
+            }
+          },
+          "spec": {
+            "containers": [
+              {
+                "name": "${NAME}",
+                "image": " ",
+                "ports": [
+                  {
+                    "containerPort": 8080,
+                    "protocol": "TCP"
+                  }
+                ],
+                "env": [
+                  {
+                    "name": "VONX_API_URL",
+                    "value": "${VONX_API_URL}"
+                  },
+                  {
+                    "name": "BC_REG_DB_HOST",
+                    "value": "${BC_REG_DB_HOST}"
+                  },
+                  {
+                    "name": "BC_REG_DB_PORT",
+                    "value": "${BC_REG_DB_PORT}"
+                  },
+                  {
+                    "name": "BC_REG_DB_DATABASE",
+                    "value": "${BC_REG_DB_DATABASE}"
+                  },
+                  {
+                    "name": "BC_REG_DB_USER",
+                    "valueFrom": {
+                      "secretKeyRef": {
+                        "name": "${BC_REG_DB_HOST}",
+                        "key": "database-user"
+                      }
+                    }
+                  },
+                  {
+                    "name": "BC_REG_DB_PASSWORD",
+                    "valueFrom": {
+                      "secretKeyRef": {
+                        "name": "${BC_REG_DB_HOST}",
+                        "key": "database-password"
+                      }
+                    }
+                  },
+                  {
+                    "name": "EVENT_PROC_DB_HOST",
+                    "value": "${EVENT_PROC_DB_HOST}"
+                  },
+                  {
+                    "name": "EVENT_PROC_DB_PORT",
+                    "value": "${EVENT_PROC_DB_PORT}"
+                  },
+                  {
+                    "name": "EVENT_PROC_DB_DATABASE",
+                    "value": "${EVENT_PROC_DB_DATABASE}"
+                  },
+                  {
+                    "name": "EVENT_PROC_DB_USER",
+                    "valueFrom": {
+                      "secretKeyRef": {
+                        "name": "${EVENT_PROC_DB_HOST}",
+                        "key": "database-user"
+                      }
+                    }
+                  },
+                  {
+                    "name": "EVENT_PROC_DB_PASSWORD",
+                    "valueFrom": {
+                      "secretKeyRef": {
+                        "name": "${EVENT_PROC_DB_HOST}",
+                        "key": "database-password"
+                      }
+                    }
+                  },
+                  {
+                    "name": "MARA_DB_HOST",
+                    "value": "${MARA_DB_HOST}"
+                  },
+                  {
+                    "name": "MARA_DB_DATABASE",
+                    "value": "${MARA_DB_DATABASE}"
+                  },
+                  {
+                    "name": "MARA_DB_USER",
+                    "valueFrom": {
+                      "secretKeyRef": {
+                        "name": "${MARA_DB_HOST}",
+                        "key": "database-user"
+                      }
+                    }
+                  },
+                  {
+                    "name": "MARA_DB_PASSWORD",
+                    "valueFrom": {
+                      "secretKeyRef": {
+                        "name": "${MARA_DB_HOST}",
+                        "key": "database-password"
+                      }
+                    }
+                  }
+                ],
+                "readinessProbe": {
+                  "timeoutSeconds": 30,
+                  "initialDelaySeconds": 3,
+                  "httpGet": {
+                    "path": "/health",
+                    "port": 8080
+                  }
+                },
+                "livenessProbe": {
+                  "timeoutSeconds": 30,
+                  "initialDelaySeconds": 300,
+                  "httpGet": {
+                    "path": "/health",
+                    "port": 8080
+                  }
+                },
+                "resources": {
+                  "requests": {
+                    "cpu": "${CPU_REQUEST}",
+                    "memory": "${MEMORY_REQUEST}"
+                  },
+                  "limits": {
+                    "cpu": "${CPU_LIMIT}",
+                    "memory": "${MEMORY_LIMIT}"
+                  }
+                }
+              }
+            ]
+          }
+        }
+      }
+    }
+  ],
+  "parameters": [
+    {
+      "name": "NAME",
+      "displayName": "Name",
+      "description": "The name assigned to all of the objects defined in this template.",
+      "required": true,
+      "value": "mara"
+    },
+    {
+      "name": "IMAGE_NAMESPACE",
+      "displayName": "Image Namespace",
+      "required": true,
+      "description": "The namespace of the OpenShift project containing the imagestream for the application.",
+      "value": "devex-von-tools"
+    },
+    {
+      "name": "TAG_NAME",
+      "displayName": "Environment TAG name",
+      "description": "The TAG name for this environment, e.g., dev, test, prod",
+      "required": true,
+      "value": "dev"
+    },
+    {
+      "name": "APPLICATION_DOMAIN",
+      "displayName": "Application Hostname",
+      "description": "The exposed hostname that will route to the service, if left blank a value will be defaulted.",
+      "value": ""
+    },
+    {
+      "name": "VONX_API_URL",
+      "displayName": "VON-X API URL",
+      "description": "VON-X API URL.",
+      "required": true,
+      "value": "http://bcreg-x-agent:8000/bcreg"
+    },
+    {
+      "name": "BC_REG_DB_HOST",
+      "displayName": "BC Registries Database Host",
+      "description": "BC Registries Database Host.",
+      "required": true,
+      "value": "postgresql-oracle-fdw"
+    },
+    {
+      "name": "BC_REG_DB_PORT",
+      "displayName": "BC Registries Database Port",
+      "description": "BC Registries Database Port.",
+      "required": true,
+      "value": "5432"
+    },
+    {
+      "name": "BC_REG_DB_DATABASE",
+      "displayName": "BC Registries Database Name",
+      "description": "BC Registries Database Name.",
+      "required": true,
+      "value": "BC_REGISTRIES"
+    },
+    {
+      "name": "EVENT_PROC_DB_HOST",
+      "displayName": "Event Processor Database Host",
+      "description": "Event Processor Database Host.",
+      "required": true,
+      "value": "event-db"
+    },
+    {
+      "name": "EVENT_PROC_DB_PORT",
+      "displayName": "Event Processor Database Port",
+      "description": "Event Processor Database Port.",
+      "required": true,
+      "value": "5432"
+    },
+    {
+      "name": "EVENT_PROC_DB_DATABASE",
+      "displayName": "Event Processor Database Name",
+      "description": "Event Processor Database Name.",
+      "required": true,
+      "value": "bc_reg_db"
+    },
+    {
+      "name": "MARA_DB_HOST",
+      "displayName": "Mara Database Host",
+      "description": "Mara Database Host.",
+      "required": true,
+      "value": "mara-db"
+    },
+    {
+      "name": "MARA_DB_PORT",
+      "displayName": "Mara Database Port",
+      "description": "Mara Database Port.",
+      "required": true,
+      "value": "5432"
+    },
+    {
+      "name": "MARA_DB_DATABASE",
+      "displayName": "Mara Database Name",
+      "description": "Mara Database Name.",
+      "required": true,
+      "value": "mara_db"
+    },
+    {
+      "name": "CPU_LIMIT",
+      "displayName": "Resources CPU Limit",
+      "description": "The resources CPU limit (in cores) for this build.",
+      "required": true,
+      "value": "0"
+    },
+    {
+      "name": "MEMORY_LIMIT",
+      "displayName": "Resources Memory Limit",
+      "description": "The resources Memory limit (in Mi, Gi, etc) for this build.",
+      "required": true,
+      "value": "0Mi"
+    },
+    {
+      "name": "CPU_REQUEST",
+      "displayName": "Resources CPU Request",
+      "description": "The resources CPU request (in cores) for this build.",
+      "required": true,
+      "value": "0"
+    },
+    {
+      "name": "MEMORY_REQUEST",
+      "displayName": "Resources Memory Request",
+      "description": "The resources Memory request (in Mi, Gi, etc) for this build.",
+      "required": true,
+      "value": "0Mi"
+    }
+  ]
+}
