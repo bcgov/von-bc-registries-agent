@@ -26,7 +26,8 @@ RUN apt-get update -y \
 # Add mara user
 ARG uid=1001
 ARG user=mara
-RUN useradd -U -ms /bin/bash -u $uid $user
+RUN useradd -U -ms /bin/bash -u $uid $user \
+    && usermod -a -G root $user
 
 ENV HOME="/home/$user" \
     APP_ROOT="$HOME" \
@@ -49,5 +50,5 @@ RUN chown -R mara:mara $HOME \
     && chmod ug+x $HOME/.scripts/mara-app/makeshell \
     && chmod ug+x ${entrypoint}
 
-USER $user
+USER $uid
 ENTRYPOINT ["bash", "docker-entrypoint.sh"]
