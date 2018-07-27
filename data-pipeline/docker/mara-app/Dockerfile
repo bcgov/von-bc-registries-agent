@@ -32,21 +32,21 @@ RUN useradd -U -ms /bin/bash -u $uid $user \
     && usermod -a -G root $user
 
 ENV HOME="/data-pipeline" \
-    APP_ROOT="$HOME" \
-    PYENV_ROOT="$HOME/.venv" \
+    APP_ROOT=$HOME \
+    PYENV_ROOT=$HOME/.venv \
     PATH=$PYENV_ROOT/bin:$PATH \
     LC_ALL=C.UTF-8 \
     LANG=C.UTF-8 \
     SHELL=/bin/bash \
     PIP_NO_CACHE_DIR=off \
-    PYTHON_VERSION="$python_version" \
+    PYTHON_VERSION=$python_version \
     PYTHONUNBUFFERED=1 \
     PYTHONIOENCODING=UTF-8 
 
 # Copy source code
 ADD . $APP_ROOT
 ADD ./docker/mara-app/docker-entrypoint.sh $APP_ROOT
-ARG entrypoint="$APP_ROOT/docker-entrypoint.sh"
+ARG entrypoint=$APP_ROOT/docker-entrypoint.sh
 
 RUN echo $APP_ROOT
 WORKDIR $APP_ROOT
