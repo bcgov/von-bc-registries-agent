@@ -1,6 +1,8 @@
 FROM ubuntu:16.04
 
 # mara-base section
+ARG python_version=3.6
+
 RUN apt-get update -y \
     && apt-get install -y \
                 build-essential \
@@ -14,26 +16,50 @@ RUN apt-get update -y \
 RUN add-apt-repository ppa:deadsnakes/ppa
 RUN apt-get update -y \
     && apt-get install -y \
-                python3.6 \
-                python3.6-dev \
-                python3.6-venv \
+                python$python_version \
+                python$python_version-dev \
+                python$python_version-venv \
                 python-psycopg2 \
                 libpq-dev
 
 # mara-app section - this is specific to our use of mara
-ENV LC_ALL=C.UTF-8
-ENV LANG=C.UTF-8
+# ======================================================
+
+# Add mara user
+ARG uid=1001
+ARG user=mara
+RUN useradd -U -ms /bin/bash -u $uid $user \
+    && usermod -a -G root $user
+
+ENV HOME="/data-pipeline"
+ENV PYENV_ROOT=$HOME/.venv
+ENV APP_ROOT=$HOME \
+    PATH=$PYENV_ROOT/bin:$PATH \
+    LC_ALL=C.UTF-8 \
+    LANG=C.UTF-8 \
+    SHELL=/bin/bash \
+    PIP_NO_CACHE_DIR=off \
+    PYTHON_VERSION=$python_version \
+    PYTHONUNBUFFERED=1 \
+    PYTHONIOENCODING=UTF-8 
 
 # Copy source code
-ADD . /data-pipeline
+ADD . $APP_ROOT
+ADD ./docker/mara-app/docker-entrypoint.sh $APP_ROOT
+ARG entrypoint=$APP_ROOT/docker-entrypoint.sh
+
+WORKDIR $APP_ROOT
+RUN make install-packages
 
 # Set ownership and permissions
 # Set scripts as executable (make files and python files do not have to be marked)
-RUN chown -R 1001:0 /data-pipeline \
-    && chmod -R ug+rw /data-pipeline \
-    && chmod ug+x /data-pipeline/.scripts/mara-app/*.sh \
-    && chmod ug+x /data-pipeline/.scripts/mara-app/makeshell
+# Make /etc/passwd writable for the root group so an entry can be created for an OpenShift assigned user account.
+RUN chown -R mara:root $APP_ROOT \
+    && chmod -R ug+rw $APP_ROOT \
+    && chmod ug+x $APP_ROOT/.scripts/mara-app/*.sh \
+    && chmod ug+x $APP_ROOT/.scripts/mara-app/makeshell \
+    && chmod ug+x $entrypoint \
+    && chmod g+rw /etc/passwd
 
-RUN cd data-pipeline/ \
-    && make install-packages
-
+USER $user
+ENTRYPOINT ["bash", "docker-entrypoint.sh"]
