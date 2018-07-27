@@ -29,11 +29,23 @@ ARG user=mara
 RUN useradd -U -ms /bin/bash -u $uid $user \
     && usermod -a -G root $user
 
+ARG python_version=3.6
+
 ENV HOME="/data-pipeline" \
     APP_ROOT="$HOME" \
+    PYENV_ROOT="$HOME/.venv" \
+    PATH=$PYENV_ROOT/bin:$PATH \
     LC_ALL=C.UTF-8 \
     LANG=C.UTF-8 \
-    SHELL=/bin/bash
+    SHELL=/bin/bash \
+    PIP_NO_CACHE_DIR=off \
+    PYTHON_VERSION="$python_version" \
+    PYTHONUNBUFFERED=1 \
+    PYTHONIOENCODING=UTF-8 
+
+LABEL io.k8s.display-name="mara" \
+      io.openshift.expose-services="8080:http" \
+      io.openshift.tags="python,mara"
 
 # Copy source code
 ADD . $HOME
