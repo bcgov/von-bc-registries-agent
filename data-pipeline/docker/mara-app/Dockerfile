@@ -10,8 +10,7 @@ RUN apt-get update -y \
                 graphviz \
                 software-properties-common \
                 python-software-properties \
-                postgresql-client \
-                nss_wrapper
+                postgresql-client
 RUN add-apt-repository ppa:deadsnakes/ppa
 RUN apt-get update -y \
     && apt-get install -y \
