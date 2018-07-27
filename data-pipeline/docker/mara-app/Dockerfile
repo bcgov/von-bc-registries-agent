@@ -29,10 +29,11 @@ ARG user=mara
 RUN useradd -U -ms /bin/bash -u $uid $user \
     && usermod -a -G root $user
 
-ENV HOME="/home/$user" \
+ENV HOME="/data-pipeline" \
     APP_ROOT="$HOME" \
     LC_ALL=C.UTF-8 \
-    LANG=C.UTF-8 
+    LANG=C.UTF-8 \
+    SHELL=/bin/bash
 
 # Copy source code
 ADD . $HOME
@@ -44,11 +45,11 @@ RUN make install-packages
 
 # Set ownership and permissions
 # Set scripts as executable (make files and python files do not have to be marked)
-RUN chown -R mara:mara $HOME \
+RUN chown -R mara:root $HOME \
     && chmod -R ug+rw $HOME \
     && chmod ug+x $HOME/.scripts/mara-app/*.sh \
     && chmod ug+x $HOME/.scripts/mara-app/makeshell \
-    && chmod ug+x ${entrypoint}
+    && chmod ug+x $entrypoint
 
 USER $uid
 ENTRYPOINT ["bash", "docker-entrypoint.sh"]
