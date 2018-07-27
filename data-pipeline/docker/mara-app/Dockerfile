@@ -31,8 +31,8 @@ ARG user=mara
 RUN useradd -U -ms /bin/bash -u $uid $user \
     && usermod -a -G root $user
 
-ENV HOME="/data-pipeline" \
-    APP_ROOT=$HOME \
+ENV HOME="/data-pipeline"
+ENV APP_ROOT=$HOME \
     PYENV_ROOT=$HOME/.venv \
     PATH=$PYENV_ROOT/bin:$PATH \
     LC_ALL=C.UTF-8 \
