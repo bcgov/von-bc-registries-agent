@@ -20,7 +20,8 @@ export HOST_PORT=${HOST_PORT:-5000}
 CMD="$@"
 if [ -z "$CMD" ]; then
   make
-  CMD=".venv/bin/activate; flask run --host=${HOST_IP} --port=${HOST_PORT} --with-threads --reload --eager-loading 2>&1"
+  source .venv/bin/activate
+  CMD="flask run --host=${HOST_IP} --port=${HOST_PORT} --with-threads --reload --eager-loading"
 fi
 
 echo "Starting server ..."
