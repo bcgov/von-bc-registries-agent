@@ -21,31 +21,33 @@ RUN apt-get update -y \
                 libpq-dev
 
 # mara-app section - this is specific to our use of mara
-ENV LC_ALL=C.UTF-8
-ENV LANG=C.UTF-8
-
+# ======================================================
 
 # Add mara user
 ARG uid=1001
 ARG user=mara
 RUN useradd -U -ms /bin/bash -u $uid $user
 
-# Copy source code
-ADD . /data-pipeline
-ADD ./docker/mara-app/docker-entrypoint.sh /data-pipeline
-ARG entrypoint="/data-pipeline/docker-entrypoint.sh"
+ENV HOME="/home/$user" \
+    APP_ROOT="$HOME" \
+    LC_ALL=C.UTF-8 \
+    LANG=C.UTF-8 
 
-WORKDIR /data-pipeline
+# Copy source code
+ADD . $HOME
+ADD ./docker/mara-app/docker-entrypoint.sh $HOME
+ARG entrypoint="$HOME/docker-entrypoint.sh"
+
+WORKDIR $HOME
 RUN make install-packages
 
 # Set ownership and permissions
 # Set scripts as executable (make files and python files do not have to be marked)
-RUN chown -R mara:mara /data-pipeline \
-    && chmod -R ug+rw /data-pipeline \
-    && chmod ug+x /data-pipeline/.scripts/mara-app/*.sh \
-    && chmod ug+x /data-pipeline/.scripts/mara-app/makeshell \
+RUN chown -R mara:mara $HOME \
+    && chmod -R ug+rw $HOME \
+    && chmod ug+x $HOME/.scripts/mara-app/*.sh \
+    && chmod ug+x $HOME/.scripts/mara-app/makeshell \
     && chmod ug+x ${entrypoint}
 
 USER $user
 ENTRYPOINT ["bash", "docker-entrypoint.sh"]
-
