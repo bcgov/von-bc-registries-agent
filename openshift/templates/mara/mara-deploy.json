@@ -109,6 +109,14 @@
                 ],
                 "env": [
                   {
+                    "name": "HOST_IP",
+                    "value": "${HOST_NAME}"
+                  },
+                  {
+                    "name": "HOST_PORT",
+                    "value": "${HOST_PORT}"
+                  },
+                  {
                     "name": "VONX_API_URL",
                     "value": "${VONX_API_URL}"
                   },
@@ -203,7 +211,7 @@
                   "timeoutSeconds": 30,
                   "initialDelaySeconds": 3,
                   "httpGet": {
-                    "path": "/health",
+                    "path": "/",
                     "port": 8080
                   }
                 },
@@ -211,7 +219,7 @@
                   "timeoutSeconds": 30,
                   "initialDelaySeconds": 300,
                   "httpGet": {
-                    "path": "/health",
+                    "path": "/",
                     "port": 8080
                   }
                 },
@@ -259,6 +267,20 @@
       "displayName": "Application Hostname",
       "description": "The exposed hostname that will route to the service, if left blank a value will be defaulted.",
       "value": ""
+    },
+    {
+      "name": "HOST_NAME",
+      "displayName": "Mara Host Name or IP",
+      "description": "The hostname or IP address on which to host the application.",
+      "required": false,
+      "value": "0.0.0.0"
+    },
+    {
+      "name": "HOST_PORT",
+      "displayName": "Mara Host Port",
+      "description": "The Port on which the host applicationshould listen.",
+      "required": false,
+      "value": "8080"
     },
     {
       "name": "VONX_API_URL",

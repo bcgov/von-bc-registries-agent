@@ -7,6 +7,8 @@
 # IMAGE_NAMESPACE=devex-von-bc-registries-agent-tools
 TAG_NAME=test
 APPLICATION_DOMAIN=mara-devex-von-bc-registries-agent-test.pathfinder.gov.bc.ca
+# HOST_NAME=0.0.0.0
+# HOST_PORT=8080
 # VONX_API_URL=http://bcreg-x-agent:8000/bcreg
 # BC_REG_DB_HOST=postgresql-oracle-fdw
 # BC_REG_DB_PORT=5432
