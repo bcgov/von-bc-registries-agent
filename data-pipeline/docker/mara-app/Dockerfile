@@ -32,8 +32,8 @@ RUN useradd -U -ms /bin/bash -u $uid $user \
     && usermod -a -G root $user
 
 ENV HOME="/data-pipeline"
+ENV PYENV_ROOT=$HOME/.venv
 ENV APP_ROOT=$HOME \
-    PYENV_ROOT=$HOME/.venv \
     PATH=$PYENV_ROOT/bin:$PATH \
     LC_ALL=C.UTF-8 \
     LANG=C.UTF-8 \
@@ -48,7 +48,6 @@ ADD . $APP_ROOT
 ADD ./docker/mara-app/docker-entrypoint.sh $APP_ROOT
 ARG entrypoint=$APP_ROOT/docker-entrypoint.sh
 
-RUN echo $APP_ROOT
 WORKDIR $APP_ROOT
 RUN make install-packages
 
