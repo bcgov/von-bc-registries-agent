@@ -14,23 +14,38 @@
 # limitations under the License.
 #
 
-export HOST_IP=${HOST_IP:-127.0.0.1}
-export HOST_PORT=${HOST_PORT:-5000}
-
 # Generate passwd file based on current uid
+# This is used in OpenShift to create an entry in the /etc/passwd file
+# for the randomly assigned user context of the container.
+#
+# In order for this to work your Docker file must grant write access to the /etc/passwd file
+# to the root group using `chmod g+rw /etc/passwd`
+#
+# This is required by Flask, actually `werkzeug`, when it it calls getpwuid();
+#   File "/data-pipeline/.venv/lib/python3.6/site-packages/werkzeug/debug/__init__.py", line 148, in get_pin_and_cookie_name
+#     username = getpass.getuser()
+#   File "/usr/lib/python3.6/getpass.py", line 169, in getuser
+#     return pwd.getpwuid(os.getuid())[0]
+#   KeyError: 'getpwuid(): uid not found: 1002170000'
+#
+# This is a known issue with Python on OpenShift; https://bugs.python.org/issue10496
+#
+# References:
+# - https://github.com/openshift/jenkins/blob/master/2/contrib/jenkins/jenkins-common.sh
 function generate_passwd_file() {
   USER_ID=$(id -u)
   GROUP_ID=$(id -g)
-
   if [ x"$USER_ID" != x"0" -a x"$USER_ID" != x"1001" ]; then
-
     echo "default:x:${USER_ID}:${GROUP_ID}:Default Application User:${HOME}:/usr/sbin/nologin" >> /etc/passwd
-
   fi
 }
 
+export HOST_IP=${HOST_IP:-0.0.0.0}
+export HOST_PORT=${HOST_PORT:-5000}
+
 CMD="$@"
 if [ -z "$CMD" ]; then
+  echo "Initializing Mara ..."
   generate_passwd_file
   make
   source .venv/bin/activate

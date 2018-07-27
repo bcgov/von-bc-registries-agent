@@ -1,6 +1,8 @@
 FROM ubuntu:16.04
 
 # mara-base section
+ARG python_version=3.6
+
 RUN apt-get update -y \
     && apt-get install -y \
                 build-essential \
@@ -14,9 +16,9 @@ RUN apt-get update -y \
 RUN add-apt-repository ppa:deadsnakes/ppa
 RUN apt-get update -y \
     && apt-get install -y \
-                python3.6 \
-                python3.6-dev \
-                python3.6-venv \
+                python$python_version \
+                python$python_version-dev \
+                python$python_version-venv \
                 python-psycopg2 \
                 libpq-dev
 
@@ -28,8 +30,6 @@ ARG uid=1001
 ARG user=mara
 RUN useradd -U -ms /bin/bash -u $uid $user \
     && usermod -a -G root $user
-
-ARG python_version=3.6
 
 ENV HOME="/data-pipeline" \
     APP_ROOT="$HOME" \
@@ -43,26 +43,22 @@ ENV HOME="/data-pipeline" \
     PYTHONUNBUFFERED=1 \
     PYTHONIOENCODING=UTF-8 
 
-LABEL io.k8s.display-name="mara" \
-      io.openshift.expose-services="8080:http" \
-      io.openshift.tags="python,mara"
-
 # Copy source code
-ADD . $HOME
-ADD ./docker/mara-app/docker-entrypoint.sh $HOME
-ARG entrypoint="$HOME/docker-entrypoint.sh"
+ADD . $APP_ROOT
+ADD ./docker/mara-app/docker-entrypoint.sh $APP_ROOT
+ARG entrypoint="$APP_ROOT/docker-entrypoint.sh"
 
-WORKDIR $HOME
+WORKDIR $APP_ROOT
 RUN make install-packages
 
 # Set ownership and permissions
 # Set scripts as executable (make files and python files do not have to be marked)
-RUN chown -R mara:root $HOME \
-    && chmod -R ug+rw $HOME \
-    && chmod ug+x $HOME/.scripts/mara-app/*.sh \
-    && chmod ug+x $HOME/.scripts/mara-app/makeshell \
+RUN chown -R mara:root $APP_ROOT \
+    && chmod -R ug+rw $APP_ROOT \
+    && chmod ug+x $APP_ROOT/.scripts/mara-app/*.sh \
+    && chmod ug+x $APP_ROOT/.scripts/mara-app/makeshell \
     && chmod ug+x $entrypoint \
     && chmod g+rw /etc/passwd
 
-USER $uid
+USER $user
 ENTRYPOINT ["bash", "docker-entrypoint.sh"]
