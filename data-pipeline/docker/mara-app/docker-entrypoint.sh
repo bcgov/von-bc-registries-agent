@@ -17,8 +17,21 @@
 export HOST_IP=${HOST_IP:-127.0.0.1}
 export HOST_PORT=${HOST_PORT:-5000}
 
+# Generate passwd file based on current uid
+function generate_passwd_file() {
+  USER_ID=$(id -u)
+  GROUP_ID=$(id -g)
+
+  if [ x"$USER_ID" != x"0" -a x"$USER_ID" != x"1001" ]; then
+
+    echo "default:x:${USER_ID}:${GROUP_ID}:Default Application User:${HOME}:/usr/sbin/nologin" >> /etc/passwd
+
+  fi
+}
+
 CMD="$@"
 if [ -z "$CMD" ]; then
+  generate_passwd_file
   make
   source .venv/bin/activate
   CMD="flask run --host=${HOST_IP} --port=${HOST_PORT} --with-threads --reload --eager-loading"
