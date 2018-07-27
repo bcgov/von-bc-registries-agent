@@ -14,14 +14,13 @@
 # limitations under the License.
 #
 
-export HOST_IP=${HOST_IP:-0.0.0.0}
+export HOST_IP=${HOST_IP:-127.0.0.1}
 export HOST_PORT=${HOST_PORT:-5000}
 
 CMD="$@"
 if [ -z "$CMD" ]; then
   make
-  source .venv/bin/activate
-  CMD="flask run --host=${HOST_IP}:${HOST_PORT} --with-threads --reload --eager-loading"
+  CMD=". .venv/bin/activate; flask run --host=${HOST_IP} --port=${HOST_PORT} --with-threads --reload --eager-loading 2>&1"
 fi
 
 echo "Starting server ..."

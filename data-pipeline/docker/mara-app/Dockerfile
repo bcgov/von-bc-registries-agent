@@ -24,6 +24,12 @@ RUN apt-get update -y \
 ENV LC_ALL=C.UTF-8
 ENV LANG=C.UTF-8
 
+
+# Add mara user
+ARG uid=1001
+ARG user=mara
+RUN useradd -U -ms /bin/bash -u $uid $user
+
 # Copy source code
 ADD . /data-pipeline
 ADD ./docker/mara-app/docker-entrypoint.sh /data-pipeline
@@ -34,12 +40,12 @@ RUN make install-packages
 
 # Set ownership and permissions
 # Set scripts as executable (make files and python files do not have to be marked)
-RUN chown -R 1001:0 /data-pipeline \
+RUN chown -R mara:mara /data-pipeline \
     && chmod -R ug+rw /data-pipeline \
     && chmod ug+x /data-pipeline/.scripts/mara-app/*.sh \
     && chmod ug+x /data-pipeline/.scripts/mara-app/makeshell \
     && chmod ug+x ${entrypoint}
 
-USER 1001
+USER $user
 ENTRYPOINT ["bash", "docker-entrypoint.sh"]
 
