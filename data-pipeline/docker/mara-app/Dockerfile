@@ -48,6 +48,7 @@ ADD . $APP_ROOT
 ADD ./docker/mara-app/docker-entrypoint.sh $APP_ROOT
 ARG entrypoint="$APP_ROOT/docker-entrypoint.sh"
 
+RUN echo $APP_ROOT
 WORKDIR $APP_ROOT
 RUN make install-packages
 
