@@ -1,0 +1,23 @@
+#=========================================================
+# OpenShift template parameters for:
+# Component: .
+# Template File: templates/bcreg-x-proxy/bcreg-x-proxy-deploy.json
+#=========================================================
+# NAME=bcreg-x-proxy
+# IMAGE_NAMESPACE=devex-von-bc-registries-agent-tools
+TAG_NAME=test
+APPLICATION_DOMAIN=bcreg-x-proxy-devex-von-bc-registries-agent-test.pathfinder.gov.bc.ca
+TOB_API_URL=https://angular-on-nginx-devex-von-bc-tob-test.pathfinder.gov.bc.ca/api/
+# WEB_HOST_NAME=0.0.0.0
+# WEB_HOST_PORT=8080
+# WEB_HOST_TLS=off
+# WEB_BASE_HREF=/
+# AGENT_HOST=bcreg-x-agent
+# AGENT_PORT=8080
+# CONFIG_FILE_NAME=Caddyfile
+# CONFIG_MAP_NAME=caddy-conf
+# CONFIG_MOUNT_PATH=/etc/
+# CPU_LIMIT=0
+# MEMORY_LIMIT=0Mi
+# CPU_REQUEST=0
+# MEMORY_REQUEST=0Mi
