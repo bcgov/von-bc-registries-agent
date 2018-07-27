@@ -38,7 +38,7 @@ RUN chown -R 1001:0 /data-pipeline \
     && chmod -R ug+rw /data-pipeline \
     && chmod ug+x /data-pipeline/.scripts/mara-app/*.sh \
     && chmod ug+x /data-pipeline/.scripts/mara-app/makeshell \
-    && chmod ug+x "${entrypoint}"
+    && chmod ug+x ${entrypoint}
 
 USER 1001
 ENTRYPOINT ["bash", "docker-entrypoint.sh"]
