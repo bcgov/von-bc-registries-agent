@@ -1,7 +1,3 @@
-issuers:
-  BC-REG:
-    path: /bcreg
-
 forms:
   bcreg-incorp:
     path: /bcreg/incorporation

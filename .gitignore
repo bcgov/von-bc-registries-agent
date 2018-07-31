@@ -11,3 +11,6 @@ genesis
 
 # Visual Studio Code
 .vscode
+
+# Local config
+.env
