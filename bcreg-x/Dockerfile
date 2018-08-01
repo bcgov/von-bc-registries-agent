@@ -3,11 +3,9 @@ FROM bcgovimages/von-image:py36-1.0rc3
 
 WORKDIR $HOME
 
-#ADD --chown=indy:indy src/requirements.txt $HOME/src/
-#RUN pip --no-cache-dir install -r src/requirements.txt
-
-RUN pip install gunicorn
-RUN pip install git+https://github.com/PSPC-SPAC-buyandsell/von-x.git@api-v2
+RUN pip install --no-cache-dir \
+    gunicorn \
+    git+https://github.com/PSPC-SPAC-buyandsell/von-x.git@v2
 
 # `ADD --chown=` is not available in OpenShift yet.
 # ADD --chown=indy:indy . $HOME

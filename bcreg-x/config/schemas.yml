@@ -4,7 +4,7 @@
     - legal_entity_id
     - corp_num
     - legal_name
-    - legal_name_effective
+    - org_name_effective
     - org_name_assumed
     - org_name_assumed_effective
     - org_name_trans
