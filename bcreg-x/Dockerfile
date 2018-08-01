@@ -22,18 +22,20 @@ RUN chown -R indy:indy "${HOME}/config" \
 
 ARG client_path="${HOME}/.indy_client"
 ARG entrypoint="${HOME}/docker-entrypoint.sh"
-RUN mkdir -p "${client_path}/wallet" \
-    && chown -R indy:indy "${client_path}" \
-    && chmod -R ug+rw "${client_path}" \
-    && chmod ug+x "${entrypoint}"
-
-USER indy
 
 ENV HOST_IP 0.0.0.0
 ENV HOST_PORT 8000
 ENV INDY_GENESIS_PATH "${HOME}/genesis"
 ENV RUST_LOG warning
 ENV RUST_BACKTRACE full
+
+RUN mkdir -p "${client_path}/wallet" \
+    && mkdir -p "${INDY_GENESIS_PATH}" \
+    && chown -R indy:indy "${client_path}" "${INDY_GENESIS_PATH}" \
+    && chmod -R ug+rw "${client_path}" "${INDY_GENESIS_PATH}" \
+    && chmod ug+x "${entrypoint}"
+
+USER indy
 
 # HEALTHCHECK is unnecessary when hosted in OpenShift
 # HEALTHCHECK --interval=60s --timeout=5s --start-period=120s \
