@@ -18,7 +18,8 @@ RUN chown -R indy:indy "${HOME}/config" \
                        "${HOME}/src" \
                        "${HOME}/src" \
                        "${HOME}/templates" \
-                       "${HOME}/test"
+                       "${HOME}/test" \
+    && chmod ug+rw "${HOME}"
 
 ARG client_path="${HOME}/.indy_client"
 ARG entrypoint="${HOME}/docker-entrypoint.sh"
