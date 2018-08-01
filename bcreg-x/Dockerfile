@@ -13,13 +13,8 @@ ADD . $HOME
 
 USER root
 
-# `ADD --chown=` is not available in OpenShift yet.
-RUN chown -R indy:indy "${HOME}/config" \
-                       "${HOME}/src" \
-                       "${HOME}/src" \
-                       "${HOME}/templates" \
-                       "${HOME}/test" \
-    && chmod ug+rw "${HOME}"
+# Add the indy uesr to the root group.
+RUN usermod -a -G root indy
 
 ARG client_path="${HOME}/.indy_client"
 ARG entrypoint="${HOME}/docker-entrypoint.sh"
@@ -31,8 +26,8 @@ ENV RUST_LOG warning
 ENV RUST_BACKTRACE full
 
 RUN mkdir -p "${client_path}/wallet" \
-    && chown -R indy:indy "${client_path}" \
-    && chmod -R ug+rw "${client_path}" \
+    && chown -R indy:root "${HOME}" \
+    && chmod -R ug+rw "${HOME}" \
     && chmod ug+x "${entrypoint}"
 
 USER indy
