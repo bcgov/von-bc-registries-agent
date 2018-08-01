@@ -30,9 +30,8 @@ ENV RUST_LOG warning
 ENV RUST_BACKTRACE full
 
 RUN mkdir -p "${client_path}/wallet" \
-    && mkdir -p "${INDY_GENESIS_PATH}" \
-    && chown -R indy:indy "${client_path}" "${INDY_GENESIS_PATH}" \
-    && chmod -R ug+rw "${client_path}" "${INDY_GENESIS_PATH}" \
+    && chown -R indy:indy "${client_path}" \
+    && chmod -R ug+rw "${client_path}" \
     && chmod ug+x "${entrypoint}"
 
 USER indy
