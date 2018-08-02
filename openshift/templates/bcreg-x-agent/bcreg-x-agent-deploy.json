@@ -35,7 +35,7 @@
         "name": "${NAME}"
       },
       "spec": {
-        "host": "${NAME}-${APPLICATION_DOMAIN}",
+        "host": "${APPLICATION_DOMAIN}",
         "tls": {
           "insecureEdgeTerminationPolicy": "Redirect",
           "termination": "edge"
@@ -270,7 +270,7 @@
       "displayName": "Application Url",
       "description": "The application URL.",
       "required": true,
-      "value": "https://bcreg-x-proxy.devex-von-bc-registries-agent-dev.pathfinder.gov.bc.ca/"
+      "value": "https://bcreg-x-proxy-devex-von-bc-registries-agent-dev.pathfinder.gov.bc.ca/"
     },
     {
       "name": "CONFIG_ROOT",
@@ -361,7 +361,7 @@
       "displayName": "TOB Indy SEED",
       "description": "The SEED for the TOB application.",
       "required": true,
-      "value": "the_org_book_dev_000000000000000"
+      "value": "bc_tob_dev_000000000000000000000"
     },
     {
       "name": "WALLET_SEED_BCREG",
