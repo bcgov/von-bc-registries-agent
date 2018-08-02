@@ -122,6 +122,7 @@ verifiers:
     connection:
       type: TheOrgBook
       api_url: $TOB_API_URL
+      sign_target: false
     wallet:
       seed: "tob-verifier-wallet-000000000001"
 
