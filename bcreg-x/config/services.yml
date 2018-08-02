@@ -10,6 +10,7 @@ issuers:
     connection:
       type: TheOrgBook
       api_url: $TOB_API_URL
+      sign_target: false
 
     wallet:
       seed: $WALLET_SEED_BCREG
