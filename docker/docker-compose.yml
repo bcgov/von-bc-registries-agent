@@ -78,14 +78,11 @@ services:
       - "5050:5000"
     depends_on:
       - bcregdb
-    command: >
+    entrypoint: >
       /bin/bash -c "
         echo sleeping ...;
         sleep 5;
-        cd data-pipeline/;
-        make;
-        source .venv/bin/activate;
-        flask run --host=0.0.0.0 --with-threads --reload --eager-loading;"
+        ./docker-entrypoint.sh;"
 
   bcregdb:
     build:
