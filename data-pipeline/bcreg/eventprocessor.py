@@ -310,6 +310,7 @@ class EventProcessor:
             addr_cred['effective_date'] = office['start_event']['event_timestmp']
         addr_cred['dba_corp_num'] = dba_corp_num
         addr_cred['dba_name'] = dba_name
+        addr_cred['end_date'] = ""
 
         return addr_cred
 
@@ -345,6 +346,7 @@ class EventProcessor:
         if 'tilma_involved' in corp_info and 'tilma_jurisdiction' in corp_info['tilma_involved']:
             corp_cred['registration_type'] = corp_info['tilma_involved']['tilma_jurisdiction'] 
         corp_cred['home_jurisdiction'] = self.get_corp_jurisdiction(corp_info)
+        corp_cred['end_date'] = ""
 
         self.insert_json_credential(cur, system_typ_cd, prev_event_id, last_event_id, corp_num, 
                                     corp_credential, corp_schema, corp_version, corp_cred)
@@ -378,6 +380,7 @@ class EventProcessor:
                         dba_cred['effective_date'] = dba_name['start_filing_event']['effective_dt']
                     else:
                         dba_cred['effective_date'] = dba_name['start_event']['event_timestmp']
+                    dba_cred['end_date'] = ""
 
                     self.insert_json_credential(cur, system_typ_cd, prev_event_id, last_event_id, corp_num, 
                                         dba_credential, dba_schema, dba_version, dba_cred)
