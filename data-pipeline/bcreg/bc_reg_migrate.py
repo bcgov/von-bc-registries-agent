@@ -1,3 +1,4 @@
+import os
 from data_integration.commands.bash import RunBash
 from data_integration.commands.python import ExecutePython
 from data_integration.pipelines import Pipeline, Task

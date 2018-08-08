@@ -1,3 +1,4 @@
+import os
 from data_integration.pipelines import Pipeline, Task
 from data_integration.ui.cli import run_pipeline
 import mara_db.auto_migration
