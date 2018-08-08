@@ -56,6 +56,7 @@ RUN make install-packages
 # Make /etc/passwd writable for the root group so an entry can be created for an OpenShift assigned user account.
 RUN chown -R mara:root $APP_ROOT \
     && chmod -R ug+rw $APP_ROOT \
+    && chmod ug+x $APP_ROOT/scripts/*.sh \
     && chmod ug+x $APP_ROOT/.scripts/mara-app/*.sh \
     && chmod ug+x $APP_ROOT/.scripts/mara-app/makeshell \
     && chmod ug+x $entrypoint \
