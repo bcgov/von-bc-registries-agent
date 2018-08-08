@@ -13,11 +13,12 @@ import app.config
 def databases():
     mara_host = os.environ.get('MARA_DB_HOST', 'bcregdb')
     mara_database = os.environ.get('MARA_DB_DATABASE', 'mara_db')
+    mara_port = os.environ.get('MARA_DB_PORT', '5432')
     mara_user = os.environ.get('MARA_DB_USER', 'mara_db')
     mara_password = os.environ.get('MARA_DB_PASSWORD')
 
     return {
-        'mara': mara_db.dbs.PostgreSQLDB(user=mara_user, password=mara_password, host=mara_host, database=mara_database)
+        'mara': mara_db.dbs.PostgreSQLDB(user=mara_user, password=mara_password, host=mara_host, database=mara_database, port=mara_port)
     }
 
 

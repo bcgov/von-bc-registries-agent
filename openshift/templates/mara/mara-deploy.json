@@ -185,6 +185,10 @@
                     "value": "${MARA_DB_HOST}"
                   },
                   {
+                    "name": "MARA_DB_PORT",
+                    "value": "${MARA_DB_PORT}"
+                  },
+                  {
                     "name": "MARA_DB_DATABASE",
                     "value": "${MARA_DB_DATABASE}"
                   },

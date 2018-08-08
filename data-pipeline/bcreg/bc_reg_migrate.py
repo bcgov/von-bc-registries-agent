@@ -9,8 +9,14 @@ import mara_db.dbs
 import data_integration
 from bcreg.bcreg_pipelines import db_init_pipeline
 
+mara_host = os.environ.get('MARA_DB_HOST', 'bcregdb')
+mara_database = os.environ.get('MARA_DB_DATABASE', 'mara_db')
+mara_port = os.environ.get('MARA_DB_PORT', '5432')
+mara_user = os.environ.get('MARA_DB_USER', 'mara_db')
+mara_password = os.environ.get('MARA_DB_PASSWORD')
+
 mara_db.config.databases \
-    = lambda: {'mara': mara_db.dbs.PostgreSQLDB(host='localhost', port='5444', user='mara_db', database='mara_db')}
+    = lambda: {'mara': mara_db.dbs.PostgreSQLDB(user=mara_user, password=mara_password, host=mara_host, database=mara_database, port=mara_port)}
 
 parent_pipeline = Pipeline(
     id = 'holder_for_pipeline_versions',
