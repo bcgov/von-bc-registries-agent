@@ -27,6 +27,8 @@ class CustomJsonEncoder(json.JSONEncoder):
 # interface to BC Registries database
 # data is returned as dictionaries, using the sql column name as identifier
 class BCRegistries:
+    local_cache = {}
+
     def __init__(self):
         try:
             params = config(section='bc_registries')
@@ -147,6 +149,71 @@ class BCRegistries:
             if cur is not None:
                 cur.close()
 
+    # clear local cache
+    def clear_cache(self):
+        self.local_cache = {}
+
+    # store data in a local cache
+    # table is the name of the "table" (or data type)
+    # pks is a list of column names forming the pk
+    # datas is an array of dict of the data (must contain pk columns)
+    def cache_data(self, table, pks, datas):
+        if table in self.local_cache:
+            table_cache = self.local_cache[table]
+        else:
+            table_cache = {}
+        for data in datas:
+            #print(data)
+            key = ""
+            i = 0
+            for pk in pks:
+                key = key + str(data[pk])
+                i = i + 1
+                if i < len(pks):
+                    key = key + "::"
+            table_cache[key] = data
+        self.local_cache[table] = table_cache
+
+    # get cache record by pk
+    # table is the name of the "table" (or data type)
+    # pks is a list of column names forming the pk
+    # vals is an list of values for each pk
+    # returns a single dict (or None)
+    def get_cache_data_pk(self, table, pks, vals):
+        if table in self.local_cache:
+            table_cache = self.local_cache[table]
+            key = ""
+            i = 0
+            for pk in pks:
+                key = key + str(vals[i])
+                i = i + 1
+                if i < len(pks):
+                    key = key + "::"
+            if key in table_cache:
+                return table_cache[key]
+        return None
+
+    # get cache record by matching key(s)
+    # table is the name of the "table" (or data type)
+    # keys is a list of column names to match
+    # vals is an list of values for each key (must equal all)
+    # returns an array of dicts (zero length if none found)
+    def get_cache_data_keys(self, table, keys, vals):
+        recs = []
+        if table in self.local_cache:
+            table_cache = self.local_cache[table]
+            for key in table_cache:
+                data = table_cache[key]
+                #print(data)
+                found = True
+                i = 0
+                for key in keys:
+                    if not (key in data and vals[i] == data[key]):
+                        found = False
+                if found:
+                    recs.append(data)
+        return recs
+
     # get all records and return in an array of dicts
     # returns a zero-length array if none found
     # optionally takes a WHERE clause and ORDER BY clause (must be valid SQL)
@@ -174,7 +241,7 @@ class BCRegistries:
     # returns a zero-length array if none found
     # optionally takes a WHERE clause and ORDER BY clause (must be valid SQL)
     def get_bcreg_table(self, table, where="", orderby=""):
-        sql = "SELECT * FROM " + table
+        sql = "SELECT * FROM bc_registries." + table
         if 0 < len(where):
             sql = sql + " WHERE " + where
         if 0 < len(orderby):
@@ -185,7 +252,7 @@ class BCRegistries:
     # returns a zero-length array if none found
     # optionally takes a WHERE clause and ORDER BY clause (must be valid SQL)
     def get_bcreg_corp_table(self, table, corp_num, where="", orderby=""):
-        subwhere = "WHERE corp_num = '" + corp_num + "'"
+        subwhere = "corp_num = '" + corp_num + "'"
         if 0 < len(where):
             subwhere = subwhere + " AND " + where
         return self.get_bcreg_table(table, subwhere, orderby)
