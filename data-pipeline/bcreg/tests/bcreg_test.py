@@ -1,8 +1,10 @@
 
 import time
 
-from bcreg.bcregistries import BCRegistries
+from bcreg.bcregistries import BCRegistries, system_type
 from bcreg.tests.bcregistries_baseline import BCRegistriesBaseline
+from bcreg.eventprocessor import EventProcessor
+from bcreg.tests.eventprocessor_baseline import EventProcessorBaseline
 
 
 def test_connect_bcreg():
@@ -107,4 +109,14 @@ def test_compare_corp_infos():
 
         assert corp_info == corp_info_baseline
         print(bcreg_loading_time_baseline, bcreg_loading_time)
+
+        with EventProcessor() as event_processor:
+        	corp_creds = event_processor.generate_credentials(system_type, corp['PREV_EVENT_ID'], corp['LAST_EVENT_ID'], 
+        										corp['CORP_NUM'], corp_info)
+
+        with EventProcessorBaseline() as event_processor:
+        	corp_creds_baseline = event_processor.generate_credentials(system_type, corp['PREV_EVENT_ID'], corp['LAST_EVENT_ID'], 
+        										corp['CORP_NUM'], corp_info_baseline)
+
+        assert corp_creds == corp_creds_baseline
 

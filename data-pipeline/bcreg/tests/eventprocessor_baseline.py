@@ -28,7 +28,7 @@ class DateTimeEncoder(json.JSONEncoder):
 
 
 # interface to Event Processor database
-class EventProcessor:
+class EventProcessorBaseline:
     def __init__(self):
         try:
             params = config(section='event_processor')

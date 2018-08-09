@@ -568,10 +568,10 @@ class BCRegistriesBaseline:
                 corp_party['phone'] = row[16]
                 corp_party['reason_typ_cd'] = row[17]
                 # note we need to pull corporate info for DBA companies
-                corp_party['dba_names'] = self.get_names(corp_party['corp_num'], ['CO','NB'], event_id)
+                #corp_party['dba_names'] = self.get_names(corp_party['corp_num'], ['CO','NB'], event_id)
                 corp_party['corp_info'] = self.get_basic_corp_info(corp_party['corp_num'], event_id)
 
-                corp_party['office'] = self.get_office(corp_party['corp_num'])
+                #corp_party['office'] = self.get_office(corp_party['corp_num'])
                 corp['parties'].append(corp_party)
                 row = cur.fetchone()
             cur.close()

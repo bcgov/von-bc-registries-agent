@@ -147,6 +147,49 @@ class BCRegistries:
             if cur is not None:
                 cur.close()
 
+    # get all records and return in an array of dicts
+    # returns a zero-length array if none found
+    # optionally takes a WHERE clause and ORDER BY clause (must be valid SQL)
+    def get_bcreg_sql(self, sql):
+        cursor = None
+        try:
+            cursor = self.conn.cursor()
+            cursor.execute(sql)
+            desc = cursor.description
+            column_names = [col[0] for col in desc]
+            rows = [dict(zip(column_names, row))  
+                for row in cursor]
+            cursor.close()
+            cursor = None
+            return rows
+        except (Exception, psycopg2.DatabaseError) as error:
+            print(error)
+            raise 
+        finally:
+            if cursor is not None:
+                cursor.close()
+            cursor = None
+
+    # get all records and return in an array of dicts
+    # returns a zero-length array if none found
+    # optionally takes a WHERE clause and ORDER BY clause (must be valid SQL)
+    def get_bcreg_table(self, table, where="", orderby=""):
+        sql = "SELECT * FROM " + table
+        if 0 < len(where):
+            sql = sql + " WHERE " + where
+        if 0 < len(orderby):
+            sql = sql + " ORDER BY " + orderby
+        return self.get_bcreg_sql(sql)
+
+    # get all records and return in an array of dicts
+    # returns a zero-length array if none found
+    # optionally takes a WHERE clause and ORDER BY clause (must be valid SQL)
+    def get_bcreg_corp_table(self, table, corp_num, where="", orderby=""):
+        subwhere = "WHERE corp_num = '" + corp_num + "'"
+        if 0 < len(where):
+            subwhere = subwhere + " AND " + where
+        return self.get_bcreg_table(table, subwhere, orderby)
+
     # find a specific event, 
     # return None if not found
     def get_event(self, corp_num, event_id):
@@ -568,10 +611,10 @@ class BCRegistries:
                 corp_party['phone'] = row[16]
                 corp_party['reason_typ_cd'] = row[17]
                 # note we need to pull corporate info for DBA companies
-                corp_party['dba_names'] = self.get_names(corp_party['corp_num'], ['CO','NB'], event_id)
+                #corp_party['dba_names'] = self.get_names(corp_party['corp_num'], ['CO','NB'], event_id)
                 corp_party['corp_info'] = self.get_basic_corp_info(corp_party['corp_num'], event_id)
 
-                corp_party['office'] = self.get_office(corp_party['corp_num'])
+                #corp_party['office'] = self.get_office(corp_party['corp_num'])
                 corp['parties'].append(corp_party)
                 row = cur.fetchone()
             cur.close()
