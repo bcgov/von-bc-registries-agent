@@ -4,6 +4,7 @@
 /.venv
 /app/bigquery_downloader/bigquery-credentials.json
 database.ini
+.pytest_cache
 
 *.pyc
 /.idea

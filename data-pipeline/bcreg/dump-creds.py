@@ -1,4 +1,5 @@
 #!/usr/bin/python
+import os
 import psycopg2
 import datetime
 import json
@@ -12,7 +13,9 @@ system_type = 'BC_REG'
 
 
 def dumpfile(path, filename, data):
-    print(path + filename)
+    #print(path + path)
+    if not os.path.exists(path):
+        os.makedirs(path)    
     text_file = open(path + filename, "w")
     text_file.write(json.dumps(data, indent=4))
     text_file.close()
@@ -109,5 +112,5 @@ def dump_corp_credential_queue(path):
 
 
 dump_corp_history_queue('../bcreg-x/testdata/corps/')
-dump_corp_credential_queue('../bcreg-x/testdata/')
+dump_corp_credential_queue('../bcreg-x/testdata/creds/')
 
