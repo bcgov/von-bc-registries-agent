@@ -40,11 +40,20 @@ function generate_passwd_file() {
   fi
 }
 
+function start_cron_jobs() {
+  echo "Starting go-crond ..."
+  exec "go-crond --allow-unprivileged --include=${CRON_FOLDER}" &
+}
+
 export HOST_IP=${HOST_IP:-0.0.0.0}
 export HOST_PORT=${HOST_PORT:-5000}
+export CRON_FOLDER=${CRON_FOLDER:-"/data-pipeline/scripts/cron"}
 
 CMD="$@"
-if [ -z "$CMD" ]; then
+if [ -z "$CMD" ]; then 
+  if [ ! -z "$START_CRON" ]; then
+    start_cron_jobs
+  fi
   echo "Initializing Mara ..."
   generate_passwd_file
   make

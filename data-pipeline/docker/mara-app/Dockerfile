@@ -22,6 +22,7 @@ RUN apt-get update -y \
                 python-psycopg2 \
                 libpq-dev
 
+# Install go-crond
 ARG GOCROND_VERSION=0.6.1
 ADD https://github.com/webdevops/go-crond/releases/download/$GOCROND_VERSION/go-crond-64-linux /usr/local/bin/
 RUN mv /usr/local/bin/go-crond-64-linux /usr/local/bin/go-crond \
@@ -66,7 +67,7 @@ RUN chown -R mara:root $APP_ROOT \
     && chmod ug+x $APP_ROOT/.scripts/mara-app/makeshell \
     && chmod ug+x $entrypoint \
     && chmod g+rw /etc/passwd \
-    && chmod g-w $APP_ROOT/scripts/cron.txt
+    && chmod g-w $APP_ROOT/scripts/cron/*
 
 USER $user
 ENTRYPOINT ["bash", "docker-entrypoint.sh"]
