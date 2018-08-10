@@ -42,7 +42,7 @@ function generate_passwd_file() {
 
 function start_cron_jobs() {
   echo "Starting go-crond ..."
-  CRON_CMD="go-crond --allow-unprivileged --include=${CRON_FOLDER}"
+  CRON_CMD="go-crond -v --allow-unprivileged --include=${CRON_FOLDER}"
   exec ${CRON_CMD} &
 }
 
