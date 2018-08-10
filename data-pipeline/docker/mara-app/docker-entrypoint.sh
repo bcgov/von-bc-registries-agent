@@ -42,7 +42,8 @@ function generate_passwd_file() {
 
 function start_cron_jobs() {
   echo "Starting go-crond ..."
-  exec "/usr/local/bin/go-crond --allow-unprivileged --include=${CRON_FOLDER}" &
+  CRON_CMD="go-crond --allow-unprivileged --include=${CRON_FOLDER}"
+  exec ${CRON_CMD} &
 }
 
 export HOST_IP=${HOST_IP:-0.0.0.0}

@@ -24,9 +24,9 @@ RUN apt-get update -y \
 
 # Install go-crond
 ARG GOCROND_VERSION=0.6.1
-ADD https://github.com/webdevops/go-crond/releases/download/$GOCROND_VERSION/go-crond-64-linux /usr/local/bin/
-RUN mv /usr/local/bin/go-crond-64-linux /usr/local/bin/go-crond \
-    && chmod ug+x /usr/local/bin/go-crond
+ADD https://github.com/webdevops/go-crond/releases/download/$GOCROND_VERSION/go-crond-64-linux /usr/bin/
+RUN mv /usr/bin/go-crond-64-linux /usr/bin/go-crond \
+    && chmod ug+x /usr/bin/go-crond
 
 # mara-app section - this is specific to our use of mara
 # ======================================================
