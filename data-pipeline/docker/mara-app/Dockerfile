@@ -65,7 +65,8 @@ RUN chown -R mara:root $APP_ROOT \
     && chmod ug+x $APP_ROOT/.scripts/mara-app/*.sh \
     && chmod ug+x $APP_ROOT/.scripts/mara-app/makeshell \
     && chmod ug+x $entrypoint \
-    && chmod g+rw /etc/passwd
+    && chmod g+rw /etc/passwd \
+    && chmod g-w $APP_ROOT/scripts/cron.txt
 
 USER $user
 ENTRYPOINT ["bash", "docker-entrypoint.sh"]
