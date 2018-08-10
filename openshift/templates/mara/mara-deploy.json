@@ -209,6 +209,10 @@
                         "key": "database-password"
                       }
                     }
+                  },
+                  {
+                    "name": "START_CRON",
+                    "value": "${START_CRON}"
                   }
                 ],
                 "readinessProbe": {
@@ -355,6 +359,13 @@
       "description": "Mara Database Name.",
       "required": true,
       "value": "mara_db"
+    },
+    {
+      "name": "START_CRON",
+      "displayName": "Start Cron Jobs",
+      "description": "Start go-crond and load the cron jobs from the CRON_FOLDER.",
+      "required": true,
+      "value": "1"
     },
     {
       "name": "CPU_LIMIT",
