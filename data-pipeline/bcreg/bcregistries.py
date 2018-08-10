@@ -1,12 +1,20 @@
 #!/usr/bin/python
 import psycopg2
+import sqlite3
 import datetime
 import json
 import decimal
+D=decimal.Decimal
+
 from bcreg.config import config
 
 system_type = 'BC_REG'
 
+def adapt_decimal(d):
+    return str(d)
+
+def convert_decimal(s):
+    return D(s)
 
 # custom encoder to convert wierd data types to strings
 class CustomJsonEncoder(json.JSONEncoder):
@@ -33,14 +41,23 @@ class BCRegistries:
         try:
             params = config(section='bc_registries')
             self.conn = psycopg2.connect(**params)
+
+            # Register the adapter
+            sqlite3.register_adapter(D, adapt_decimal)
+            # Register the converter
+            sqlite3.register_converter("decimal", convert_decimal)
+            self.cache = sqlite3.connect(':memory:', detect_types=sqlite3.PARSE_DECLTYPES|sqlite3.PARSE_COLNAMES)
         except (Exception) as error:
             print(error)
             self.conn = None
+            self.cache = None
             raise
 
     def __del__(self):
         if self.conn:
             self.conn.close()
+        if self.cache:
+            self.cache.close()
 
     def __enter__(self):
         # todo
@@ -214,10 +231,127 @@ class BCRegistries:
                     recs.append(data)
         return recs
 
+    # return the table structure of a bcreg table
+    def get_bcreg_table_struct(self, table, where=""):
+        sql = "SELECT * from bc_registries." + table
+        if 0 < len(where):
+            sql = sql + " WHERE " + where
+        cursor = None
+        try:
+            cursor = self.conn.cursor()
+            cursor.execute(sql)
+            desc = cursor.description
+            cursor.close()
+            cursor = None
+            return desc
+        except (Exception, psycopg2.DatabaseError) as error:
+            print(error)
+            raise 
+        finally:
+            if cursor is not None:
+                cursor.close()
+            cursor = None
+
+    # return a sql to create an in-mem sqlite table
+    def create_table_sql(self, table, table_desc):
+        table_sql = 'create table if not exists ' + table + ' ('
+        i = 0
+        for col in table_desc:
+            col_name = col[0]
+            col_type = self.get_sql_col_type(col[1])
+            col_len = col[3]
+            table_sql = table_sql + col_name + ' ' + col_type 
+            i = i + 1
+            if i < len(table_desc):
+                table_sql = table_sql + ', '
+            else:
+                table_sql = table_sql + ')'
+        return table_sql
+
+    def get_sql_col_type(self, pg_type):
+        if pg_type == 1042:  # CHAR
+            return 'text'  
+        if pg_type == 1043:  # VARCHAR
+            return 'text'
+        if pg_type == 1700:  # NUMBER(38)
+            return 'numeric'
+        if pg_type == 23:    # NUMBER(7)
+            return 'integer'
+        if pg_type == 1114:  # DATE or DATETIME
+            return 'timestamp'
+        # default for now
+        return 'text'
+
+    # cache data from bc registries database into a local in-mem sqlite table
+    # create the table if nencessary, based on the bc registries dictionary
+    def cache_bcreg_data(self, table, desc, rows):
+        create_sql = self.create_table_sql(table, desc)
+        col_keys = []
+        insert_keys = ''
+        insert_placeholders = ''
+        inserts = []
+        for row in rows:
+            if len(col_keys) == 0:
+                i = 0
+                for key in row:
+                    col_keys.append(key)
+                    insert_keys = insert_keys + key
+                    insert_placeholders = insert_placeholders + '?'
+                    i = i + 1
+                    if i < len(row):
+                        insert_keys = insert_keys + ', '
+                        insert_placeholders = insert_placeholders + ', '
+            insert_row_vals = []
+            for key in col_keys:
+                insert_row_vals.append(row[key])
+            inserts.append(insert_row_vals)
+        insert_sql = 'insert into ' + table + ' (' + insert_keys + ')' + ' values (' + insert_placeholders + ')'
+
+        #print(create_sql)
+        #print(insert_sql)
+        #print(inserts)
+
+        cache_cursor = None
+        try:
+            cache_cursor = self.cache.cursor()
+
+            cache_cursor.execute(create_sql)
+            cache_cursor.executemany(insert_sql, inserts)
+
+            cache_cursor.close()
+            cache_cursor = None
+        except (Exception) as error:
+            print(error)
+            raise 
+        finally:
+            if cache_cursor is not None:
+                cache_cursor.close()
+            cache_cursor = None
+
+    def get_cache_sql(self, sql):
+        cursor = None
+        try:
+            cursor = self.cache.cursor()
+            cursor.execute(sql)
+            desc = cursor.description
+            column_names = [col[0] for col in desc]
+            rows = [dict(zip(column_names, row))  
+                for row in cursor]
+            cursor.close()
+            cursor = None
+            return rows
+        except (Exception) as error:
+            print(error)
+            raise 
+        finally:
+            if cursor is not None:
+                cursor.close()
+            cursor = None
+
     # get all records and return in an array of dicts
     # returns a zero-length array if none found
     # optionally takes a WHERE clause and ORDER BY clause (must be valid SQL)
-    def get_bcreg_sql(self, sql):
+    def get_bcreg_sql(self, table, sql, cache=False):
         cursor = None
         try:
             cursor = self.conn.cursor()
@@ -228,6 +362,8 @@ class BCRegistries:
                 for row in cursor]
             cursor.close()
             cursor = None
+            if cache:
+                self.cache_bcreg_data(table, desc, rows)
             return rows
         except (Exception, psycopg2.DatabaseError) as error:
             print(error)
@@ -240,22 +376,22 @@ class BCRegistries:
     # get all records and return in an array of dicts
     # returns a zero-length array if none found
     # optionally takes a WHERE clause and ORDER BY clause (must be valid SQL)
-    def get_bcreg_table(self, table, where="", orderby=""):
+    def get_bcreg_table(self, table, where="", orderby="", cache=False):
         sql = "SELECT * FROM bc_registries." + table
         if 0 < len(where):
             sql = sql + " WHERE " + where
         if 0 < len(orderby):
             sql = sql + " ORDER BY " + orderby
-        return self.get_bcreg_sql(sql)
+        return self.get_bcreg_sql(table, sql, cache)
 
     # get all records and return in an array of dicts
     # returns a zero-length array if none found
     # optionally takes a WHERE clause and ORDER BY clause (must be valid SQL)
-    def get_bcreg_corp_table(self, table, corp_num, where="", orderby=""):
+    def get_bcreg_corp_table(self, table, corp_num, where="", orderby="", cache=False):
         subwhere = "corp_num = '" + corp_num + "'"
         if 0 < len(where):
             subwhere = subwhere + " AND " + where
-        return self.get_bcreg_table(table, subwhere, orderby)
+        return self.get_bcreg_table(table, subwhere, orderby, cache)
 
     # find a specific event, 
     # return None if not found
