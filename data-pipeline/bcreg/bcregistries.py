@@ -316,7 +316,8 @@ class BCRegistries:
             cache_cursor = self.cache.cursor()
 
             cache_cursor.execute(create_sql)
-            cache_cursor.executemany(insert_sql, inserts)
+            if 0 < len(rows):
+                cache_cursor.executemany(insert_sql, inserts)
 
             cache_cursor.close()
             cache_cursor = None
@@ -348,12 +349,117 @@ class BCRegistries:
                 cursor.close()
             cursor = None
 
+    # load all bc registries data for the specified corps into our in-mem cache
+    def cache_bcreg_corps(self, specific_corps):
+        code_tables =  ['corp_type', 
+                        'corp_op_state', 
+                        'party_type', 
+                        'office_type', 
+                        'event_type', 
+                        'filing_type', 
+                        'corp_name_type', 
+                        'jurisdiction_type',
+                        'xpro_type']
+        corp_tables =  ['corporation', 
+                        'corp_state', 
+                        'tilma_involved', 
+                        'jurisdiction', 
+                        'corp_name']
+        other_tables = ['corp_party', 
+                        'event', 
+                        'filing',
+                        'office',
+                        'address']
+
+        corp_list = ''
+        i = 0
+        for corp in specific_corps:
+            corp_list = corp_list + "'" + corp + "'"
+            i = i + 1
+            if i < len(specific_corps):
+                corp_list = corp_list  + ', '
+
+        corp_party_where = 'bus_company_num in (' + corp_list + ')'
+        print(other_tables[0])
+        party_rows = self.get_bcreg_table(other_tables[0], corp_party_where, '', True)
+        print(other_tables[0], len(party_rows))
+
+        # TODO include related corps, i.e. dba related companies
+        # include all corp_num from the parties just returned
+        corp_party_list = ''
+        i = 0
+        for party in party_rows:
+            corp_party_list = corp_party_list + "'" + party['corp_num'] + "'"
+            i = i + 1
+            if i < len(party_rows):
+                corp_party_list = corp_party_list + ', '
+        if 0 < len(corp_party_list):
+            corp_list = corp_list + ', ' + corp_party_list
+
+        event_where = 'corp_num in (' + corp_list + ')'
+        print(other_tables[1])
+        event_rows = self.get_bcreg_table(other_tables[1], event_where, '', True)
+        print(other_tables[1], len(event_rows))
+
+        event_list = ''
+        i = 0
+        for event in event_rows:
+            event_list = event_list + str(event['event_id'])
+            i = i + 1
+            if i < len(event_rows):
+                event_list = event_list  + ', '
+        filing_where = 'event_id in (' + event_list + ')'
+        print(other_tables[2])
+        rows = self.get_bcreg_table(other_tables[2], filing_where, '', True)
+        print(other_tables[2], len(rows))
+
+        corp_num_where = 'corp_num in (' + corp_list + ')'
+        for corp_table in corp_tables:
+            print(corp_table)
+            rows = self.get_bcreg_table(corp_table, corp_num_where, '', True)
+            print(corp_table, len(rows))
+
+        office_where = 'corp_num in (' + corp_list + ')'
+        print(other_tables[3])
+        office_rows = self.get_bcreg_table(other_tables[3], office_where, '', True)
+        print(other_tables[3], len(office_rows))
+
+        addr_id_list = []
+        for party in party_rows:
+            if party['mailing_addr_id'] is not None:
+                addr_id_list.append(str(party['mailing_addr_id']))
+            if party['delivery_addr_id'] is not None:
+                addr_id_list.append(str(party['delivery_addr_id']))
+        for office in office_rows:
+            if office['mailing_addr_id'] is not None:
+                addr_id_list.append(str(office['mailing_addr_id']))
+            if office['delivery_addr_id'] is not None:
+                addr_id_list.append(str(office['delivery_addr_id']))
+        addr_list = ''
+        i = 0
+        for addr_id in addr_id_list:
+            addr_list = addr_list + addr_id
+            i = i + 1
+            if i < len(addr_id_list):
+                addr_list = addr_list  + ', '
+        address_where = 'addr_id in (' + addr_list + ')'
+        print(other_tables[4])
+        self.get_bcreg_table(other_tables[4], address_where, '', True)
+        print(other_tables[4], len(rows))
+
+        for code_table in code_tables:
+            print(code_table)
+            rows = self.get_bcreg_table(code_table, '', '', True)
+            print(code_table, len(rows))
+
+
     # get all records and return in an array of dicts
     # returns a zero-length array if none found
     # optionally takes a WHERE clause and ORDER BY clause (must be valid SQL)
     def get_bcreg_sql(self, table, sql, cache=False):
         cursor = None
         try:
+            #print(sql)
             cursor = self.conn.cursor()
             cursor.execute(sql)
             desc = cursor.description

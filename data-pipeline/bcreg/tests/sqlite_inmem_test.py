@@ -1,5 +1,6 @@
 
 import sqlite3
+import time
 from bcreg.bcregistries import BCRegistries
 
 
@@ -74,27 +75,60 @@ def test_load_bcreg_table():
 
 def test_cache_bcreg_table():
     with BCRegistries() as bc_registries:
-        print('================')
         rows = bc_registries.get_bcreg_table('party_type', '', '', True)
         c_rows = bc_registries.get_cache_sql('SELECT * FROM party_type')
         assert len(rows) == len(c_rows)
         assert rows == c_rows
         
-        print('================')
         rows = bc_registries.get_bcreg_table('corporation', "corp_num = '0641655'", '', True)
         c_rows = bc_registries.get_cache_sql('SELECT * FROM corporation')
         assert len(rows) == len(c_rows)
         assert rows == c_rows
         
-        print('================')
         rows = bc_registries.get_bcreg_table('event', "corp_num = '0641655'", '', True)
         c_rows = bc_registries.get_cache_sql('SELECT * FROM event')
         assert len(rows) == len(c_rows)
         assert rows == c_rows
         
-        print('================')
         rows = bc_registries.get_bcreg_table('jurisdiction', "corp_num = 'REG0000185'", '', True)
         c_rows = bc_registries.get_cache_sql('SELECT * FROM jurisdiction')
         assert len(rows) == len(c_rows)
         assert rows == c_rows
         
+def test_cache_bcreg_clients():
+    specific_corps = [
+                    '0641655',
+                    '0820416',
+                    '0700450',
+                    '0803224',
+                    'LLC0000192',
+                    'C0277609',
+                    'A0072972',
+                    'A0051862',
+                    'C0874156',
+                    '0874244',
+                    '0593707',
+                    'A0068919',
+                    'A0064760',
+                    'LLC0000234',
+                    'A0077118',
+                    'A0062459',
+                    '0708325',
+                    '0679026',
+                    '0707774',
+                    'C0874057',
+                    'A0028374',
+                    'A0053381',
+                    'A0051632',
+                    '0578221',
+                    'A0032100',
+                    '0874088',
+                    '0803207',
+                    '0873646',
+                    ]
+    with BCRegistries() as bc_registries:
+        start_time = time.perf_counter()
+        bc_registries.cache_bcreg_corps(specific_corps)
+        caching_time = time.perf_counter() - start_time
+        print(caching_time)
+
