@@ -22,6 +22,22 @@ RUN apt-get update -y \
                 python-psycopg2 \
                 libpq-dev
 
+# ========================================================================================================
+# Install go-crond (https://github.com/webdevops/go-crond)
+#
+# CRON Jobs in OpenShift:
+# - https://blog.danman.eu/cron-jobs-in-openshift/
+#
+# - go-crond was selected over OpenShift cron jobs, and attempting to get crond running on OpenShift
+#   - Allows the mara container to be running and the user interface to be available.
+#   - The history issues with the OpenShift cron jobs are avoided.
+# --------------------------------------------------------------------------------------------------------
+ARG GOCROND_VERSION=0.6.1
+ADD https://github.com/webdevops/go-crond/releases/download/$GOCROND_VERSION/go-crond-64-linux /usr/bin/
+RUN mv /usr/bin/go-crond-64-linux /usr/bin/go-crond \
+    && chmod ug+x /usr/bin/go-crond
+# ========================================================================================================
+
 # mara-app section - this is specific to our use of mara
 # ======================================================
 
@@ -56,10 +72,12 @@ RUN make install-packages
 # Make /etc/passwd writable for the root group so an entry can be created for an OpenShift assigned user account.
 RUN chown -R mara:root $APP_ROOT \
     && chmod -R ug+rw $APP_ROOT \
+    && chmod ug+x $APP_ROOT/scripts/*.sh \
     && chmod ug+x $APP_ROOT/.scripts/mara-app/*.sh \
     && chmod ug+x $APP_ROOT/.scripts/mara-app/makeshell \
     && chmod ug+x $entrypoint \
-    && chmod g+rw /etc/passwd
+    && chmod g+rw /etc/passwd \
+    && chmod g-w $APP_ROOT/scripts/cron/*
 
 USER $user
 ENTRYPOINT ["bash", "docker-entrypoint.sh"]

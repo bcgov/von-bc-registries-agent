@@ -70,6 +70,7 @@ services:
       - EVENT_PROC_DB_PASSWORD=
       # [mara_db]
       - MARA_DB_HOST=${MARA_DB_HOST:-bcregdb}
+      - MARA_DB_PORT=${MARA_DB_PORT:-5432}
       - MARA_DB_DATABASE=${MARA_DB_DATABASE:-mara_db}
       - MARA_DB_USER=${MARA_DB_USER:-mara_db}
     networks:

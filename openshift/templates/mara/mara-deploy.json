@@ -185,6 +185,10 @@
                     "value": "${MARA_DB_HOST}"
                   },
                   {
+                    "name": "MARA_DB_PORT",
+                    "value": "${MARA_DB_PORT}"
+                  },
+                  {
                     "name": "MARA_DB_DATABASE",
                     "value": "${MARA_DB_DATABASE}"
                   },
@@ -205,6 +209,10 @@
                         "key": "database-password"
                       }
                     }
+                  },
+                  {
+                    "name": "START_CRON",
+                    "value": "${START_CRON}"
                   }
                 ],
                 "readinessProbe": {
@@ -287,7 +295,7 @@
       "displayName": "VON-X API URL",
       "description": "VON-X API URL.",
       "required": true,
-      "value": "http://bcreg-x-agent:8000/bcreg"
+      "value": "http://bcreg-x-agent:8080/bcreg"
     },
     {
       "name": "BC_REG_DB_HOST",
@@ -351,6 +359,13 @@
       "description": "Mara Database Name.",
       "required": true,
       "value": "mara_db"
+    },
+    {
+      "name": "START_CRON",
+      "displayName": "Start Cron Jobs",
+      "description": "Start go-crond and load the cron jobs from the CRON_FOLDER.",
+      "required": true,
+      "value": "1"
     },
     {
       "name": "CPU_LIMIT",
