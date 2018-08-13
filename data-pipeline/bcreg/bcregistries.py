@@ -75,6 +75,10 @@ class BCRegistries:
         # todo
         pass
 
+
+    ###########################################################################
+    # database cache configuration methods
+    ###########################################################################
     def use_local_cache(self):
         return self.sql_local_cache
 
@@ -101,103 +105,10 @@ class BCRegistries:
         print('cache miss!!!', miss)
         self.cache_miss.append(miss)
     
-    # get max event number from bc registries event log
-    def get_max_event(self):
-        cur = None
-        try:
-            # create a cursor
-            cur = self.conn.cursor()
-            cur.execute("""SELECT max(event_id) FROM """ + BC_REGISTRIES_TABLE_PREFIX + """event""")
-            row = cur.fetchone()
-            cur.close()
-            cur = None
-            return row[0]
-        except (Exception, psycopg2.DatabaseError) as error:
-            print(error)
-            raise
-        finally:
-            if cur is not None:
-                cur.close()
 
-    # return a specific set of corporations, based on an event range
-    def get_specific_corps(self, corp_filter):
-        sql = """SELECT distinct(corp_num) from """ + BC_REGISTRIES_TABLE_PREFIX + """event
-                where corp_num in ({})
-                order by corp_num;"""
-        cur = None
-        try:
-            cur = self.conn.cursor()
-            placeholders= ', '.join(['%s']*len(corp_filter))  # "%s, %s, %s, ... %s"
-            sql = sql.format(placeholders)
-            cur.execute(sql, tuple(corp_filter))
-            row = cur.fetchone()
-            corps = []
-            while row is not None:
-                # print(row)
-                corps.append({'CORP_NUM':row[0],})
-                row = cur.fetchone()
-            cur.close()
-            cur = None
-            return corps
-        except (Exception, psycopg2.DatabaseError) as error:
-            print(error)
-            raise
-        finally:
-            if cur is not None:
-                cur.close()
-
-    # return unprocessed corporations, based on an event range
-    def get_unprocessed_corps(self, last_event_id, max_event_id):
-        cur = None
-        try:
-            cur = self.conn.cursor()
-            cur.execute("""SELECT distinct(corp_num) from """ + BC_REGISTRIES_TABLE_PREFIX + """event
-                            where event_id > %s and event_id <= %s
-                            and corp_num in
-                            (SELECT corp_num from """ + BC_REGISTRIES_TABLE_PREFIX + """corporation
-                             where corp_typ_cd in ('A','LLC','BC','C','CUL','ULC'))
-                            order by corp_num;""", (last_event_id, max_event_id,))
-            row = cur.fetchone()
-            corps = []
-            while row is not None:
-                # print(row)
-                corps.append({'CORP_NUM':row[0],})
-                row = cur.fetchone()
-            cur.close()
-            cur = None
-            return corps
-        except (Exception, psycopg2.DatabaseError) as error:
-            print(error)
-            raise
-        finally:
-            if cur is not None:
-                cur.close()
-
-    #return the (unprocessed) event range for each provided corporation
-    def get_unprocessed_corp_events(self, last_event_id, max_event_id, corps, max=None):
-        cur = None
-        try:
-            for i,corp in enumerate(corps): 
-                # create a cursor
-                # print(corp['CORP_NUM'])
-                cur = self.conn.cursor()
-                cur.execute("""SELECT max(event_id) from """ + BC_REGISTRIES_TABLE_PREFIX + """event
-                                where corp_num = %s and event_id > %s and event_id <= %s""", 
-                                (corp['CORP_NUM'], last_event_id, max_event_id,))
-                row = cur.fetchone()
-                corp['PREV_EVENT_ID'] = last_event_id
-                corp['LAST_EVENT_ID'] = row[0]
-                cur.close()
-                cur = None
-                if max and i >= max:
-                    break
-            return corps
-        except (Exception, psycopg2.DatabaseError) as error:
-            print(error)
-            raise
-        finally:
-            if cur is not None:
-                cur.close()
+    ###########################################################################
+    # methods to build and populate in-memory cache of bc registries data
+    ###########################################################################
 
     # return the table structure of a bcreg table
     def get_bcreg_table_struct(self, table, where=""):
@@ -348,6 +259,11 @@ class BCRegistries:
                 id_list = id_list  + ', '
         return id_list
 
+
+    ###########################################################################
+    # load all bc registries data for the specified corps into our in-mem cache
+    ###########################################################################
+
     # load all bc registries data for the specified corps into our in-mem cache
     def cache_bcreg_corps(self, specific_corps):
         code_tables =  ['corp_type', 
@@ -454,6 +370,10 @@ class BCRegistries:
                 print(code_table, len(rows))
 
 
+    ###########################################################################
+    # utility methods to query bc registries data
+    ###########################################################################
+
     # get all records and return in an array of dicts
     # returns a zero-length array if none found
     # optionally takes a WHERE clause and ORDER BY clause (must be valid SQL)
@@ -499,6 +419,116 @@ class BCRegistries:
         if 0 < len(where):
             subwhere = subwhere + " AND " + where
         return self.get_bcreg_table(table, subwhere, orderby, cache)
+
+
+    ###########################################################################
+    # methods to determine un-processed corporations/events
+    ###########################################################################
+
+    # get max event number from bc registries event log
+    def get_max_event(self):
+        cur = None
+        try:
+            # create a cursor
+            cur = self.conn.cursor()
+            cur.execute("""SELECT max(event_id) FROM """ + BC_REGISTRIES_TABLE_PREFIX + """event""")
+            row = cur.fetchone()
+            cur.close()
+            cur = None
+            return row[0]
+        except (Exception, psycopg2.DatabaseError) as error:
+            print(error)
+            raise
+        finally:
+            if cur is not None:
+                cur.close()
+
+    # return a specific set of corporations, based on an event range
+    def get_specific_corps(self, corp_filter):
+        sql = """SELECT distinct(corp_num) from """ + BC_REGISTRIES_TABLE_PREFIX + """event
+                where corp_num in ({})
+                order by corp_num;"""
+        cur = None
+        try:
+            cur = self.conn.cursor()
+            placeholders= ', '.join(['%s']*len(corp_filter))  # "%s, %s, %s, ... %s"
+            sql = sql.format(placeholders)
+            cur.execute(sql, tuple(corp_filter))
+            row = cur.fetchone()
+            corps = []
+            while row is not None:
+                # print(row)
+                corps.append({'CORP_NUM':row[0],})
+                row = cur.fetchone()
+            cur.close()
+            cur = None
+            return corps
+        except (Exception, psycopg2.DatabaseError) as error:
+            print(error)
+            raise
+        finally:
+            if cur is not None:
+                cur.close()
+
+    # return unprocessed corporations, based on an event range
+    def get_unprocessed_corps(self, last_event_id, max_event_id):
+        cur = None
+        try:
+            cur = self.conn.cursor()
+            cur.execute("""SELECT distinct(corp_num) from """ + BC_REGISTRIES_TABLE_PREFIX + """event
+                            where event_id > %s and event_id <= %s
+                            and corp_num in
+                            (SELECT corp_num from """ + BC_REGISTRIES_TABLE_PREFIX + """corporation
+                             where corp_typ_cd in ('A','LLC','BC','C','CUL','ULC'))
+                            order by corp_num;""", (last_event_id, max_event_id,))
+            row = cur.fetchone()
+            corps = []
+            while row is not None:
+                # print(row)
+                corps.append({'CORP_NUM':row[0],})
+                row = cur.fetchone()
+            cur.close()
+            cur = None
+            return corps
+        except (Exception, psycopg2.DatabaseError) as error:
+            print(error)
+            raise
+        finally:
+            if cur is not None:
+                cur.close()
+
+    #return the (unprocessed) event range for each provided corporation
+    def get_unprocessed_corp_events(self, last_event_id, max_event_id, corps, max=None):
+        cur = None
+        try:
+            for i,corp in enumerate(corps): 
+                # create a cursor
+                # print(corp['CORP_NUM'])
+                cur = self.conn.cursor()
+                cur.execute("""SELECT max(event_id) from """ + BC_REGISTRIES_TABLE_PREFIX + """event
+                                where corp_num = %s and event_id > %s and event_id <= %s""", 
+                                (corp['CORP_NUM'], last_event_id, max_event_id,))
+                row = cur.fetchone()
+                corp['PREV_EVENT_ID'] = last_event_id
+                corp['LAST_EVENT_ID'] = row[0]
+                cur.close()
+                cur = None
+                if max and i >= max:
+                    break
+            return corps
+        except (Exception, psycopg2.DatabaseError) as error:
+            print(error)
+            raise
+        finally:
+            if cur is not None:
+                cur.close()
+
+
+    ###########################################################################
+    # methods to run corporation-specific queries 
+    # (can run against the in-memory cache 
+    #  or against bc registries database directly)
+    ###########################################################################
 
     # find a specific event, 
     # return None if not found
@@ -898,6 +928,11 @@ class BCRegistries:
         finally:
             if cur is not None:
                 cur.close()
+
+
+    ###########################################################################
+    # primary method to load all bc registries data for the specified corporation
+    ###########################################################################
 
     def get_bc_reg_corp_info(self, corp_num, event_id):
         sql_party = """SELECT corp_num, corp_party_id, mailing_addr_id, delivery_addr_id, party_typ_cd, start_event_id, end_event_id, cessation_dt,
