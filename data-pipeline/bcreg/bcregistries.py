@@ -445,7 +445,7 @@ class BCRegistries:
                 addr_list = self.id_where_in(ids_list)
                 address_where = 'addr_id in (' + addr_list + ')'
                 #print(other_tables[4])
-                self.get_bcreg_table(other_tables[4], address_where, '', True)
+                rows = self.get_bcreg_table(other_tables[4], address_where, '', True)
                 print(other_tables[4], len(rows))
 
             for code_table in code_tables:
