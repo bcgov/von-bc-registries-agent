@@ -74,7 +74,7 @@ def test_load_bcreg_table():
     conn.close()
 
 def test_cache_bcreg_table():
-    with BCRegistries() as bc_registries:
+    with BCRegistries(True) as bc_registries:
         rows = bc_registries.get_bcreg_table('party_type', '', '', True)
         c_rows = bc_registries.get_cache_sql('SELECT * FROM party_type')
         assert len(rows) == len(c_rows)
@@ -126,7 +126,7 @@ def test_cache_bcreg_clients():
                     '0803207',
                     '0873646',
                     ]
-    with BCRegistries() as bc_registries:
+    with BCRegistries(True) as bc_registries:
         start_time = time.perf_counter()
         bc_registries.cache_bcreg_corps(specific_corps)
         caching_time = time.perf_counter() - start_time

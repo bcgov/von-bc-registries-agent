@@ -65,14 +65,32 @@ def test_compare_corp_events():
 def test_compare_corp_infos():
     specific_corps = [
                     '0641655',
+                    '0820416',
+                    '0700450',
+                    '0803224',
                     'LLC0000192',
                     'C0277609',
+                    'A0072972',
+                    'A0051862',
+                    'C0874156',
                     '0874244',
+                    '0593707',
+                    'A0068919',
+                    'A0064760',
                     'LLC0000234',
+                    'A0077118',
+                    'A0062459',
+                    '0708325',
                     '0679026',
                     '0707774',
+                    'C0874057',
+                    'A0028374',
+                    'A0053381',
                     'A0051632',
+                    '0578221',
+                    'A0032100',
                     '0874088',
+                    '0803207',
                     '0873646',
                     ]
     
@@ -94,29 +112,44 @@ def test_compare_corp_infos():
     bcreg_loading_time = 0
     bcreg_loading_time_baseline = 0
 
+    corp_info = {}
+    with BCRegistries(True) as bc_registries:
+        print('Load cached corp info')
+        start_time = time.perf_counter()
+        bc_registries.cache_bcreg_corps(specific_corps)
+        for corp in corps:
+            print(corp)
+            corp_info[corp['CORP_NUM']] = bc_registries.get_bc_reg_corp_info(corp['CORP_NUM'], corp['LAST_EVENT_ID'])
+        bcreg_loading_time = bcreg_loading_time + (time.perf_counter() - start_time)
+
+    print('new load:', bcreg_loading_time)
+
+    corp_info_baseline = {}
+    with BCRegistriesBaseline() as bc_registries:
+        print('Run baseline')
+        start_time = time.perf_counter()
+        for corp in corps:
+            print(corp)
+            corp_info_baseline[corp['CORP_NUM']] = bc_registries.get_bc_reg_corp_info(corp['CORP_NUM'], corp['LAST_EVENT_ID'])
+        bcreg_loading_time_baseline = bcreg_loading_time_baseline + (time.perf_counter() - start_time)
+
+    print('baseline:', bcreg_loading_time_baseline, 'new load:', bcreg_loading_time)
+
+    #for corp in corps:
+    #    assert corp_info[corp['CORP_NUM']] == corp_info_baseline[corp['CORP_NUM']]
+
+    corp_creds = {}
+    with EventProcessor() as event_processor:
+        for corp in corps:
+            corp_creds[corp['CORP_NUM']] = event_processor.generate_credentials(system_type, corp['PREV_EVENT_ID'], corp['LAST_EVENT_ID'], 
+    										corp['CORP_NUM'], corp_info[corp['CORP_NUM']])
+
+    corp_creds_baseline = {}
+    with EventProcessorBaseline() as event_processor:
+        for corp in corps:
+            corp_creds_baseline[corp['CORP_NUM']] = event_processor.generate_credentials(system_type, corp['PREV_EVENT_ID'], corp['LAST_EVENT_ID'], 
+    										corp['CORP_NUM'], corp_info_baseline[corp['CORP_NUM']])
+
     for corp in corps:
-        print(corp)
-
-        with BCRegistries() as bc_registries:
-            start_time = time.perf_counter()
-            corp_info = bc_registries.get_bc_reg_corp_info(corp['CORP_NUM'], corp['LAST_EVENT_ID'])
-            bcreg_loading_time = bcreg_loading_time + (time.perf_counter() - start_time)
-
-        with BCRegistriesBaseline() as bc_registries:
-            start_time = time.perf_counter()
-            corp_info_baseline = bc_registries.get_bc_reg_corp_info(corp['CORP_NUM'], corp['LAST_EVENT_ID'])
-            bcreg_loading_time_baseline = bcreg_loading_time_baseline + (time.perf_counter() - start_time)
-
-        assert corp_info == corp_info_baseline
-        print(bcreg_loading_time_baseline, bcreg_loading_time)
-
-        with EventProcessor() as event_processor:
-        	corp_creds = event_processor.generate_credentials(system_type, corp['PREV_EVENT_ID'], corp['LAST_EVENT_ID'], 
-        										corp['CORP_NUM'], corp_info)
-
-        with EventProcessorBaseline() as event_processor:
-        	corp_creds_baseline = event_processor.generate_credentials(system_type, corp['PREV_EVENT_ID'], corp['LAST_EVENT_ID'], 
-        										corp['CORP_NUM'], corp_info_baseline)
-
-        assert corp_creds == corp_creds_baseline
+        assert corp_creds[corp['CORP_NUM']] == corp_creds_baseline[corp['CORP_NUM']]
 

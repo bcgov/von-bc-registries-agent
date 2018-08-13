@@ -8,6 +8,6 @@ from bcreg.eventprocessor import EventProcessor
 
 
 with EventProcessor() as event_processor:
-    event_processor.process_corp_event_queue()
+    event_processor.process_corp_event_queue(True)
 
 

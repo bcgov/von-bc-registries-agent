@@ -10,6 +10,11 @@ from bcreg.config import config
 
 system_type = 'BC_REG'
 
+BC_REGISTRIES_TABLE_PREFIX = 'bc_registries.'
+INMEM_CACHE_TABLE_PREFIX   = ''
+MAX_WHERE_IN = 500
+
+
 def adapt_decimal(d):
     return str(d)
 
@@ -35,9 +40,11 @@ class CustomJsonEncoder(json.JSONEncoder):
 # interface to BC Registries database
 # data is returned as dictionaries, using the sql column name as identifier
 class BCRegistries:
-    local_cache = {}
+    sql_local_cache = False
+    cache_miss = []
 
-    def __init__(self):
+    def __init__(self, cache=False):
+        self.sql_local_cache = cache
         try:
             params = config(section='bc_registries')
             self.conn = psycopg2.connect(**params)
@@ -46,6 +53,7 @@ class BCRegistries:
             sqlite3.register_adapter(D, adapt_decimal)
             # Register the converter
             sqlite3.register_converter("decimal", convert_decimal)
+            # connect to in-memory database
             self.cache = sqlite3.connect(':memory:', detect_types=sqlite3.PARSE_DECLTYPES|sqlite3.PARSE_COLNAMES)
         except (Exception) as error:
             print(error)
@@ -67,6 +75,31 @@ class BCRegistries:
         # todo
         pass
 
+    def use_local_cache(self):
+        return self.sql_local_cache
+
+    def get_db_connection(self, force_query_remote=False):
+        if self.use_local_cache() and (not force_query_remote):
+            return self.cache
+        else:
+            return self.conn
+
+    def get_db_sql_param(self, force_query_remote=False):
+        if self.use_local_cache() and (not force_query_remote):
+            return '?'
+        else:
+            return '%s'
+    
+    def get_table_prefix(self, force_query_remote=False):
+        if self.use_local_cache() and (not force_query_remote):
+            return INMEM_CACHE_TABLE_PREFIX
+        else:
+            return BC_REGISTRIES_TABLE_PREFIX
+
+    def add_cache_miss(self, table, corp_num, row_id, row):
+        miss = {'table':table, 'corp_num':corp_num, 'row_id':row_id, 'row':row}
+        print('cache miss!!!', miss)
+        self.cache_miss.append(miss)
     
     # get max event number from bc registries event log
     def get_max_event(self):
@@ -74,7 +107,7 @@ class BCRegistries:
         try:
             # create a cursor
             cur = self.conn.cursor()
-            cur.execute("""SELECT max(event_id) FROM bc_registries.event""")
+            cur.execute("""SELECT max(event_id) FROM """ + BC_REGISTRIES_TABLE_PREFIX + """event""")
             row = cur.fetchone()
             cur.close()
             cur = None
@@ -88,7 +121,7 @@ class BCRegistries:
 
     # return a specific set of corporations, based on an event range
     def get_specific_corps(self, corp_filter):
-        sql = """SELECT distinct(corp_num) from bc_registries.event
+        sql = """SELECT distinct(corp_num) from """ + BC_REGISTRIES_TABLE_PREFIX + """event
                 where corp_num in ({})
                 order by corp_num;"""
         cur = None
@@ -118,10 +151,10 @@ class BCRegistries:
         cur = None
         try:
             cur = self.conn.cursor()
-            cur.execute("""SELECT distinct(corp_num) from bc_registries.event
+            cur.execute("""SELECT distinct(corp_num) from """ + BC_REGISTRIES_TABLE_PREFIX + """event
                             where event_id > %s and event_id <= %s
                             and corp_num in
-                            (SELECT corp_num from bc_registries.corporation
+                            (SELECT corp_num from """ + BC_REGISTRIES_TABLE_PREFIX + """corporation
                              where corp_typ_cd in ('A','LLC','BC','C','CUL','ULC'))
                             order by corp_num;""", (last_event_id, max_event_id,))
             row = cur.fetchone()
@@ -148,7 +181,7 @@ class BCRegistries:
                 # create a cursor
                 # print(corp['CORP_NUM'])
                 cur = self.conn.cursor()
-                cur.execute("""SELECT max(event_id) from bc_registries.event
+                cur.execute("""SELECT max(event_id) from """ + BC_REGISTRIES_TABLE_PREFIX + """event
                                 where corp_num = %s and event_id > %s and event_id <= %s""", 
                                 (corp['CORP_NUM'], last_event_id, max_event_id,))
                 row = cur.fetchone()
@@ -166,74 +199,9 @@ class BCRegistries:
             if cur is not None:
                 cur.close()
 
-    # clear local cache
-    def clear_cache(self):
-        self.local_cache = {}
-
-    # store data in a local cache
-    # table is the name of the "table" (or data type)
-    # pks is a list of column names forming the pk
-    # datas is an array of dict of the data (must contain pk columns)
-    def cache_data(self, table, pks, datas):
-        if table in self.local_cache:
-            table_cache = self.local_cache[table]
-        else:
-            table_cache = {}
-        for data in datas:
-            #print(data)
-            key = ""
-            i = 0
-            for pk in pks:
-                key = key + str(data[pk])
-                i = i + 1
-                if i < len(pks):
-                    key = key + "::"
-            table_cache[key] = data
-        self.local_cache[table] = table_cache
-
-    # get cache record by pk
-    # table is the name of the "table" (or data type)
-    # pks is a list of column names forming the pk
-    # vals is an list of values for each pk
-    # returns a single dict (or None)
-    def get_cache_data_pk(self, table, pks, vals):
-        if table in self.local_cache:
-            table_cache = self.local_cache[table]
-            key = ""
-            i = 0
-            for pk in pks:
-                key = key + str(vals[i])
-                i = i + 1
-                if i < len(pks):
-                    key = key + "::"
-            if key in table_cache:
-                return table_cache[key]
-        return None
-
-    # get cache record by matching key(s)
-    # table is the name of the "table" (or data type)
-    # keys is a list of column names to match
-    # vals is an list of values for each key (must equal all)
-    # returns an array of dicts (zero length if none found)
-    def get_cache_data_keys(self, table, keys, vals):
-        recs = []
-        if table in self.local_cache:
-            table_cache = self.local_cache[table]
-            for key in table_cache:
-                data = table_cache[key]
-                #print(data)
-                found = True
-                i = 0
-                for key in keys:
-                    if not (key in data and vals[i] == data[key]):
-                        found = False
-                if found:
-                    recs.append(data)
-        return recs
-
     # return the table structure of a bcreg table
     def get_bcreg_table_struct(self, table, where=""):
-        sql = "SELECT * from bc_registries." + table
+        sql = "SELECT * from " + BC_REGISTRIES_TABLE_PREFIX + table
         if 0 < len(where):
             sql = sql + " WHERE " + where
         cursor = None
@@ -349,6 +317,37 @@ class BCRegistries:
                 cursor.close()
             cursor = None
 
+    # split up a List of id's into a List of Lists of no more than MAX id's
+    def split_list(self, ids, max):
+        ret = []
+        sub_ids = []
+        i = 0
+        for id in ids:
+            sub_ids.append(id)
+            i = i + 1
+            if i >= max:
+                ret.append(sub_ids)
+                sub_ids = []
+                i = 0
+        if 0 < len(sub_ids):
+            ret.append(sub_ids)
+        return ret
+
+    # create a "where in" clasuse for a List of id's
+    def id_where_in(self, ids, text=False):
+        if text:
+            delimiter = "'"
+        else:
+            delimiter = ''
+        id_list = ''
+        i = 0
+        for the_id in ids:
+            id_list = id_list + delimiter + the_id + delimiter
+            i = i + 1
+            if i < len(ids):
+                id_list = id_list  + ', '
+        return id_list
+
     # load all bc registries data for the specified corps into our in-mem cache
     def cache_bcreg_corps(self, specific_corps):
         code_tables =  ['corp_type', 
@@ -371,86 +370,88 @@ class BCRegistries:
                         'office',
                         'address']
 
-        corp_list = ''
-        i = 0
-        for corp in specific_corps:
-            corp_list = corp_list + "'" + corp + "'"
-            i = i + 1
-            if i < len(specific_corps):
-                corp_list = corp_list  + ', '
+        if self.use_local_cache():
+            # ensure we have a unique list
+            specific_corps = list({s_corp for s_corp in specific_corps})
+            specific_corps_lists = self.split_list(specific_corps, MAX_WHERE_IN)
 
-        corp_party_where = 'bus_company_num in (' + corp_list + ')'
-        print(other_tables[0])
-        party_rows = self.get_bcreg_table(other_tables[0], corp_party_where, '', True)
-        print(other_tables[0], len(party_rows))
+            addr_id_list = []
+            for corp_nums_list in specific_corps_lists:
+                corp_list = self.id_where_in(corp_nums_list, True)
+                corp_party_where = 'bus_company_num in (' + corp_list + ')'
+                #print(other_tables[0])
+                party_rows = self.get_bcreg_table(other_tables[0], corp_party_where, '', True)
+                print(other_tables[0], len(party_rows))
 
-        # TODO include related corps, i.e. dba related companies
-        # include all corp_num from the parties just returned
-        corp_party_list = ''
-        i = 0
-        for party in party_rows:
-            corp_party_list = corp_party_list + "'" + party['corp_num'] + "'"
-            i = i + 1
-            if i < len(party_rows):
-                corp_party_list = corp_party_list + ', '
-        if 0 < len(corp_party_list):
-            corp_list = corp_list + ', ' + corp_party_list
+                # include all corp_num from the parties just returned (dba related companies)
+                for party in party_rows:
+                    specific_corps.append(party['corp_num'])
 
-        event_where = 'corp_num in (' + corp_list + ')'
-        print(other_tables[1])
-        event_rows = self.get_bcreg_table(other_tables[1], event_where, '', True)
-        print(other_tables[1], len(event_rows))
+                for party in party_rows:
+                    if party['mailing_addr_id'] is not None:
+                        addr_id_list.append(str(party['mailing_addr_id']))
+                    if party['delivery_addr_id'] is not None:
+                        addr_id_list.append(str(party['delivery_addr_id']))
 
-        event_list = ''
-        i = 0
-        for event in event_rows:
-            event_list = event_list + str(event['event_id'])
-            i = i + 1
-            if i < len(event_rows):
-                event_list = event_list  + ', '
-        filing_where = 'event_id in (' + event_list + ')'
-        print(other_tables[2])
-        rows = self.get_bcreg_table(other_tables[2], filing_where, '', True)
-        print(other_tables[2], len(rows))
+            # ensure we have a unique list
+            specific_corps = list({s_corp for s_corp in specific_corps})
+            specific_corps_lists = self.split_list(specific_corps, MAX_WHERE_IN)
 
-        corp_num_where = 'corp_num in (' + corp_list + ')'
-        for corp_table in corp_tables:
-            print(corp_table)
-            rows = self.get_bcreg_table(corp_table, corp_num_where, '', True)
-            print(corp_table, len(rows))
+            event_ids = []
+            for corp_nums_list in specific_corps_lists:
+                corp_nums_list = self.id_where_in(corp_nums_list, True)
+                event_where = 'corp_num in (' + corp_nums_list + ')'
+                #print(other_tables[1])
+                event_rows = self.get_bcreg_table(other_tables[1], event_where, '', True)
+                print(other_tables[1], len(event_rows))
 
-        office_where = 'corp_num in (' + corp_list + ')'
-        print(other_tables[3])
-        office_rows = self.get_bcreg_table(other_tables[3], office_where, '', True)
-        print(other_tables[3], len(office_rows))
+                for event in event_rows:
+                    event_ids.append(str(event['event_id']))
 
-        addr_id_list = []
-        for party in party_rows:
-            if party['mailing_addr_id'] is not None:
-                addr_id_list.append(str(party['mailing_addr_id']))
-            if party['delivery_addr_id'] is not None:
-                addr_id_list.append(str(party['delivery_addr_id']))
-        for office in office_rows:
-            if office['mailing_addr_id'] is not None:
-                addr_id_list.append(str(office['mailing_addr_id']))
-            if office['delivery_addr_id'] is not None:
-                addr_id_list.append(str(office['delivery_addr_id']))
-        addr_list = ''
-        i = 0
-        for addr_id in addr_id_list:
-            addr_list = addr_list + addr_id
-            i = i + 1
-            if i < len(addr_id_list):
-                addr_list = addr_list  + ', '
-        address_where = 'addr_id in (' + addr_list + ')'
-        print(other_tables[4])
-        self.get_bcreg_table(other_tables[4], address_where, '', True)
-        print(other_tables[4], len(rows))
+            # ensure we have a unique list
+            event_ids = list({event_id for event_id in event_ids})
+            event_ids_lists = self.split_list(event_ids, MAX_WHERE_IN)
 
-        for code_table in code_tables:
-            print(code_table)
-            rows = self.get_bcreg_table(code_table, '', '', True)
-            print(code_table, len(rows))
+            for ids_list in event_ids_lists:
+                event_list = self.id_where_in(ids_list)
+                filing_where = 'event_id in (' + event_list + ')'
+                #print(other_tables[2])
+                rows = self.get_bcreg_table(other_tables[2], filing_where, '', True)
+                print(other_tables[2], len(rows))
+
+            for corp_nums_list in specific_corps_lists:
+                corp_nums_list = self.id_where_in(corp_nums_list, True)
+                corp_num_where = 'corp_num in (' + corp_nums_list + ')'
+                for corp_table in corp_tables:
+                    #print(corp_table)
+                    rows = self.get_bcreg_table(corp_table, corp_num_where, '', True)
+                    print(corp_table, len(rows))
+
+                office_where = 'corp_num in (' + corp_nums_list + ')'
+                #print(other_tables[3])
+                office_rows = self.get_bcreg_table(other_tables[3], office_where, '', True)
+                print(other_tables[3], len(office_rows))
+
+                for office in office_rows:
+                    if office['mailing_addr_id'] is not None:
+                        addr_id_list.append(str(office['mailing_addr_id']))
+                    if office['delivery_addr_id'] is not None:
+                        addr_id_list.append(str(office['delivery_addr_id']))
+
+            # ensure we have a unique list
+            addr_id_list = list({addr_id for addr_id in addr_id_list})
+            addr_ids_lists = self.split_list(addr_id_list, MAX_WHERE_IN)
+            for ids_list in addr_ids_lists:
+                addr_list = self.id_where_in(ids_list)
+                address_where = 'addr_id in (' + addr_list + ')'
+                #print(other_tables[4])
+                self.get_bcreg_table(other_tables[4], address_where, '', True)
+                print(other_tables[4], len(rows))
+
+            for code_table in code_tables:
+                #print(code_table)
+                rows = self.get_bcreg_table(code_table, '', '', True)
+                print(code_table, len(rows))
 
 
     # get all records and return in an array of dicts
@@ -468,7 +469,7 @@ class BCRegistries:
                 for row in cursor]
             cursor.close()
             cursor = None
-            if cache:
+            if self.use_local_cache() and cache:
                 self.cache_bcreg_data(table, desc, rows)
             return rows
         except (Exception, psycopg2.DatabaseError) as error:
@@ -483,7 +484,7 @@ class BCRegistries:
     # returns a zero-length array if none found
     # optionally takes a WHERE clause and ORDER BY clause (must be valid SQL)
     def get_bcreg_table(self, table, where="", orderby="", cache=False):
-        sql = "SELECT * FROM bc_registries." + table
+        sql = "SELECT * FROM " + BC_REGISTRIES_TABLE_PREFIX + table
         if 0 < len(where):
             sql = sql + " WHERE " + where
         if 0 < len(orderby):
@@ -501,13 +502,13 @@ class BCRegistries:
 
     # find a specific event, 
     # return None if not found
-    def get_event(self, corp_num, event_id):
+    def get_event(self, corp_num, event_id, force_query_remote=False):
         sql = """SELECT event_id, corp_num, event_typ_cd, event_timestmp
-                    FROM bc_registries.event
-                    WHERE corp_num = %s and event_id = %s"""
+                    FROM """ + self.get_table_prefix(force_query_remote) + """event
+                    WHERE corp_num = """ + self.get_db_sql_param(force_query_remote) + """ and event_id = """ + self.get_db_sql_param(force_query_remote)
         cursor = None
         try:
-            cursor = self.conn.cursor()
+            cursor = self.get_db_connection(force_query_remote).cursor()
             cursor.execute(sql, (corp_num, event_id,))
             desc = cursor.description
             column_names = [col[0] for col in desc]
@@ -517,6 +518,11 @@ class BCRegistries:
             cursor = None
             if len(event) > 0:
                 return event[0]
+            # check for a cache miss
+            if self.use_local_cache() and (not force_query_remote):
+                event = self.get_event(corp_num, event_id, True)
+                self.add_cache_miss('event', corp_num, event_id, event)
+                return event
             return {}
         except (Exception, psycopg2.DatabaseError) as error:
             print(error)
@@ -525,12 +531,12 @@ class BCRegistries:
             if cursor is not None:
                 cursor.close()
 
-    def get_filing_event(self, corp_num, event_id):
-        sql_filing = """SELECT * from bc_registries.filing 
-                        WHERE event_id = %s"""
+    def get_filing_event(self, corp_num, event_id, force_query_remote=False):
+        sql_filing = """SELECT * from """ + self.get_table_prefix(force_query_remote) + """filing 
+                        WHERE event_id = """ + self.get_db_sql_param(force_query_remote)
         cursor = None
         try:
-            cursor = self.conn.cursor()
+            cursor = self.get_db_connection(force_query_remote).cursor()
             cursor.execute(sql_filing, (event_id,))
             desc = cursor.description
             column_names = [col[0] for col in desc]
@@ -540,6 +546,11 @@ class BCRegistries:
             cursor = None
             if len(filing_event) > 0:
                 return filing_event[0]
+            # check for a cache miss
+            if self.use_local_cache() and (not force_query_remote):
+                filing_event = self.get_filing_event(corp_num, event_id, True)
+                self.add_cache_miss('filing', corp_num, event_id, filing_event)
+                return filing_event
             return {}
         except (Exception, psycopg2.DatabaseError) as error:
             print(error)
@@ -549,11 +560,11 @@ class BCRegistries:
                 cursor.close()
 
     def get_office(self, corp_num):
-        sql_office = """SELECT * from bc_registries.office
-                        WHERE corp_num = %s and office_typ_cd in ('RG','HD','FO') and end_event_id is null"""
+        sql_office = """SELECT * from """ + self.get_table_prefix() + """office
+                        WHERE corp_num = """ + self.get_db_sql_param() + """ and office_typ_cd in ('RG','HD','FO') and end_event_id is null"""
         cursor = None
         try:
-            cursor = self.conn.cursor()
+            cursor = self.get_db_connection().cursor()
             cursor.execute(sql_office, (corp_num,))
             desc = cursor.description
             column_names = [col[0] for col in desc]
@@ -563,9 +574,9 @@ class BCRegistries:
             cursor = None
 
             for office in offices:
-                office['delivery_addr'] = self.get_address(office['delivery_addr_id'])
+                office['delivery_addr'] = self.get_address(corp_num, office['delivery_addr_id'])
                 if 'mailing_addr_id' in office and office['mailing_addr_id'] != office['delivery_addr_id']:
-                    office['mailing_addr'] = self.get_address(office['mailing_addr_id'])
+                    office['mailing_addr'] = self.get_address(corp_num, office['mailing_addr_id'])
                 office['start_event'] = self.get_event(corp_num, office['start_event_id'])
                 office['start_filing_event'] = self.get_filing_event(corp_num, office['start_event_id'])
 
@@ -577,14 +588,17 @@ class BCRegistries:
             if cursor is not None:
                 cursor.close()
 
-    def get_address(self, address_id):
+    def get_address(self, corp_num, address_id, force_query_remote=False):
+        if address_id is None:
+            return {}
+
         sql_addr = """SELECT addr_id, province, country_typ_cd, postal_cd, addr_line_1, addr_line_2, addr_line_3, city, address_format_type,
                          address_desc, address_desc_short, unit_no, unit_type, province_state_name
-                  FROM bc_registries.address
-                  WHERE addr_id = %s"""
+                  FROM """ + self.get_table_prefix(force_query_remote) + """address
+                  WHERE addr_id = """ + self.get_db_sql_param(force_query_remote)
         cursor = None
         try:
-            cursor = self.conn.cursor()
+            cursor = self.get_db_connection(force_query_remote).cursor()
             cursor.execute(sql_addr, (address_id,))
             desc = cursor.description
             column_names = [col[0] for col in desc]
@@ -607,6 +621,11 @@ class BCRegistries:
                 else:
                     address['local_addr'] = ""
                 return address
+            # check for a cache miss
+            if self.use_local_cache() and (not force_query_remote):
+                address = self.get_address(corp_num, address_id, True)
+                self.add_cache_miss('address', corp_num, address_id, address)
+                return address
             return {}
         except (Exception, psycopg2.DatabaseError) as error:
             print(error)
@@ -617,15 +636,15 @@ class BCRegistries:
 
     def get_names(self, corp_num, name_typ_cds, event_id):
         sql_name = """SELECT corp_num, corp_name_typ_cd, start_event_id, end_event_id, corp_name_seq_num, srch_nme, corp_nme, dd_corp_num
-                  FROM bc_registries.corp_name
-                  WHERE corp_num = %s AND end_event_id is null 
+                  FROM """ + self.get_table_prefix() + """corp_name
+                  WHERE corp_num = """ + self.get_db_sql_param() + """ AND end_event_id is null 
                     AND corp_name_typ_cd in ({}) """
 
         cur = None
         try:
             names = []
-            cur = self.conn.cursor()
-            placeholders= ', '.join(['%s']*len(name_typ_cds))  # "%s, %s, %s, ... %s"
+            cur = self.get_db_connection().cursor()
+            placeholders= ', '.join([self.get_db_sql_param()]*len(name_typ_cds))  # "%s, %s, %s, ... %s"
             sql_name = sql_name.format(placeholders)
             cur.execute(sql_name, (corp_num,) + tuple(name_typ_cds))
             row = cur.fetchone()
@@ -657,12 +676,12 @@ class BCRegistries:
         sql_state = """SELECT state.corp_num corp_num, state.start_event_id start_event_id, state.end_event_id end_event_id, 
                         state.state_typ_cd state_typ_cd, state.dd_corp_num dd_corp_num, 
                         op_state.op_state_typ_cd op_state_typ_cd, op_state.short_desc short_desc, op_state.full_desc full_desc
-                        FROM bc_registries.corp_state state, bc_registries.corp_op_state op_state
-                        WHERE corp_num = %s and op_state.state_typ_cd = state.state_typ_cd"""
+                        FROM """ + self.get_table_prefix() + """corp_state state, """ + self.get_table_prefix() + """corp_op_state op_state
+                        WHERE corp_num = """ + self.get_db_sql_param() + """ and op_state.state_typ_cd = state.state_typ_cd"""
         cursor = None
         try:
             #print('Read event and filing history to determine date')
-            cursor = self.conn.cursor()
+            cursor = self.get_db_connection().cursor()
             cursor.execute(sql_state, (corp['corp_num'],))
             desc = cursor.description
             column_names = [col[0] for col in desc]
@@ -701,6 +720,7 @@ class BCRegistries:
 
     def get_corp_state_date(self, corp):
         corp_state = corp['corp_state']
+        #print('corp_state', corp_state)
         if corp_state is None:
             return corp['recognition_dts']
         else:
@@ -728,11 +748,11 @@ class BCRegistries:
         sql_state = """SELECT state.corp_num corp_num, state.start_event_id start_event_id, state.end_event_id end_event_id, 
                         state.state_typ_cd state_typ_cd, state.dd_corp_num dd_corp_num, 
                         op_state.op_state_typ_cd op_state_typ_cd, op_state.short_desc short_desc, op_state.full_desc full_desc
-                        FROM bc_registries.corp_state state, bc_registries.corp_op_state op_state
-                        WHERE corp_num = %s and end_event_id is null and op_state.state_typ_cd = state.state_typ_cd"""
+                        FROM """ + self.get_table_prefix() + """corp_state state, """ + self.get_table_prefix() + """corp_op_state op_state
+                        WHERE corp_num = """ + self.get_db_sql_param() + """ and end_event_id is null and op_state.state_typ_cd = state.state_typ_cd"""
         cursor = None
         try:
-            cursor = self.conn.cursor()
+            cursor = self.get_db_connection().cursor()
             cursor.execute(sql_state, (corp_num,))
             desc = cursor.description
             column_names = [col[0] for col in desc]
@@ -754,12 +774,12 @@ class BCRegistries:
         sql_juris = """SELECT corp_num, start_event_id, end_event_id, j.can_jur_typ_cd can_jur_typ_cd,
                                 home_recogn_dt, othr_juris_desc, home_juris_num, home_company_nme,
                                 short_desc, full_desc
-                        FROM bc_registries.jurisdiction j, bc_registries.jurisdiction_type jt
-                        WHERE j.corp_num = %s and j.end_event_id is null
+                        FROM """ + self.get_table_prefix() + """jurisdiction j, """ + self.get_table_prefix() + """jurisdiction_type jt
+                        WHERE j.corp_num = """ + self.get_db_sql_param() + """ and j.end_event_id is null
                           AND j.can_jur_typ_cd = jt.can_jur_typ_cd"""
         cursor = None
         try:
-            cursor = self.conn.cursor()
+            cursor = self.get_db_connection().cursor()
             cursor.execute(sql_juris, (corp_num,))
             desc = cursor.description
             column_names = [col[0] for col in desc]
@@ -779,11 +799,11 @@ class BCRegistries:
 
     def get_corp_type(self, corp_typ_cd):
         sql_type = """SELECT corp_typ_cd, colin_ind, corp_class, short_desc, full_desc
-                        FROM bc_registries.corp_type
-                        WHERE corp_typ_cd = %s"""
+                        FROM """ + self.get_table_prefix() + """corp_type
+                        WHERE corp_typ_cd = """ + self.get_db_sql_param()
         cursor = None
         try:
-            cursor = self.conn.cursor()
+            cursor = self.get_db_connection().cursor()
             cursor.execute(sql_type, (corp_typ_cd,))
             desc = cursor.description
             column_names = [col[0] for col in desc]
@@ -802,11 +822,11 @@ class BCRegistries:
                 cursor.close()
 
     def get_tilma_involveds(self, corp_num):
-        sql_tilma = """SELECT * from bc_registries.tilma_involved
-                        WHERE corp_num = %s and end_event_id is null and involved_ind = 'Y'"""
+        sql_tilma = """SELECT * from """ + self.get_table_prefix() + """tilma_involved
+                        WHERE corp_num = """ + self.get_db_sql_param() + """ and end_event_id is null and involved_ind = 'Y'"""
         cursor = None
         try:
-            cursor = self.conn.cursor()
+            cursor = self.get_db_connection().cursor()
             cursor.execute(sql_tilma, (corp_num,))
             desc = cursor.description
             column_names = [col[0] for col in desc]
@@ -831,15 +851,15 @@ class BCRegistries:
 
     def get_basic_corp_info(self, corp_num, event_id):
         sql_corp = """SELECT corp_num, corp_typ_cd, recognition_dts, last_ar_filed_dt, bn_9, bn_15, admin_email, last_ledger_dt
-                 FROM bc_registries.corporation
-                 WHERE corp_num = %s"""
+                 FROM """ + self.get_table_prefix() + """corporation
+                 WHERE corp_num = """ + self.get_db_sql_param()
 
         cur = None
         try:
             corp = {}
 
             # assume there is just one corp record
-            cur = self.conn.cursor()
+            cur = self.get_db_connection().cursor()
             cur.execute(sql_corp, (corp_num,))
             row = cur.fetchone()
             corp['corp_num'] = row[0]
@@ -883,8 +903,8 @@ class BCRegistries:
         sql_party = """SELECT corp_num, corp_party_id, mailing_addr_id, delivery_addr_id, party_typ_cd, start_event_id, end_event_id, cessation_dt,
                          last_nme, middle_nme, first_nme, business_nme, bus_company_num, email_address, corp_party_seq_num, office_notification_dt,
                          phone, reason_typ_cd
-                  FROM bc_registries.corp_party
-                  WHERE bus_company_num = %s AND party_typ_cd = 'FBO' AND end_event_id is null"""
+                  FROM """ + self.get_table_prefix() + """corp_party
+                  WHERE bus_company_num = """ + self.get_db_sql_param() + """ AND party_typ_cd = 'FBO' AND end_event_id is null"""
 
         cur = None
         try:
@@ -892,7 +912,7 @@ class BCRegistries:
 
             # get parties
             corp['parties'] = []
-            cur = self.conn.cursor()
+            cur = self.get_db_connection().cursor()
             cur.execute(sql_party, (corp_num,))
             row = cur.fetchone()
             while row is not None:
@@ -900,9 +920,9 @@ class BCRegistries:
                 corp_party['corp_num'] = row[0]
                 corp_party['corp_party_id'] = row[1]
                 corp_party['mailing_addr_id'] = row[2]
-                corp_party['mailing_addr'] = self.get_address(row[2])
+                corp_party['mailing_addr'] = self.get_address(corp_num, row[2])
                 corp_party['delivery_addr_id'] = row[3]
-                corp_party['delivery_addr'] = self.get_address(row[3])
+                corp_party['delivery_addr'] = self.get_address(corp_num, row[3])
                 corp_party['party_typ_cd'] = row[4]
                 corp_party['start_event_id'] = row[5]
                 corp_party['start_event'] = self.get_event(row[0], row[5])
