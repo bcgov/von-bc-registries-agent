@@ -42,6 +42,7 @@ class CustomJsonEncoder(json.JSONEncoder):
 class BCRegistries:
     sql_local_cache = False
     cache_miss = []
+    generated_sqls = []
 
     def __init__(self, cache=False):
         self.sql_local_cache = cache
@@ -161,14 +162,56 @@ class BCRegistries:
         # default for now
         return 'text'
 
+    def stringify(self, s_val):
+        if "'" in s_val:
+            s_val = s_val.replace("'", "''")
+        return str(s_val)
+
+    def get_sql_col_value(self, col_value, pg_type):
+        if col_value is None:
+            return 'null'
+        if pg_type == 1042:  # CHAR
+            return "'" + self.stringify(col_value) + "'"  
+        if pg_type == 1043:  # VARCHAR
+            return "'" + self.stringify(col_value) + "'"  
+        if pg_type == 1700:  # NUMBER(38)
+            return str(col_value)
+        if pg_type == 23:    # NUMBER(7)
+            return str(col_value)
+        if pg_type == 1114:  # DATE or DATETIME
+            return "'" + str(col_value) + "'"  
+        # default for now
+        return str(col_value)
+
     # cache data from bc registries database into a local in-mem sqlite table
     # create the table if nencessary, based on the bc registries dictionary
-    def cache_bcreg_data(self, table, desc, rows):
+    def cache_cleanup_data(self, table):
+        delete_sql = 'delete from ' + table
+        cache_cursor = None
+        try:
+            cache_cursor = self.cache.cursor()
+            cache_cursor.execute(delete_sql)
+            cache_cursor.close()
+            cache_cursor = None
+        except (Exception) as error:
+            print(error)
+            raise 
+        finally:
+            if cache_cursor is not None:
+                cache_cursor.close()
+            cache_cursor = None
+
+    # cache data from bc registries database into a local in-mem sqlite table
+    # create the table if nencessary, based on the bc registries dictionary
+    # note: "generate_individual_sql" will generate and print sql statements if True
+    #       to be used to generate sample data for unit testing
+    def cache_bcreg_data(self, table, desc, rows, generate_individual_sql=False):
         create_sql = self.create_table_sql(table, desc)
         col_keys = []
         insert_keys = ''
         insert_placeholders = ''
         inserts = []
+        insert_sqls = []
         for row in rows:
             if len(col_keys) == 0:
                 i = 0
@@ -181,32 +224,48 @@ class BCRegistries:
                         insert_keys = insert_keys + ', '
                         insert_placeholders = insert_placeholders + ', '
             insert_row_vals = []
+            insert_values = ''
+            i = 0
             for key in col_keys:
                 insert_row_vals.append(row[key])
+                if generate_individual_sql:
+                    insert_values = insert_values + self.get_sql_col_value(row[key], desc[i][1])
+                    i = i + 1
+                    if i < len(col_keys):
+                        insert_values = insert_values + ', '
             inserts.append(insert_row_vals)
-        insert_sql = 'insert into ' + table + ' (' + insert_keys + ')' + ' values (' + insert_placeholders + ')'
+            if generate_individual_sql:
+                insert_sqls.append('insert into ' + table + ' (' + insert_keys + ') values (' + insert_values + ')')
+        insert_sql = 'insert into ' + table + ' (' + insert_keys + ') values (' + insert_placeholders + ')'
 
-        #print(create_sql)
-        #print(insert_sql)
-        #print(inserts)
+        if generate_individual_sql:
+            #print(create_sql)
+            self.generated_sqls.append(create_sql)
+            for insert_sql in insert_sqls:
+                #print(insert_sql)
+                self.generated_sqls.append(insert_sql)
+        else:
+            #print(create_sql)
+            #print(insert_sql)
+            #print(inserts)
 
-        cache_cursor = None
-        try:
-            cache_cursor = self.cache.cursor()
-
-            cache_cursor.execute(create_sql)
-            if 0 < len(rows):
-                cache_cursor.executemany(insert_sql, inserts)
-
-            cache_cursor.close()
             cache_cursor = None
-        except (Exception) as error:
-            print(error)
-            raise 
-        finally:
-            if cache_cursor is not None:
+            try:
+                cache_cursor = self.cache.cursor()
+
+                cache_cursor.execute(create_sql)
+                if 0 < len(rows):
+                    cache_cursor.executemany(insert_sql, inserts)
+
                 cache_cursor.close()
-            cache_cursor = None
+                cache_cursor = None
+            except (Exception) as error:
+                print(error)
+                raise 
+            finally:
+                if cache_cursor is not None:
+                    cache_cursor.close()
+                cache_cursor = None
 
     def get_cache_sql(self, sql):
         cursor = None
@@ -220,6 +279,31 @@ class BCRegistries:
             cursor.close()
             cursor = None
             return rows
+        except (Exception) as error:
+            print(error)
+            raise 
+        finally:
+            if cursor is not None:
+                cursor.close()
+            cursor = None
+
+    # run arbitrary sql's (create and insert) to populate in-mem cache
+    # to be used to populate sample data for unit testing
+    # sqls is an array of sql statements
+    def insert_cache_sqls(self, sqls):
+        for sql in sqls:
+            self.insert_cache_sql(sql)
+
+    # run arbitrary sql's (create and insert) to populate in-mem cache
+    # to be used to populate sample data for unit testing
+    # sql is an individual sql statement (string)
+    def insert_cache_sql(self, sql):
+        cursor = None
+        try:
+            cursor = self.cache.cursor()
+            cursor.execute(sql)
+            cursor.close()
+            cursor = None
         except (Exception) as error:
             print(error)
             raise 
@@ -264,29 +348,36 @@ class BCRegistries:
     # load all bc registries data for the specified corps into our in-mem cache
     ###########################################################################
 
-    # load all bc registries data for the specified corps into our in-mem cache
-    def cache_bcreg_corps(self, specific_corps):
-        code_tables =  ['corp_type', 
-                        'corp_op_state', 
-                        'party_type', 
-                        'office_type', 
-                        'event_type', 
-                        'filing_type', 
-                        'corp_name_type', 
-                        'jurisdiction_type',
-                        'xpro_type']
-        corp_tables =  ['corporation', 
-                        'corp_state', 
-                        'tilma_involved', 
-                        'jurisdiction', 
-                        'corp_name']
-        other_tables = ['corp_party', 
-                        'event', 
-                        'filing',
-                        'office',
-                        'address']
+    code_tables =  ['corp_type', 
+                    'corp_op_state', 
+                    'party_type', 
+                    'office_type', 
+                    'event_type', 
+                    'filing_type', 
+                    'corp_name_type', 
+                    'jurisdiction_type',
+                    'xpro_type']
+    corp_tables =  ['corporation', 
+                    'corp_state', 
+                    'tilma_involved', 
+                    'jurisdiction', 
+                    'corp_name']
+    other_tables = ['corp_party', 
+                    'event', 
+                    'filing',
+                    'office',
+                    'address']
 
+    # load all bc registries data for the specified corps into our in-mem cache
+    def cache_bcreg_corps(self, specific_corps, generate_individual_sql=False):
         if self.use_local_cache():
+            self.cache_bcreg_corp_tables(specific_corps, generate_individual_sql)
+            self.cache_bcreg_code_tables(generate_individual_sql)
+
+    # load all bc registries data for the specified corps into our in-mem cache
+    def cache_bcreg_corp_tables(self, specific_corps, generate_individual_sql=False):
+        if self.use_local_cache():
+            self.generated_sqls = []
             # ensure we have a unique list
             specific_corps = list({s_corp for s_corp in specific_corps})
             specific_corps_lists = self.split_list(specific_corps, MAX_WHERE_IN)
@@ -295,9 +386,9 @@ class BCRegistries:
             for corp_nums_list in specific_corps_lists:
                 corp_list = self.id_where_in(corp_nums_list, True)
                 corp_party_where = 'bus_company_num in (' + corp_list + ')'
-                #print(other_tables[0])
-                party_rows = self.get_bcreg_table(other_tables[0], corp_party_where, '', True)
-                print(other_tables[0], len(party_rows))
+                #print(self.other_tables[0])
+                party_rows = self.get_bcreg_table(self.other_tables[0], corp_party_where, '', True, generate_individual_sql)
+                print(self.other_tables[0], len(party_rows))
 
                 # include all corp_num from the parties just returned (dba related companies)
                 for party in party_rows:
@@ -317,9 +408,9 @@ class BCRegistries:
             for corp_nums_list in specific_corps_lists:
                 corp_nums_list = self.id_where_in(corp_nums_list, True)
                 event_where = 'corp_num in (' + corp_nums_list + ')'
-                #print(other_tables[1])
-                event_rows = self.get_bcreg_table(other_tables[1], event_where, '', True)
-                print(other_tables[1], len(event_rows))
+                #print(self.other_tables[1])
+                event_rows = self.get_bcreg_table(self.other_tables[1], event_where, '', True, generate_individual_sql)
+                print(self.other_tables[1], len(event_rows))
 
                 for event in event_rows:
                     event_ids.append(str(event['event_id']))
@@ -331,22 +422,22 @@ class BCRegistries:
             for ids_list in event_ids_lists:
                 event_list = self.id_where_in(ids_list)
                 filing_where = 'event_id in (' + event_list + ')'
-                #print(other_tables[2])
-                rows = self.get_bcreg_table(other_tables[2], filing_where, '', True)
-                print(other_tables[2], len(rows))
+                #print(self.other_tables[2])
+                rows = self.get_bcreg_table(self.other_tables[2], filing_where, '', True, generate_individual_sql)
+                print(self.other_tables[2], len(rows))
 
             for corp_nums_list in specific_corps_lists:
                 corp_nums_list = self.id_where_in(corp_nums_list, True)
                 corp_num_where = 'corp_num in (' + corp_nums_list + ')'
-                for corp_table in corp_tables:
+                for corp_table in self.corp_tables:
                     #print(corp_table)
-                    rows = self.get_bcreg_table(corp_table, corp_num_where, '', True)
+                    rows = self.get_bcreg_table(corp_table, corp_num_where, '', True, generate_individual_sql)
                     print(corp_table, len(rows))
 
                 office_where = 'corp_num in (' + corp_nums_list + ')'
-                #print(other_tables[3])
-                office_rows = self.get_bcreg_table(other_tables[3], office_where, '', True)
-                print(other_tables[3], len(office_rows))
+                #print(self.other_tables[3])
+                office_rows = self.get_bcreg_table(self.other_tables[3], office_where, '', True, generate_individual_sql)
+                print(self.other_tables[3], len(office_rows))
 
                 for office in office_rows:
                     if office['mailing_addr_id'] is not None:
@@ -360,14 +451,27 @@ class BCRegistries:
             for ids_list in addr_ids_lists:
                 addr_list = self.id_where_in(ids_list)
                 address_where = 'addr_id in (' + addr_list + ')'
-                #print(other_tables[4])
-                rows = self.get_bcreg_table(other_tables[4], address_where, '', True)
-                print(other_tables[4], len(rows))
+                #print(self.other_tables[4])
+                rows = self.get_bcreg_table(self.other_tables[4], address_where, '', True, generate_individual_sql)
+                print(self.other_tables[4], len(rows))
 
-            for code_table in code_tables:
+    # load all bc registries data for the specified corps into our in-mem cache
+    def cache_bcreg_code_tables(self, generate_individual_sql=False):
+        if self.use_local_cache():
+            self.generated_sqls = []
+            for code_table in self.code_tables:
                 #print(code_table)
-                rows = self.get_bcreg_table(code_table, '', '', True)
+                rows = self.get_bcreg_table(code_table, '', '', True, generate_individual_sql)
                 print(code_table, len(rows))
+
+    # clear in-mem cache - delete all existing data
+    def cache_cleanup(self):
+        for table in self.corp_tables:
+            self.cache_cleanup_data(table)
+        for table in self.other_tables:
+            self.cache_cleanup_data(table)
+        for table in self.code_tables:
+            self.cache_cleanup_data(table)
 
 
     ###########################################################################
@@ -377,7 +481,7 @@ class BCRegistries:
     # get all records and return in an array of dicts
     # returns a zero-length array if none found
     # optionally takes a WHERE clause and ORDER BY clause (must be valid SQL)
-    def get_bcreg_sql(self, table, sql, cache=False):
+    def get_bcreg_sql(self, table, sql, cache=False, generate_individual_sql=False):
         cursor = None
         try:
             #print(sql)
@@ -390,7 +494,7 @@ class BCRegistries:
             cursor.close()
             cursor = None
             if self.use_local_cache() and cache:
-                self.cache_bcreg_data(table, desc, rows)
+                self.cache_bcreg_data(table, desc, rows, generate_individual_sql)
             return rows
         except (Exception, psycopg2.DatabaseError) as error:
             print(error)
@@ -403,22 +507,22 @@ class BCRegistries:
     # get all records and return in an array of dicts
     # returns a zero-length array if none found
     # optionally takes a WHERE clause and ORDER BY clause (must be valid SQL)
-    def get_bcreg_table(self, table, where="", orderby="", cache=False):
+    def get_bcreg_table(self, table, where="", orderby="", cache=False, generate_individual_sql=False):
         sql = "SELECT * FROM " + BC_REGISTRIES_TABLE_PREFIX + table
         if 0 < len(where):
             sql = sql + " WHERE " + where
         if 0 < len(orderby):
             sql = sql + " ORDER BY " + orderby
-        return self.get_bcreg_sql(table, sql, cache)
+        return self.get_bcreg_sql(table, sql, cache, generate_individual_sql)
 
     # get all records and return in an array of dicts
     # returns a zero-length array if none found
     # optionally takes a WHERE clause and ORDER BY clause (must be valid SQL)
-    def get_bcreg_corp_table(self, table, corp_num, where="", orderby="", cache=False):
+    def get_bcreg_corp_table(self, table, corp_num, where="", orderby="", cache=False, generate_individual_sql=False):
         subwhere = "corp_num = '" + corp_num + "'"
         if 0 < len(where):
             subwhere = subwhere + " AND " + where
-        return self.get_bcreg_table(table, subwhere, orderby, cache)
+        return self.get_bcreg_table(table, subwhere, orderby, cache, generate_individual_sql)
 
 
     ###########################################################################
