@@ -3,8 +3,10 @@ import psycopg2
 import sqlite3
 import datetime
 import json
+import string
 import decimal
 D=decimal.Decimal
+import random
 
 from bcreg.config import config
 
@@ -43,6 +45,7 @@ class BCRegistries:
     sql_local_cache = False
     cache_miss = []
     generated_sqls = []
+    generated_corp_nums = {}
 
     def __init__(self, cache=False):
         self.sql_local_cache = cache
@@ -106,6 +109,44 @@ class BCRegistries:
         print('cache miss!!!', miss)
         self.cache_miss.append(miss)
     
+
+    ###########################################################################
+    # random string methods (for generating test data)
+    ###########################################################################
+
+    def random_alpha_string(self, length, contains_spaces=False):
+        if contains_spaces:
+            chars = string.ascii_uppercase + ' '
+        else:
+            chars = string.ascii_uppercase
+        return ''.join(random.SystemRandom().choice(chars) for _ in range(length))
+
+    def random_numeric_string(self, length):
+        chars = string.digits
+        return ''.join(random.SystemRandom().choice(chars) for _ in range(length))
+
+    def random_an_string(self, length, contains_spaces=False):
+        if contains_spaces:
+            chars = string.ascii_uppercase + string.digits + ' '
+        else:
+            chars = string.ascii_uppercase + string.digits
+        return ''.join(random.SystemRandom().choice(chars) for _ in range(length))
+
+    def add_generated_corp_num(self, corp_num):
+        if corp_num in self.generated_corp_nums:
+            return self.generated_corp_nums[corp_num]
+
+        alpha_prefix = ''
+        for ch in corp_num:
+            if ch.isalpha():
+                alpha_prefix = alpha_prefix + ch
+            else:
+                break
+        new_corp_num = alpha_prefix + self.random_numeric_string(len(corp_num) - len(alpha_prefix))
+        #print(corp_num, ' ===>>> ', new_corp_num)
+        self.generated_corp_nums[corp_num] = new_corp_num
+        return new_corp_num
+
 
     ###########################################################################
     # methods to build and populate in-memory cache of bc registries data
@@ -223,13 +264,85 @@ class BCRegistries:
                     if i < len(row):
                         insert_keys = insert_keys + ', '
                         insert_placeholders = insert_placeholders + ', '
+
+            if generate_individual_sql:
+                gen_row = dict()
+                gen_row.update(row)
+                # depending on the table, generate some sample data and/or replace certain values
+                # for the corp_party table, generate random corp nums (this table should be loaded first)
+                if table == "corp_party":
+                    gen_row['corp_num'] = self.add_generated_corp_num(row['corp_num'])
+                    gen_row['bus_company_num'] = self.add_generated_corp_num(row['bus_company_num'])
+                    gen_row['business_nme'] = row['bus_company_num'] + self.random_alpha_string(20, True)
+                else:
+                    # for any table, replace corp_num with the corresponding random value
+                    if 'corp_num' in row:
+                        gen_row['corp_num'] = self.add_generated_corp_num(row['corp_num'])
+
+                # for corporation, corp_name and address tables, replace certain values
+                if table == "corporation":
+                    if 'bn_9' in row and row['bn_9'] is not None:
+                        gen_row['bn_9'] = self.random_numeric_string(9)
+                    if 'bn_15' in row and row['bn_15'] is not None:
+                        gen_row['bn_15'] = self.random_numeric_string(15)
+                    if 'corp_password' in row and row['corp_password'] is not None:
+                        gen_row['corp_password'] = self.random_alpha_string(8)
+                    if 'prompt_question' in row and row['prompt_question'] is not None:
+                        gen_row['prompt_question'] = self.random_alpha_string(8)
+                    if 'admin_email' in row and row['admin_email'] is not None:
+                        gen_row['admin_email'] = self.random_alpha_string(12) + '@' + self.random_alpha_string(8) + '.com'
+                if table == "corp_name":
+                    if 'corp_nme' in row and row['corp_nme'] is not None:
+                        gen_row['corp_nme'] = self.random_alpha_string(25, True)
+                    if 'srch_nme' in row and row['srch_nme'] is not None:
+                        gen_row['srch_nme'] = self.random_alpha_string(20)
+                if table == "address":
+                    if 'postal_cd' in row and row['postal_cd'] is not None:
+                        gen_row['postal_cd'] = self.random_an_string(6)
+                    if 'addr_line_1' in row and row['addr_line_1'] is not None:
+                        gen_row['addr_line_1'] = self.random_alpha_string(25, True)
+                    if 'addr_line_2' in row and row['addr_line_2'] is not None:
+                        gen_row['addr_line_2'] = self.random_alpha_string(25, True)
+                    if 'address_desc' in row and row['address_desc'] is not None:
+                        gen_row['address_desc'] = self.random_alpha_string(40, True)
+                    if 'address_desc_short' in row and row['address_desc_short'] is not None:
+                        gen_row['address_desc_short'] = self.random_alpha_string(20, True)
+                    if 'delivery_instructions' in row and row['delivery_instructions'] is not None:
+                        gen_row['delivery_instructions'] = self.random_alpha_string(40, True)
+                    if 'unit_no' in row and row['unit_no'] is not None:
+                        gen_row['unit_no'] = self.random_numeric_string(3)
+                    if 'unit_type' in row and row['unit_type'] is not None:
+                        gen_row['unit_type'] = self.random_alpha_string(3)
+                    if 'civic_no' in row and row['civic_no'] is not None:
+                        gen_row['civic_no'] = self.random_numeric_string(3)
+                    if 'civic_no_suffix' in row and row['civic_no_suffix'] is not None:
+                        gen_row['civic_no_suffix'] = self.random_alpha_string(3)
+                    if 'street_name' in row and row['street_name'] is not None:
+                        gen_row['street_name'] = self.random_alpha_string(15)
+                    if 'street_type' in row and row['street_type'] is not None:
+                        gen_row['street_type'] = 'ST'
+                    if 'street_direction' in row and row['street_direction'] is not None:
+                        gen_row['street_direction'] = 'N'
+                    if 'lock_box_no' in row and row['lock_box_no'] is not None:
+                        gen_row['lock_box_no'] = self.random_numeric_string(3)
+                    if 'installation_type' in row and row['installation_type'] is not None:
+                        gen_row['installation_type'] = self.random_alpha_string(3)
+                    if 'installation_name' in row and row['installation_name'] is not None:
+                        gen_row['installation_name'] = self.random_alpha_string(10)
+                    if 'installation_qualifier' in row and row['installation_qualifier'] is not None:
+                        gen_row['installation_qualifier'] = self.random_alpha_string(3)
+                    if 'route_service_type' in row and row['route_service_type'] is not None:
+                        gen_row['route_service_type'] = self.random_alpha_string(3)
+                    if 'route_service_no' in row and row['route_service_no'] is not None:
+                        gen_row['route_service_no'] = self.random_numeric_string(3)
+
             insert_row_vals = []
             insert_values = ''
             i = 0
             for key in col_keys:
                 insert_row_vals.append(row[key])
                 if generate_individual_sql:
-                    insert_values = insert_values + self.get_sql_col_value(row[key], desc[i][1])
+                    insert_values = insert_values + self.get_sql_col_value(gen_row[key], desc[i][1])
                     i = i + 1
                     if i < len(col_keys):
                         insert_values = insert_values + ', '
@@ -378,8 +491,10 @@ class BCRegistries:
     def cache_bcreg_corp_tables(self, specific_corps, generate_individual_sql=False):
         if self.use_local_cache():
             self.generated_sqls = []
+            self.generated_corp_nums = {}
             # ensure we have a unique list
             specific_corps = list({s_corp for s_corp in specific_corps})
+            #print('specific_corps (1) = ', specific_corps)
             specific_corps_lists = self.split_list(specific_corps, MAX_WHERE_IN)
 
             addr_id_list = []
@@ -388,7 +503,7 @@ class BCRegistries:
                 corp_party_where = 'bus_company_num in (' + corp_list + ')'
                 #print(self.other_tables[0])
                 party_rows = self.get_bcreg_table(self.other_tables[0], corp_party_where, '', True, generate_individual_sql)
-                print(self.other_tables[0], len(party_rows))
+                #print(self.other_tables[0], len(party_rows))
 
                 # include all corp_num from the parties just returned (dba related companies)
                 for party in party_rows:
@@ -402,6 +517,7 @@ class BCRegistries:
 
             # ensure we have a unique list
             specific_corps = list({s_corp for s_corp in specific_corps})
+            #print('specific_corps (2) = ', specific_corps)
             specific_corps_lists = self.split_list(specific_corps, MAX_WHERE_IN)
 
             event_ids = []
@@ -410,7 +526,7 @@ class BCRegistries:
                 event_where = 'corp_num in (' + corp_nums_list + ')'
                 #print(self.other_tables[1])
                 event_rows = self.get_bcreg_table(self.other_tables[1], event_where, '', True, generate_individual_sql)
-                print(self.other_tables[1], len(event_rows))
+                #print(self.other_tables[1], len(event_rows))
 
                 for event in event_rows:
                     event_ids.append(str(event['event_id']))
@@ -424,7 +540,7 @@ class BCRegistries:
                 filing_where = 'event_id in (' + event_list + ')'
                 #print(self.other_tables[2])
                 rows = self.get_bcreg_table(self.other_tables[2], filing_where, '', True, generate_individual_sql)
-                print(self.other_tables[2], len(rows))
+                #print(self.other_tables[2], len(rows))
 
             for corp_nums_list in specific_corps_lists:
                 corp_nums_list = self.id_where_in(corp_nums_list, True)
@@ -432,12 +548,12 @@ class BCRegistries:
                 for corp_table in self.corp_tables:
                     #print(corp_table)
                     rows = self.get_bcreg_table(corp_table, corp_num_where, '', True, generate_individual_sql)
-                    print(corp_table, len(rows))
+                    #print(corp_table, len(rows))
 
                 office_where = 'corp_num in (' + corp_nums_list + ')'
                 #print(self.other_tables[3])
                 office_rows = self.get_bcreg_table(self.other_tables[3], office_where, '', True, generate_individual_sql)
-                print(self.other_tables[3], len(office_rows))
+                #print(self.other_tables[3], len(office_rows))
 
                 for office in office_rows:
                     if office['mailing_addr_id'] is not None:
@@ -453,16 +569,17 @@ class BCRegistries:
                 address_where = 'addr_id in (' + addr_list + ')'
                 #print(self.other_tables[4])
                 rows = self.get_bcreg_table(self.other_tables[4], address_where, '', True, generate_individual_sql)
-                print(self.other_tables[4], len(rows))
+                #print(self.other_tables[4], len(rows))
 
     # load all bc registries data for the specified corps into our in-mem cache
     def cache_bcreg_code_tables(self, generate_individual_sql=False):
         if self.use_local_cache():
             self.generated_sqls = []
+            self.generated_corp_nums = {}
             for code_table in self.code_tables:
                 #print(code_table)
                 rows = self.get_bcreg_table(code_table, '', '', True, generate_individual_sql)
-                print(code_table, len(rows))
+                #print(code_table, len(rows))
 
     # clear in-mem cache - delete all existing data
     def cache_cleanup(self):
