@@ -9,47 +9,24 @@ The VON Event Processor connects enterprise data sources to a Sovrin edge agent,
 
 The Event processor consists of:
 
-* A set of input interfaces - a REST listener, filesystem monitor, database monitor (and potentially others via a plug-in architecture)
-* A batch scheduler, to automate the processing of the above interfaces
-* An event-mapper, that maps and generates output credentials based on input events
+* A framework for running batch processes, and recording and displaying batch status (based on the Mara framework - https://github.com/mara/mara-example-project)
+* A batch scheduler, to automate the processing of the above interfaces (based on go-crond - https://github.com/webdevops/go-crond)
+* An optional JSON mapper, to support a configuration-based approach for generating output credentials (based on JSONbender - https://github.com/Onyo/jsonbender)
 * An output processor, that sends generated credentials to a configured REST endpoint
 * A local database, for tracking input events processed and output credentials generated
-* An admin interface, for monitoring the overall processing status
+* A local in-memory cache, to improve performance loading and processing BC Registries corporations
+* An admin interface (based on Mara), for monitoring the overall processing status
 
-The VON Event Processor is built based on the Django framework, and incorporates the following modules:
-
-* Django Background Tasks (http://django-background-tasks.readthedocs.io/en/latest/) - task scheduling for the input interfaces
-* Pandas (http://pandas.pydata.org/pandas-docs/stable/) - supports conversion between input Event and output Credential data formats (note under review, other libraries are also being considered, such as https://github.com/fabianvf/schema-transformer)
-
-## BC Registries Event Monitor
+## BC Registries Data Model
 
 VON Event Processor will be implemented as an event publishing tool for BC Registries, to publish credentials relating to filing events for BC Corporations.
 
-For the initial implementation, the following filing events will be published:
 
-| Filing_Typ_Cd | Filing_Typ_Class | Short_Desc | Count |
-| ------------- | ---------------- | ---------- | ----: |
-| FRREG | FRMFIL | Stmt of Registration of Partnership or Sole Prop | 539,832 |
-| ICORP | FILING | Incorporate a Company | 163,726 |
-| NOCAD | FILING | Change Address Information | 164,530 |
+![BC Registries Corporation Data Model](https://github.com/ianco/von-bc-registries-agent/raw/master/doc/BCReg-Data-Model.png "BC Registries Corporation Data Model")
 
-Note that there are currently over 11 million Events in the BC Registries database, including over 8 million Filings.  The above represents about 10% of BC Registries Events.  The remainder of the Events will be published in subsequent releases of the Event Processor.
 
-For each event, the related company information will be queried from the BC Registries database and sent to the Event Processor for processing.  The following set of BC Registries tables will be included:
+![BC Registries DBA Data Model](https://github.com/ianco/von-bc-registries-agent/raw/master/doc/BCReg-DBA-Data-Model.png "BC Registries DBA Data Model")
 
-| BC Reg. Table | Description |
-| ------------- | ----------- |
-| CORPORATION | Main corporation table (key is CORP_NUM) |
-| BUSINESS_DESCRIPTION | Description of business |
-| CORP_FLAG | Various attributes of the corporation |
-| CORP_INVOLVED | Jurisdiction |
-| CORP_NAME | Company name or doing business as |
-| CORP_PARTY, ADDRESS | Officers and link to address |
-| CORP_STATE | Company status |
-| EMAIL_ADDRESS | Email contact |
-| JURISDICTION | Jurisdiction |
-| OFFICE, ADDRESS | Company address |
-| TILMA_INVOLVED | Related to NUANS name? |
 
 ## Event Processor Data Model
 
