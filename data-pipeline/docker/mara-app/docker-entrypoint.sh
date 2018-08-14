@@ -41,7 +41,7 @@ function generate_passwd_file() {
 }
 
 function start_cron_jobs() {
-  echo "Starting go-crond ..."
+  echo "Starting go-crond as a background task ..."
   CRON_CMD="go-crond -v --allow-unprivileged --include=${CRON_FOLDER}"
   exec ${CRON_CMD} &
 }
