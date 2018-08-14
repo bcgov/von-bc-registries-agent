@@ -21,12 +21,51 @@ The Event processor consists of:
 
 VON Event Processor will be implemented as an event publishing tool for BC Registries, to publish credentials relating to filing events for BC Corporations.
 
+The following BC Registries tables provide information for Incorporation and Address credentials:
 
 ![BC Registries Corporation Data Model](https://github.com/ianco/von-bc-registries-agent/raw/master/doc/BCReg-Data-Model.png "BC Registries Corporation Data Model")
 
+The following BC Registries tables are used to determine DBA relationships:
 
 ![BC Registries DBA Data Model](https://github.com/ianco/von-bc-registries-agent/raw/master/doc/BCReg-DBA-Data-Model.png "BC Registries DBA Data Model")
 
+
+## BC Registries Initial Data Load
+
+Determine the corporations to process (any corporation with activity since the last run):
+
+```
+:prev_event_id = the previously processed max event (will be zero for the initial load)
+:max_event_id = SELECT max(event_id) FROM event;
+SELECT distinct(corp_num) from event
+  where event_id > :prev_event_id and event_id <= :max_event_id
+  and corp_num in
+  (SELECT corp.corp_num
+    from corporation corp, corp_state state, corp_op_state op_state
+    where corp.corp_num = state.corp_num
+      and state.end_event_id is null
+      and state.state_typ_cd = op_state.state_typ_cd
+      and op_state.op_state_typ_cd = 'ACT'
+      and corp.corp_typ_cd in ('A','LLC','BC','C','CUL','ULC'))
+  order by corp_num;
+```
+
+This provides a list of Corporations to be processed.
+
+Now determine the most recent event for each active corporation:
+
+```
+for each :corp_num (from previous query):
+    SELECT max(event_id) from event
+    where corp_num = :corp_num
+      and event_id > :prev_event_id and event_id <= :max_event_id
+```
+
+Note that for the initial data load the event id is not used (credentials are generated based on the corporations's current status).  However for future updates the event id must be saved (in order to differentiate future updates based on event id).
+
+The Incorporation, Address and DBA Credentials are generated per the above data model, based on the corporation's current status.
+
+## BC Registries Event Monitoring
 
 ## Event Processor Data Model
 
