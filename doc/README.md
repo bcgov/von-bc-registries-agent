@@ -5,7 +5,7 @@
 
 The VON Event Processor connects enterprise data sources to a Sovrin edge agent, monitoring the enterprise data source(s) for changes to enterprise data, and generating credential requests that are sent to the network, using a von-x connector.
 
-![VON Event Processor Proposed Design](./Event-Processor.png "VON Event Processor Proposed Design")
+![VON Event Processor Design ](https://github.com/ianco/von-bc-registries-agent/raw/master/doc/Event-Processor.png "VON Event Processor Design")
 
 The Event processor consists of:
 
@@ -62,7 +62,7 @@ The following data model will be implemented within the Event Processor to suppo
 
 The Event Processor data model is illustrated as follows:
 
-![VON Event Processor Data Model](./Event-Processor-Data-Model.png "VON Event Processor Data Model")
+![VON Event Processor Data Model](https://github.com/ianco/von-bc-registries-agent/raw/master/doc/Event-Processor-Data-Model.png "VON Event Processor Data Model")
 
 Table descriptions are as follows:
 
