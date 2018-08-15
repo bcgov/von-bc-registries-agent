@@ -112,7 +112,11 @@ async def process_credential_queue(http_client):
                 else:
                     #print("log error to database")
                     cur2 = conn.cursor()
-                    cur2.execute(sql3, (datetime.datetime.now(), result['result'], credential['RECORD_ID'],))
+                    if 255 < len(result['result']):
+                        res = result['result'][:250] + '...'
+                    else:
+                        res = result['result']
+                    cur2.execute(sql3, (datetime.datetime.now(), res, credential['RECORD_ID'],))
                     cur2.close()
                     cur2 = None
 

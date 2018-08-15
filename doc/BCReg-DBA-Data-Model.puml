@@ -1,0 +1,85 @@
+@startuml
+
+object CORP_TYPE {
+	CORP_TYP_CD
+}
+
+object CORP_OP_STATE {
+	STATE_TYP_CD
+}
+
+object CORP_STATE {
+	CORP_NUM
+	STATE_TYP_CD
+}
+
+object CORPORATION {
+	CORP_NUM
+	CORP_TYP_CD
+}
+
+object DBA_CORPORATION {
+	CORP_NUM
+}
+
+object CORP_PARTY {
+	CORP_NUM
+	PARTY_TYP_CD
+	BUS_COMPANY_NUM
+	BUSINESS_NME
+	MAILING_ADDR_ID
+	DELIVERY_ADDR_ID
+}
+
+object PARTY_TYPE {
+	PARTY_TYP_CD
+}
+
+object OFFICE_TYPE {
+	OFFICE_TYP_CD
+}
+
+object OFFICE {
+	CORP_NUM
+	OFFICE_TYP_CD
+	MAILING_ADDR_ID
+	DELIVERY_ADDR_ID
+}
+
+object ADDRESS {
+	ADDR_ID
+}
+
+object EVENT {
+	EVENT_ID
+}
+
+object FILING {
+	FILING_ID
+	EVENT_ID
+}
+
+CORP_TYPE "1" -down- "0..*" CORPORATION
+CORP_STATE "1..*" -down- "1" CORPORATION
+CORP_OP_STATE "1" -down- "0..*" CORP_STATE
+
+CORPORATION "1" -right- "0..*" CORP_PARTY : BUS_COMPANY_NUM
+note on link : where PARTY_TYP_CD = 'FBO'
+DBA_CORPORATION "1" -right- "0..*" CORP_PARTY : CORP_NUM
+CORPORATION -[hidden]down- DBA_CORPORATION
+
+PARTY_TYPE "1" -- "0..*" CORP_PARTY
+
+
+OFFICE_TYPE "1" -right- "0..*" OFFICE
+note on link : office_typ_cd in ('RG','HD','FO')
+
+DBA_CORPORATION "1" -down- "1..*" OFFICE : CORP_NUM
+
+OFFICE "1" -right- "1..*" ADDRESS : DELIVERY_ADDR_ID
+OFFICE "1" -right- "0..*" ADDRESS : MAILING_ADDR_ID
+
+EVENT "1..*" -right- "1" CORPORATION
+EVENT "1" -down- "0..1" FILING
+
+@enduml

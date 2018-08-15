@@ -28,7 +28,7 @@ class DateTimeEncoder(json.JSONEncoder):
 
 
 # interface to Event Processor database
-class EventProcessor:
+class EventProcessorBaseline:
     def __init__(self):
         try:
             params = config(section='event_processor')
@@ -409,7 +409,7 @@ class EventProcessor:
         return corp_creds
 
     # process corps that have been queued - update data from bc_registries
-    def process_corp_event_queue_internal(self, load_regs=True, generate_creds=False, use_cache=False):
+    def process_corp_event_queue_internal(self, load_regs=True, generate_creds=False):
         sql1 = """SELECT RECORD_ID, SYSTEM_TYPE_CD, PREV_EVENT_ID, LAST_EVENT_ID, CORP_NUM, ENTRY_DATE
                  FROM EVENT_BY_CORP_FILING
                  WHERE PROCESS_DATE is null"""
@@ -432,7 +432,6 @@ class EventProcessor:
         cur = None
         try:
             corps = []
-            specific_corps = []
             if load_regs:
                 # we are loading data from BC Registries based on the corp event queue
                 cur = self.conn.cursor()
@@ -441,7 +440,6 @@ class EventProcessor:
                 while row is not None:
                     corps.append({'RECORD_ID':row[0], 'SYSTEM_TYPE_CD':row[1], 'PREV_EVENT_ID':row[2], 'LAST_EVENT_ID':row[3], 
                                     'CORP_NUM':row[4], 'ENTRY_DATE':row[5]})
-                    specific_corps.append(row[4])
                     row = cur.fetchone()
                 cur.close()
                 cur = None
@@ -454,14 +452,11 @@ class EventProcessor:
                     # print(row)
                     corps.append({'RECORD_ID':row[0], 'SYSTEM_TYPE_CD':row[1], 'PREV_EVENT_ID':row[2], 'LAST_EVENT_ID':row[3], 
                                 'CORP_NUM':row[4], 'CORP_JSON':row[5], 'ENTRY_DATE':row[6]})
-                    specific_corps.append(row[4])
                     row = cur.fetchone()
                 cur.close()
                 cur = None
 
-            with BCRegistries(use_cache) as bc_registries:
-                if use_cache:
-                    bc_registries.cache_bcreg_corps(specific_corps)
+            with BCRegistries() as bc_registries:
                 for i,corp in enumerate(corps): 
                     print('>>> Processing {} of {} corporations.'.format(i+1, len(corps)))
                     if load_regs:
@@ -521,16 +516,16 @@ class EventProcessor:
                 print('Cursor closed.')
 
     # process corps that have been queued - update data from bc_registries
-    def process_corp_event_queue(self, use_cache=False):
-        self.process_corp_event_queue_internal(True, False, use_cache)
+    def process_corp_event_queue(self):
+        self.process_corp_event_queue_internal(True, False)
 
     # generate creds based on pre-processed data (no connect to bc reg)
     def process_corp_generate_creds(self):
         self.process_corp_event_queue_internal(False, True)
 
     # process corps that have been queued - update data from bc_registries - and generate credentials
-    def process_corp_event_queue_and_generate_creds(self, use_cache=False):
-        self.process_corp_event_queue_internal(True, True, use_cache)
+    def process_corp_event_queue_and_generate_creds(self):
+        self.process_corp_event_queue_internal(True, True)
 
     # insert a transform into the transform table
     def insert_credential_transform(self, system_type, credential_typ_cd, mapping_transform, schema_name, schema_version):

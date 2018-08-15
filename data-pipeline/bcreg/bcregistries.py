@@ -1,12 +1,27 @@
 #!/usr/bin/python
 import psycopg2
+import sqlite3
 import datetime
 import json
+import string
 import decimal
+D=decimal.Decimal
+import random
+
 from bcreg.config import config
 
 system_type = 'BC_REG'
 
+BC_REGISTRIES_TABLE_PREFIX = 'bc_registries.'
+INMEM_CACHE_TABLE_PREFIX   = ''
+MAX_WHERE_IN = 500
+
+
+def adapt_decimal(d):
+    return str(d)
+
+def convert_decimal(s):
+    return D(s)
 
 # custom encoder to convert wierd data types to strings
 class CustomJsonEncoder(json.JSONEncoder):
@@ -27,18 +42,34 @@ class CustomJsonEncoder(json.JSONEncoder):
 # interface to BC Registries database
 # data is returned as dictionaries, using the sql column name as identifier
 class BCRegistries:
-    def __init__(self):
+    sql_local_cache = False
+    cache_miss = []
+    generated_sqls = []
+    generated_corp_nums = {}
+
+    def __init__(self, cache=False):
+        self.sql_local_cache = cache
         try:
             params = config(section='bc_registries')
             self.conn = psycopg2.connect(**params)
+
+            # Register the adapter
+            sqlite3.register_adapter(D, adapt_decimal)
+            # Register the converter
+            sqlite3.register_converter("decimal", convert_decimal)
+            # connect to in-memory database
+            self.cache = sqlite3.connect(':memory:', detect_types=sqlite3.PARSE_DECLTYPES|sqlite3.PARSE_COLNAMES)
         except (Exception) as error:
             print(error)
             self.conn = None
+            self.cache = None
             raise
 
     def __del__(self):
         if self.conn:
             self.conn.close()
+        if self.cache:
+            self.cache.close()
 
     def __enter__(self):
         # todo
@@ -48,14 +79,580 @@ class BCRegistries:
         # todo
         pass
 
+
+    ###########################################################################
+    # database cache configuration methods
+    ###########################################################################
+    def use_local_cache(self):
+        return self.sql_local_cache
+
+    def get_db_connection(self, force_query_remote=False):
+        if self.use_local_cache() and (not force_query_remote):
+            return self.cache
+        else:
+            return self.conn
+
+    def get_db_sql_param(self, force_query_remote=False):
+        if self.use_local_cache() and (not force_query_remote):
+            return '?'
+        else:
+            return '%s'
     
+    def get_table_prefix(self, force_query_remote=False):
+        if self.use_local_cache() and (not force_query_remote):
+            return INMEM_CACHE_TABLE_PREFIX
+        else:
+            return BC_REGISTRIES_TABLE_PREFIX
+
+    def add_cache_miss(self, table, corp_num, row_id, row):
+        miss = {'table':table, 'corp_num':corp_num, 'row_id':row_id, 'row':row}
+        print('cache miss!!!', miss)
+        self.cache_miss.append(miss)
+    
+
+    ###########################################################################
+    # random string methods (for generating test data)
+    ###########################################################################
+
+    def random_alpha_string(self, length, contains_spaces=False):
+        if contains_spaces:
+            chars = string.ascii_uppercase + ' '
+        else:
+            chars = string.ascii_uppercase
+        return ''.join(random.SystemRandom().choice(chars) for _ in range(length))
+
+    def random_numeric_string(self, length):
+        chars = string.digits
+        return ''.join(random.SystemRandom().choice(chars) for _ in range(length))
+
+    def random_an_string(self, length, contains_spaces=False):
+        if contains_spaces:
+            chars = string.ascii_uppercase + string.digits + ' '
+        else:
+            chars = string.ascii_uppercase + string.digits
+        return ''.join(random.SystemRandom().choice(chars) for _ in range(length))
+
+    def add_generated_corp_num(self, corp_num):
+        if corp_num in self.generated_corp_nums:
+            return self.generated_corp_nums[corp_num]
+
+        alpha_prefix = ''
+        for ch in corp_num:
+            if ch.isalpha():
+                alpha_prefix = alpha_prefix + ch
+            else:
+                break
+        new_corp_num = alpha_prefix + self.random_numeric_string(len(corp_num) - len(alpha_prefix))
+        #print(corp_num, ' ===>>> ', new_corp_num)
+        self.generated_corp_nums[corp_num] = new_corp_num
+        return new_corp_num
+
+
+    ###########################################################################
+    # methods to build and populate in-memory cache of bc registries data
+    ###########################################################################
+
+    # return the table structure of a bcreg table
+    def get_bcreg_table_struct(self, table, where=""):
+        sql = "SELECT * from " + BC_REGISTRIES_TABLE_PREFIX + table
+        if 0 < len(where):
+            sql = sql + " WHERE " + where
+        cursor = None
+        try:
+            cursor = self.conn.cursor()
+            cursor.execute(sql)
+            desc = cursor.description
+            cursor.close()
+            cursor = None
+            return desc
+        except (Exception, psycopg2.DatabaseError) as error:
+            print(error)
+            raise 
+        finally:
+            if cursor is not None:
+                cursor.close()
+            cursor = None
+
+    # return a sql to create an in-mem sqlite table
+    def create_table_sql(self, table, table_desc):
+        table_sql = 'create table if not exists ' + table + ' ('
+        i = 0
+        for col in table_desc:
+            col_name = col[0]
+            col_type = self.get_sql_col_type(col[1])
+            col_len = col[3]
+            table_sql = table_sql + col_name + ' ' + col_type 
+            i = i + 1
+            if i < len(table_desc):
+                table_sql = table_sql + ', '
+            else:
+                table_sql = table_sql + ')'
+        return table_sql
+
+    def get_sql_col_type(self, pg_type):
+        if pg_type == 1042:  # CHAR
+            return 'text'  
+        if pg_type == 1043:  # VARCHAR
+            return 'text'
+        if pg_type == 1700:  # NUMBER(38)
+            return 'numeric'
+        if pg_type == 23:    # NUMBER(7)
+            return 'integer'
+        if pg_type == 1114:  # DATE or DATETIME
+            return 'timestamp'
+        # default for now
+        return 'text'
+
+    def stringify(self, s_val):
+        if "'" in s_val:
+            s_val = s_val.replace("'", "''")
+        return str(s_val)
+
+    def get_sql_col_value(self, col_value, pg_type):
+        if col_value is None:
+            return 'null'
+        if pg_type == 1042:  # CHAR
+            return "'" + self.stringify(col_value) + "'"  
+        if pg_type == 1043:  # VARCHAR
+            return "'" + self.stringify(col_value) + "'"  
+        if pg_type == 1700:  # NUMBER(38)
+            return str(col_value)
+        if pg_type == 23:    # NUMBER(7)
+            return str(col_value)
+        if pg_type == 1114:  # DATE or DATETIME
+            return "'" + str(col_value) + "'"  
+        # default for now
+        return str(col_value)
+
+    # cache data from bc registries database into a local in-mem sqlite table
+    # create the table if nencessary, based on the bc registries dictionary
+    def cache_cleanup_data(self, table):
+        delete_sql = 'delete from ' + table
+        cache_cursor = None
+        try:
+            cache_cursor = self.cache.cursor()
+            cache_cursor.execute(delete_sql)
+            cache_cursor.close()
+            cache_cursor = None
+        except (Exception) as error:
+            print(error)
+            raise 
+        finally:
+            if cache_cursor is not None:
+                cache_cursor.close()
+            cache_cursor = None
+
+    # cache data from bc registries database into a local in-mem sqlite table
+    # create the table if nencessary, based on the bc registries dictionary
+    # note: "generate_individual_sql" will generate and print sql statements if True
+    #       to be used to generate sample data for unit testing
+    def cache_bcreg_data(self, table, desc, rows, generate_individual_sql=False):
+        create_sql = self.create_table_sql(table, desc)
+        col_keys = []
+        insert_keys = ''
+        insert_placeholders = ''
+        inserts = []
+        insert_sqls = []
+        for row in rows:
+            if len(col_keys) == 0:
+                i = 0
+                for key in row:
+                    col_keys.append(key)
+                    insert_keys = insert_keys + key
+                    insert_placeholders = insert_placeholders + '?'
+                    i = i + 1
+                    if i < len(row):
+                        insert_keys = insert_keys + ', '
+                        insert_placeholders = insert_placeholders + ', '
+
+            if generate_individual_sql:
+                gen_row = dict()
+                gen_row.update(row)
+                # depending on the table, generate some sample data and/or replace certain values
+                # for the corp_party table, generate random corp nums (this table should be loaded first)
+                if table == "corp_party":
+                    gen_row['corp_num'] = self.add_generated_corp_num(row['corp_num'])
+                    gen_row['bus_company_num'] = self.add_generated_corp_num(row['bus_company_num'])
+                    gen_row['business_nme'] = row['bus_company_num'] + self.random_alpha_string(20, True)
+                else:
+                    # for any table, replace corp_num with the corresponding random value
+                    if 'corp_num' in row:
+                        gen_row['corp_num'] = self.add_generated_corp_num(row['corp_num'])
+
+                # for corporation, corp_name and address tables, replace certain values
+                if table == "corporation":
+                    if 'bn_9' in row and row['bn_9'] is not None:
+                        gen_row['bn_9'] = self.random_numeric_string(9)
+                    if 'bn_15' in row and row['bn_15'] is not None:
+                        gen_row['bn_15'] = self.random_numeric_string(15)
+                    if 'corp_password' in row and row['corp_password'] is not None:
+                        gen_row['corp_password'] = self.random_alpha_string(8)
+                    if 'prompt_question' in row and row['prompt_question'] is not None:
+                        gen_row['prompt_question'] = self.random_alpha_string(8)
+                    if 'admin_email' in row and row['admin_email'] is not None:
+                        gen_row['admin_email'] = self.random_alpha_string(12) + '@' + self.random_alpha_string(8) + '.com'
+                if table == "corp_name":
+                    if 'corp_nme' in row and row['corp_nme'] is not None:
+                        gen_row['corp_nme'] = self.random_alpha_string(25, True)
+                    if 'srch_nme' in row and row['srch_nme'] is not None:
+                        gen_row['srch_nme'] = self.random_alpha_string(20)
+                if table == "address":
+                    if 'postal_cd' in row and row['postal_cd'] is not None:
+                        gen_row['postal_cd'] = self.random_an_string(6)
+                    if 'addr_line_1' in row and row['addr_line_1'] is not None:
+                        gen_row['addr_line_1'] = self.random_alpha_string(25, True)
+                    if 'addr_line_2' in row and row['addr_line_2'] is not None:
+                        gen_row['addr_line_2'] = self.random_alpha_string(25, True)
+                    if 'address_desc' in row and row['address_desc'] is not None:
+                        gen_row['address_desc'] = self.random_alpha_string(40, True)
+                    if 'address_desc_short' in row and row['address_desc_short'] is not None:
+                        gen_row['address_desc_short'] = self.random_alpha_string(20, True)
+                    if 'delivery_instructions' in row and row['delivery_instructions'] is not None:
+                        gen_row['delivery_instructions'] = self.random_alpha_string(40, True)
+                    if 'unit_no' in row and row['unit_no'] is not None:
+                        gen_row['unit_no'] = self.random_numeric_string(3)
+                    if 'unit_type' in row and row['unit_type'] is not None:
+                        gen_row['unit_type'] = self.random_alpha_string(3)
+                    if 'civic_no' in row and row['civic_no'] is not None:
+                        gen_row['civic_no'] = self.random_numeric_string(3)
+                    if 'civic_no_suffix' in row and row['civic_no_suffix'] is not None:
+                        gen_row['civic_no_suffix'] = self.random_alpha_string(3)
+                    if 'street_name' in row and row['street_name'] is not None:
+                        gen_row['street_name'] = self.random_alpha_string(15)
+                    if 'street_type' in row and row['street_type'] is not None:
+                        gen_row['street_type'] = 'ST'
+                    if 'street_direction' in row and row['street_direction'] is not None:
+                        gen_row['street_direction'] = 'N'
+                    if 'lock_box_no' in row and row['lock_box_no'] is not None:
+                        gen_row['lock_box_no'] = self.random_numeric_string(3)
+                    if 'installation_type' in row and row['installation_type'] is not None:
+                        gen_row['installation_type'] = self.random_alpha_string(3)
+                    if 'installation_name' in row and row['installation_name'] is not None:
+                        gen_row['installation_name'] = self.random_alpha_string(10)
+                    if 'installation_qualifier' in row and row['installation_qualifier'] is not None:
+                        gen_row['installation_qualifier'] = self.random_alpha_string(3)
+                    if 'route_service_type' in row and row['route_service_type'] is not None:
+                        gen_row['route_service_type'] = self.random_alpha_string(3)
+                    if 'route_service_no' in row and row['route_service_no'] is not None:
+                        gen_row['route_service_no'] = self.random_numeric_string(3)
+
+            insert_row_vals = []
+            insert_values = ''
+            i = 0
+            for key in col_keys:
+                insert_row_vals.append(row[key])
+                if generate_individual_sql:
+                    insert_values = insert_values + self.get_sql_col_value(gen_row[key], desc[i][1])
+                    i = i + 1
+                    if i < len(col_keys):
+                        insert_values = insert_values + ', '
+            inserts.append(insert_row_vals)
+            if generate_individual_sql:
+                insert_sqls.append('insert into ' + table + ' (' + insert_keys + ') values (' + insert_values + ')')
+        insert_sql = 'insert into ' + table + ' (' + insert_keys + ') values (' + insert_placeholders + ')'
+
+        if generate_individual_sql:
+            #print(create_sql)
+            self.generated_sqls.append(create_sql)
+            for insert_sql in insert_sqls:
+                #print(insert_sql)
+                self.generated_sqls.append(insert_sql)
+        else:
+            #print(create_sql)
+            #print(insert_sql)
+            #print(inserts)
+
+            cache_cursor = None
+            try:
+                cache_cursor = self.cache.cursor()
+
+                cache_cursor.execute(create_sql)
+                if 0 < len(rows):
+                    cache_cursor.executemany(insert_sql, inserts)
+
+                cache_cursor.close()
+                cache_cursor = None
+            except (Exception) as error:
+                print(error)
+                raise 
+            finally:
+                if cache_cursor is not None:
+                    cache_cursor.close()
+                cache_cursor = None
+
+    def get_cache_sql(self, sql):
+        cursor = None
+        try:
+            cursor = self.cache.cursor()
+            cursor.execute(sql)
+            desc = cursor.description
+            column_names = [col[0] for col in desc]
+            rows = [dict(zip(column_names, row))  
+                for row in cursor]
+            cursor.close()
+            cursor = None
+            return rows
+        except (Exception) as error:
+            print(error)
+            raise 
+        finally:
+            if cursor is not None:
+                cursor.close()
+            cursor = None
+
+    # run arbitrary sql's (create and insert) to populate in-mem cache
+    # to be used to populate sample data for unit testing
+    # sqls is an array of sql statements
+    def insert_cache_sqls(self, sqls):
+        for sql in sqls:
+            self.insert_cache_sql(sql)
+
+    # run arbitrary sql's (create and insert) to populate in-mem cache
+    # to be used to populate sample data for unit testing
+    # sql is an individual sql statement (string)
+    def insert_cache_sql(self, sql):
+        cursor = None
+        try:
+            cursor = self.cache.cursor()
+            cursor.execute(sql)
+            cursor.close()
+            cursor = None
+        except (Exception) as error:
+            print(error)
+            raise 
+        finally:
+            if cursor is not None:
+                cursor.close()
+            cursor = None
+
+    # split up a List of id's into a List of Lists of no more than MAX id's
+    def split_list(self, ids, max):
+        ret = []
+        sub_ids = []
+        i = 0
+        for id in ids:
+            sub_ids.append(id)
+            i = i + 1
+            if i >= max:
+                ret.append(sub_ids)
+                sub_ids = []
+                i = 0
+        if 0 < len(sub_ids):
+            ret.append(sub_ids)
+        return ret
+
+    # create a "where in" clasuse for a List of id's
+    def id_where_in(self, ids, text=False):
+        if text:
+            delimiter = "'"
+        else:
+            delimiter = ''
+        id_list = ''
+        i = 0
+        for the_id in ids:
+            id_list = id_list + delimiter + the_id + delimiter
+            i = i + 1
+            if i < len(ids):
+                id_list = id_list  + ', '
+        return id_list
+
+
+    ###########################################################################
+    # load all bc registries data for the specified corps into our in-mem cache
+    ###########################################################################
+
+    code_tables =  ['corp_type', 
+                    'corp_op_state', 
+                    'party_type', 
+                    'office_type', 
+                    'event_type', 
+                    'filing_type', 
+                    'corp_name_type', 
+                    'jurisdiction_type',
+                    'xpro_type']
+    corp_tables =  ['corporation', 
+                    'corp_state', 
+                    'tilma_involved', 
+                    'jurisdiction', 
+                    'corp_name']
+    other_tables = ['corp_party', 
+                    'event', 
+                    'filing',
+                    'office',
+                    'address']
+
+    # load all bc registries data for the specified corps into our in-mem cache
+    def cache_bcreg_corps(self, specific_corps, generate_individual_sql=False):
+        if self.use_local_cache():
+            self.cache_bcreg_corp_tables(specific_corps, generate_individual_sql)
+            self.cache_bcreg_code_tables(generate_individual_sql)
+
+    # load all bc registries data for the specified corps into our in-mem cache
+    def cache_bcreg_corp_tables(self, specific_corps, generate_individual_sql=False):
+        if self.use_local_cache():
+            self.generated_sqls = []
+            self.generated_corp_nums = {}
+            # ensure we have a unique list
+            specific_corps = list({s_corp for s_corp in specific_corps})
+            #print('specific_corps (1) = ', specific_corps)
+            specific_corps_lists = self.split_list(specific_corps, MAX_WHERE_IN)
+
+            addr_id_list = []
+            for corp_nums_list in specific_corps_lists:
+                corp_list = self.id_where_in(corp_nums_list, True)
+                corp_party_where = 'bus_company_num in (' + corp_list + ')'
+                #print(self.other_tables[0])
+                party_rows = self.get_bcreg_table(self.other_tables[0], corp_party_where, '', True, generate_individual_sql)
+                #print(self.other_tables[0], len(party_rows))
+
+                # include all corp_num from the parties just returned (dba related companies)
+                for party in party_rows:
+                    specific_corps.append(party['corp_num'])
+
+                for party in party_rows:
+                    if party['mailing_addr_id'] is not None:
+                        addr_id_list.append(str(party['mailing_addr_id']))
+                    if party['delivery_addr_id'] is not None:
+                        addr_id_list.append(str(party['delivery_addr_id']))
+
+            # ensure we have a unique list
+            specific_corps = list({s_corp for s_corp in specific_corps})
+            #print('specific_corps (2) = ', specific_corps)
+            specific_corps_lists = self.split_list(specific_corps, MAX_WHERE_IN)
+
+            event_ids = []
+            for corp_nums_list in specific_corps_lists:
+                corp_nums_list = self.id_where_in(corp_nums_list, True)
+                event_where = 'corp_num in (' + corp_nums_list + ')'
+                #print(self.other_tables[1])
+                event_rows = self.get_bcreg_table(self.other_tables[1], event_where, '', True, generate_individual_sql)
+                #print(self.other_tables[1], len(event_rows))
+
+                for event in event_rows:
+                    event_ids.append(str(event['event_id']))
+
+            # ensure we have a unique list
+            event_ids = list({event_id for event_id in event_ids})
+            event_ids_lists = self.split_list(event_ids, MAX_WHERE_IN)
+
+            for ids_list in event_ids_lists:
+                event_list = self.id_where_in(ids_list)
+                filing_where = 'event_id in (' + event_list + ')'
+                #print(self.other_tables[2])
+                rows = self.get_bcreg_table(self.other_tables[2], filing_where, '', True, generate_individual_sql)
+                #print(self.other_tables[2], len(rows))
+
+            for corp_nums_list in specific_corps_lists:
+                corp_nums_list = self.id_where_in(corp_nums_list, True)
+                corp_num_where = 'corp_num in (' + corp_nums_list + ')'
+                for corp_table in self.corp_tables:
+                    #print(corp_table)
+                    rows = self.get_bcreg_table(corp_table, corp_num_where, '', True, generate_individual_sql)
+                    #print(corp_table, len(rows))
+
+                office_where = 'corp_num in (' + corp_nums_list + ')'
+                #print(self.other_tables[3])
+                office_rows = self.get_bcreg_table(self.other_tables[3], office_where, '', True, generate_individual_sql)
+                #print(self.other_tables[3], len(office_rows))
+
+                for office in office_rows:
+                    if office['mailing_addr_id'] is not None:
+                        addr_id_list.append(str(office['mailing_addr_id']))
+                    if office['delivery_addr_id'] is not None:
+                        addr_id_list.append(str(office['delivery_addr_id']))
+
+            # ensure we have a unique list
+            addr_id_list = list({addr_id for addr_id in addr_id_list})
+            addr_ids_lists = self.split_list(addr_id_list, MAX_WHERE_IN)
+            for ids_list in addr_ids_lists:
+                addr_list = self.id_where_in(ids_list)
+                address_where = 'addr_id in (' + addr_list + ')'
+                #print(self.other_tables[4])
+                rows = self.get_bcreg_table(self.other_tables[4], address_where, '', True, generate_individual_sql)
+                #print(self.other_tables[4], len(rows))
+
+    # load all bc registries data for the specified corps into our in-mem cache
+    def cache_bcreg_code_tables(self, generate_individual_sql=False):
+        if self.use_local_cache():
+            self.generated_sqls = []
+            self.generated_corp_nums = {}
+            for code_table in self.code_tables:
+                #print(code_table)
+                rows = self.get_bcreg_table(code_table, '', '', True, generate_individual_sql)
+                #print(code_table, len(rows))
+
+    # clear in-mem cache - delete all existing data
+    def cache_cleanup(self):
+        for table in self.corp_tables:
+            self.cache_cleanup_data(table)
+        for table in self.other_tables:
+            self.cache_cleanup_data(table)
+        for table in self.code_tables:
+            self.cache_cleanup_data(table)
+
+
+    ###########################################################################
+    # utility methods to query bc registries data
+    ###########################################################################
+
+    # get all records and return in an array of dicts
+    # returns a zero-length array if none found
+    # optionally takes a WHERE clause and ORDER BY clause (must be valid SQL)
+    def get_bcreg_sql(self, table, sql, cache=False, generate_individual_sql=False):
+        cursor = None
+        try:
+            #print(sql)
+            cursor = self.conn.cursor()
+            cursor.execute(sql)
+            desc = cursor.description
+            column_names = [col[0] for col in desc]
+            rows = [dict(zip(column_names, row))  
+                for row in cursor]
+            cursor.close()
+            cursor = None
+            if self.use_local_cache() and cache:
+                self.cache_bcreg_data(table, desc, rows, generate_individual_sql)
+            return rows
+        except (Exception, psycopg2.DatabaseError) as error:
+            print(error)
+            raise 
+        finally:
+            if cursor is not None:
+                cursor.close()
+            cursor = None
+
+    # get all records and return in an array of dicts
+    # returns a zero-length array if none found
+    # optionally takes a WHERE clause and ORDER BY clause (must be valid SQL)
+    def get_bcreg_table(self, table, where="", orderby="", cache=False, generate_individual_sql=False):
+        sql = "SELECT * FROM " + BC_REGISTRIES_TABLE_PREFIX + table
+        if 0 < len(where):
+            sql = sql + " WHERE " + where
+        if 0 < len(orderby):
+            sql = sql + " ORDER BY " + orderby
+        return self.get_bcreg_sql(table, sql, cache, generate_individual_sql)
+
+    # get all records and return in an array of dicts
+    # returns a zero-length array if none found
+    # optionally takes a WHERE clause and ORDER BY clause (must be valid SQL)
+    def get_bcreg_corp_table(self, table, corp_num, where="", orderby="", cache=False, generate_individual_sql=False):
+        subwhere = "corp_num = '" + corp_num + "'"
+        if 0 < len(where):
+            subwhere = subwhere + " AND " + where
+        return self.get_bcreg_table(table, subwhere, orderby, cache, generate_individual_sql)
+
+
+    ###########################################################################
+    # methods to determine un-processed corporations/events
+    ###########################################################################
+
     # get max event number from bc registries event log
     def get_max_event(self):
         cur = None
         try:
             # create a cursor
             cur = self.conn.cursor()
-            cur.execute("""SELECT max(event_id) FROM bc_registries.event""")
+            cur.execute("""SELECT max(event_id) FROM """ + BC_REGISTRIES_TABLE_PREFIX + """event""")
             row = cur.fetchone()
             cur.close()
             cur = None
@@ -69,7 +666,7 @@ class BCRegistries:
 
     # return a specific set of corporations, based on an event range
     def get_specific_corps(self, corp_filter):
-        sql = """SELECT distinct(corp_num) from bc_registries.event
+        sql = """SELECT distinct(corp_num) from """ + BC_REGISTRIES_TABLE_PREFIX + """event
                 where corp_num in ({})
                 order by corp_num;"""
         cur = None
@@ -99,11 +696,17 @@ class BCRegistries:
         cur = None
         try:
             cur = self.conn.cursor()
-            cur.execute("""SELECT distinct(corp_num) from bc_registries.event
+            cur.execute("""SELECT distinct(corp_num) from """ + BC_REGISTRIES_TABLE_PREFIX + """event
                             where event_id > %s and event_id <= %s
                             and corp_num in
-                            (SELECT corp_num from bc_registries.corporation
-                             where corp_typ_cd in ('A','LLC','BC','C','CUL','ULC'))
+                            (SELECT corp.corp_num from """ + BC_REGISTRIES_TABLE_PREFIX + """corporation corp,
+                                """ + BC_REGISTRIES_TABLE_PREFIX + """corp_state state, 
+                                """ + BC_REGISTRIES_TABLE_PREFIX + """corp_op_state op_state
+                             where corp.corp_num = state.corp_num
+                              and state.end_event_id is null
+                              and state.state_typ_cd = op_state.state_typ_cd
+                              and op_state.op_state_typ_cd = 'ACT' 
+                              and corp.corp_typ_cd in ('A','LLC','BC','C','CUL','ULC'))
                             order by corp_num;""", (last_event_id, max_event_id,))
             row = cur.fetchone()
             corps = []
@@ -129,7 +732,7 @@ class BCRegistries:
                 # create a cursor
                 # print(corp['CORP_NUM'])
                 cur = self.conn.cursor()
-                cur.execute("""SELECT max(event_id) from bc_registries.event
+                cur.execute("""SELECT max(event_id) from """ + BC_REGISTRIES_TABLE_PREFIX + """event
                                 where corp_num = %s and event_id > %s and event_id <= %s""", 
                                 (corp['CORP_NUM'], last_event_id, max_event_id,))
                 row = cur.fetchone()
@@ -147,15 +750,22 @@ class BCRegistries:
             if cur is not None:
                 cur.close()
 
+
+    ###########################################################################
+    # methods to run corporation-specific queries 
+    # (can run against the in-memory cache 
+    #  or against bc registries database directly)
+    ###########################################################################
+
     # find a specific event, 
     # return None if not found
-    def get_event(self, corp_num, event_id):
+    def get_event(self, corp_num, event_id, force_query_remote=False):
         sql = """SELECT event_id, corp_num, event_typ_cd, event_timestmp
-                    FROM bc_registries.event
-                    WHERE corp_num = %s and event_id = %s"""
+                    FROM """ + self.get_table_prefix(force_query_remote) + """event
+                    WHERE corp_num = """ + self.get_db_sql_param(force_query_remote) + """ and event_id = """ + self.get_db_sql_param(force_query_remote)
         cursor = None
         try:
-            cursor = self.conn.cursor()
+            cursor = self.get_db_connection(force_query_remote).cursor()
             cursor.execute(sql, (corp_num, event_id,))
             desc = cursor.description
             column_names = [col[0] for col in desc]
@@ -165,6 +775,11 @@ class BCRegistries:
             cursor = None
             if len(event) > 0:
                 return event[0]
+            # check for a cache miss
+            if self.use_local_cache() and (not force_query_remote):
+                event = self.get_event(corp_num, event_id, True)
+                self.add_cache_miss('event', corp_num, event_id, event)
+                return event
             return {}
         except (Exception, psycopg2.DatabaseError) as error:
             print(error)
@@ -173,12 +788,12 @@ class BCRegistries:
             if cursor is not None:
                 cursor.close()
 
-    def get_filing_event(self, corp_num, event_id):
-        sql_filing = """SELECT * from bc_registries.filing 
-                        WHERE event_id = %s"""
+    def get_filing_event(self, corp_num, event_id, force_query_remote=False):
+        sql_filing = """SELECT * from """ + self.get_table_prefix(force_query_remote) + """filing 
+                        WHERE event_id = """ + self.get_db_sql_param(force_query_remote)
         cursor = None
         try:
-            cursor = self.conn.cursor()
+            cursor = self.get_db_connection(force_query_remote).cursor()
             cursor.execute(sql_filing, (event_id,))
             desc = cursor.description
             column_names = [col[0] for col in desc]
@@ -188,6 +803,11 @@ class BCRegistries:
             cursor = None
             if len(filing_event) > 0:
                 return filing_event[0]
+            # check for a cache miss
+            if self.use_local_cache() and (not force_query_remote):
+                filing_event = self.get_filing_event(corp_num, event_id, True)
+                self.add_cache_miss('filing', corp_num, event_id, filing_event)
+                return filing_event
             return {}
         except (Exception, psycopg2.DatabaseError) as error:
             print(error)
@@ -197,11 +817,11 @@ class BCRegistries:
                 cursor.close()
 
     def get_office(self, corp_num):
-        sql_office = """SELECT * from bc_registries.office
-                        WHERE corp_num = %s and office_typ_cd in ('RG','HD','FO') and end_event_id is null"""
+        sql_office = """SELECT * from """ + self.get_table_prefix() + """office
+                        WHERE corp_num = """ + self.get_db_sql_param() + """ and office_typ_cd in ('RG','HD','FO') and end_event_id is null"""
         cursor = None
         try:
-            cursor = self.conn.cursor()
+            cursor = self.get_db_connection().cursor()
             cursor.execute(sql_office, (corp_num,))
             desc = cursor.description
             column_names = [col[0] for col in desc]
@@ -211,9 +831,9 @@ class BCRegistries:
             cursor = None
 
             for office in offices:
-                office['delivery_addr'] = self.get_address(office['delivery_addr_id'])
+                office['delivery_addr'] = self.get_address(corp_num, office['delivery_addr_id'])
                 if 'mailing_addr_id' in office and office['mailing_addr_id'] != office['delivery_addr_id']:
-                    office['mailing_addr'] = self.get_address(office['mailing_addr_id'])
+                    office['mailing_addr'] = self.get_address(corp_num, office['mailing_addr_id'])
                 office['start_event'] = self.get_event(corp_num, office['start_event_id'])
                 office['start_filing_event'] = self.get_filing_event(corp_num, office['start_event_id'])
 
@@ -225,14 +845,17 @@ class BCRegistries:
             if cursor is not None:
                 cursor.close()
 
-    def get_address(self, address_id):
+    def get_address(self, corp_num, address_id, force_query_remote=False):
+        if address_id is None:
+            return {}
+
         sql_addr = """SELECT addr_id, province, country_typ_cd, postal_cd, addr_line_1, addr_line_2, addr_line_3, city, address_format_type,
                          address_desc, address_desc_short, unit_no, unit_type, province_state_name
-                  FROM bc_registries.address
-                  WHERE addr_id = %s"""
+                  FROM """ + self.get_table_prefix(force_query_remote) + """address
+                  WHERE addr_id = """ + self.get_db_sql_param(force_query_remote)
         cursor = None
         try:
-            cursor = self.conn.cursor()
+            cursor = self.get_db_connection(force_query_remote).cursor()
             cursor.execute(sql_addr, (address_id,))
             desc = cursor.description
             column_names = [col[0] for col in desc]
@@ -255,6 +878,11 @@ class BCRegistries:
                 else:
                     address['local_addr'] = ""
                 return address
+            # check for a cache miss
+            if self.use_local_cache() and (not force_query_remote):
+                address = self.get_address(corp_num, address_id, True)
+                self.add_cache_miss('address', corp_num, address_id, address)
+                return address
             return {}
         except (Exception, psycopg2.DatabaseError) as error:
             print(error)
@@ -265,15 +893,15 @@ class BCRegistries:
 
     def get_names(self, corp_num, name_typ_cds, event_id):
         sql_name = """SELECT corp_num, corp_name_typ_cd, start_event_id, end_event_id, corp_name_seq_num, srch_nme, corp_nme, dd_corp_num
-                  FROM bc_registries.corp_name
-                  WHERE corp_num = %s AND end_event_id is null 
+                  FROM """ + self.get_table_prefix() + """corp_name
+                  WHERE corp_num = """ + self.get_db_sql_param() + """ AND end_event_id is null 
                     AND corp_name_typ_cd in ({}) """
 
         cur = None
         try:
             names = []
-            cur = self.conn.cursor()
-            placeholders= ', '.join(['%s']*len(name_typ_cds))  # "%s, %s, %s, ... %s"
+            cur = self.get_db_connection().cursor()
+            placeholders= ', '.join([self.get_db_sql_param()]*len(name_typ_cds))  # "%s, %s, %s, ... %s"
             sql_name = sql_name.format(placeholders)
             cur.execute(sql_name, (corp_num,) + tuple(name_typ_cds))
             row = cur.fetchone()
@@ -305,12 +933,12 @@ class BCRegistries:
         sql_state = """SELECT state.corp_num corp_num, state.start_event_id start_event_id, state.end_event_id end_event_id, 
                         state.state_typ_cd state_typ_cd, state.dd_corp_num dd_corp_num, 
                         op_state.op_state_typ_cd op_state_typ_cd, op_state.short_desc short_desc, op_state.full_desc full_desc
-                        FROM bc_registries.corp_state state, bc_registries.corp_op_state op_state
-                        WHERE corp_num = %s and op_state.state_typ_cd = state.state_typ_cd"""
+                        FROM """ + self.get_table_prefix() + """corp_state state, """ + self.get_table_prefix() + """corp_op_state op_state
+                        WHERE corp_num = """ + self.get_db_sql_param() + """ and op_state.state_typ_cd = state.state_typ_cd"""
         cursor = None
         try:
             #print('Read event and filing history to determine date')
-            cursor = self.conn.cursor()
+            cursor = self.get_db_connection().cursor()
             cursor.execute(sql_state, (corp['corp_num'],))
             desc = cursor.description
             column_names = [col[0] for col in desc]
@@ -349,6 +977,7 @@ class BCRegistries:
 
     def get_corp_state_date(self, corp):
         corp_state = corp['corp_state']
+        #print('corp_state', corp_state)
         if corp_state is None:
             return corp['recognition_dts']
         else:
@@ -376,11 +1005,11 @@ class BCRegistries:
         sql_state = """SELECT state.corp_num corp_num, state.start_event_id start_event_id, state.end_event_id end_event_id, 
                         state.state_typ_cd state_typ_cd, state.dd_corp_num dd_corp_num, 
                         op_state.op_state_typ_cd op_state_typ_cd, op_state.short_desc short_desc, op_state.full_desc full_desc
-                        FROM bc_registries.corp_state state, bc_registries.corp_op_state op_state
-                        WHERE corp_num = %s and end_event_id is null and op_state.state_typ_cd = state.state_typ_cd"""
+                        FROM """ + self.get_table_prefix() + """corp_state state, """ + self.get_table_prefix() + """corp_op_state op_state
+                        WHERE corp_num = """ + self.get_db_sql_param() + """ and end_event_id is null and op_state.state_typ_cd = state.state_typ_cd"""
         cursor = None
         try:
-            cursor = self.conn.cursor()
+            cursor = self.get_db_connection().cursor()
             cursor.execute(sql_state, (corp_num,))
             desc = cursor.description
             column_names = [col[0] for col in desc]
@@ -402,12 +1031,12 @@ class BCRegistries:
         sql_juris = """SELECT corp_num, start_event_id, end_event_id, j.can_jur_typ_cd can_jur_typ_cd,
                                 home_recogn_dt, othr_juris_desc, home_juris_num, home_company_nme,
                                 short_desc, full_desc
-                        FROM bc_registries.jurisdiction j, bc_registries.jurisdiction_type jt
-                        WHERE j.corp_num = %s and j.end_event_id is null
+                        FROM """ + self.get_table_prefix() + """jurisdiction j, """ + self.get_table_prefix() + """jurisdiction_type jt
+                        WHERE j.corp_num = """ + self.get_db_sql_param() + """ and j.end_event_id is null
                           AND j.can_jur_typ_cd = jt.can_jur_typ_cd"""
         cursor = None
         try:
-            cursor = self.conn.cursor()
+            cursor = self.get_db_connection().cursor()
             cursor.execute(sql_juris, (corp_num,))
             desc = cursor.description
             column_names = [col[0] for col in desc]
@@ -427,11 +1056,11 @@ class BCRegistries:
 
     def get_corp_type(self, corp_typ_cd):
         sql_type = """SELECT corp_typ_cd, colin_ind, corp_class, short_desc, full_desc
-                        FROM bc_registries.corp_type
-                        WHERE corp_typ_cd = %s"""
+                        FROM """ + self.get_table_prefix() + """corp_type
+                        WHERE corp_typ_cd = """ + self.get_db_sql_param()
         cursor = None
         try:
-            cursor = self.conn.cursor()
+            cursor = self.get_db_connection().cursor()
             cursor.execute(sql_type, (corp_typ_cd,))
             desc = cursor.description
             column_names = [col[0] for col in desc]
@@ -450,11 +1079,11 @@ class BCRegistries:
                 cursor.close()
 
     def get_tilma_involveds(self, corp_num):
-        sql_tilma = """SELECT * from bc_registries.tilma_involved
-                        WHERE corp_num = %s and end_event_id is null and involved_ind = 'Y'"""
+        sql_tilma = """SELECT * from """ + self.get_table_prefix() + """tilma_involved
+                        WHERE corp_num = """ + self.get_db_sql_param() + """ and end_event_id is null and involved_ind = 'Y'"""
         cursor = None
         try:
-            cursor = self.conn.cursor()
+            cursor = self.get_db_connection().cursor()
             cursor.execute(sql_tilma, (corp_num,))
             desc = cursor.description
             column_names = [col[0] for col in desc]
@@ -479,15 +1108,15 @@ class BCRegistries:
 
     def get_basic_corp_info(self, corp_num, event_id):
         sql_corp = """SELECT corp_num, corp_typ_cd, recognition_dts, last_ar_filed_dt, bn_9, bn_15, admin_email, last_ledger_dt
-                 FROM bc_registries.corporation
-                 WHERE corp_num = %s"""
+                 FROM """ + self.get_table_prefix() + """corporation
+                 WHERE corp_num = """ + self.get_db_sql_param()
 
         cur = None
         try:
             corp = {}
 
             # assume there is just one corp record
-            cur = self.conn.cursor()
+            cur = self.get_db_connection().cursor()
             cur.execute(sql_corp, (corp_num,))
             row = cur.fetchone()
             corp['corp_num'] = row[0]
@@ -527,12 +1156,17 @@ class BCRegistries:
             if cur is not None:
                 cur.close()
 
+
+    ###########################################################################
+    # primary method to load all bc registries data for the specified corporation
+    ###########################################################################
+
     def get_bc_reg_corp_info(self, corp_num, event_id):
         sql_party = """SELECT corp_num, corp_party_id, mailing_addr_id, delivery_addr_id, party_typ_cd, start_event_id, end_event_id, cessation_dt,
                          last_nme, middle_nme, first_nme, business_nme, bus_company_num, email_address, corp_party_seq_num, office_notification_dt,
                          phone, reason_typ_cd
-                  FROM bc_registries.corp_party
-                  WHERE bus_company_num = %s AND party_typ_cd = 'FBO' AND end_event_id is null"""
+                  FROM """ + self.get_table_prefix() + """corp_party
+                  WHERE bus_company_num = """ + self.get_db_sql_param() + """ AND party_typ_cd = 'FBO' AND end_event_id is null"""
 
         cur = None
         try:
@@ -540,7 +1174,7 @@ class BCRegistries:
 
             # get parties
             corp['parties'] = []
-            cur = self.conn.cursor()
+            cur = self.get_db_connection().cursor()
             cur.execute(sql_party, (corp_num,))
             row = cur.fetchone()
             while row is not None:
@@ -548,9 +1182,9 @@ class BCRegistries:
                 corp_party['corp_num'] = row[0]
                 corp_party['corp_party_id'] = row[1]
                 corp_party['mailing_addr_id'] = row[2]
-                corp_party['mailing_addr'] = self.get_address(row[2])
+                corp_party['mailing_addr'] = self.get_address(corp_num, row[2])
                 corp_party['delivery_addr_id'] = row[3]
-                corp_party['delivery_addr'] = self.get_address(row[3])
+                corp_party['delivery_addr'] = self.get_address(corp_num, row[3])
                 corp_party['party_typ_cd'] = row[4]
                 corp_party['start_event_id'] = row[5]
                 corp_party['start_event'] = self.get_event(row[0], row[5])
@@ -568,10 +1202,10 @@ class BCRegistries:
                 corp_party['phone'] = row[16]
                 corp_party['reason_typ_cd'] = row[17]
                 # note we need to pull corporate info for DBA companies
-                corp_party['dba_names'] = self.get_names(corp_party['corp_num'], ['CO','NB'], event_id)
+                #corp_party['dba_names'] = self.get_names(corp_party['corp_num'], ['CO','NB'], event_id)
                 corp_party['corp_info'] = self.get_basic_corp_info(corp_party['corp_num'], event_id)
 
-                corp_party['office'] = self.get_office(corp_party['corp_num'])
+                #corp_party['office'] = self.get_office(corp_party['corp_num'])
                 corp['parties'].append(corp_party)
                 row = cur.fetchone()
             cur.close()

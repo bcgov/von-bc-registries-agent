@@ -2,47 +2,60 @@
 
 folder BC_Registries {
   database BC_Registries_DB
-  database BC_Registries_Log
+  database Event_Monitor_DB
 }
 
-database Event_Monitor
-
-BC_Registries_DB -down-> BC_Registries_Log
-BC_Registries_Log -down-> Event_Monitor
-BC_Registries_DB -down-> Event_Monitor
-
-note bottom of Event_Monitor
-Monitor log file and generate Events
-Event_Monitor fetches data from Registries DB
-end note
+BC_Registries_DB -up-> Event_Monitor_DB
 
 folder Event_Processor {
-  folder Event_API {
-    node REST_API
-    node File_API
-    node Batch_API
+  folder Event_Batch {
+    node Monitor_Events
+    node Cache_Corporations
+    node Load_Corporations
+    node Generate_Credentials
+    node Submit_Credentials
   }
 
-  REST_API -[hidden]left-> File_API
-  File_API -[hidden]left-> Batch_API
+  Monitor_Events -[hidden]down-> Cache_Corporations
+  Cache_Corporations -[hidden]down-> Load_Corporations
+  Load_Corporations -[hidden]down-> Generate_Credentials
+  Generate_Credentials -[hidden]down-> Submit_Credentials
 
-  node Event_JSON
-  node Event_Transform
-  node Claim_JSON
-  node Django_Background_Tasks
-  node Schema_Transformer
-  database Event_DB
+  database Corp_Event_DB
+  database Corp_Cache_DB
+  database Corp_JSON_DB
+  database Credential_JSON_DB
+
+  Corp_Event_DB -[hidden]down-> Corp_Cache_DB
+  Corp_Cache_DB -[hidden]down-> Corp_JSON_DB
+  Corp_JSON_DB -[hidden]down-> Credential_JSON_DB
 }
 
-Event_Transform -down-> Schema_Transformer
-Event_API -down-> Event_DB
-Batch_API --> Django_Background_Tasks
-Batch_API -left-> Event_Monitor
+note top of Monitor_Events
+Monitor log file and generate Events
+Monitor_Events fetches data from Registries DB
+end note
+
+Event_Monitor_DB -right-> Monitor_Events
+Monitor_Events -right-> Corp_Event_DB
+
+Corp_Event_DB --> Cache_Corporations
+BC_Registries_DB -right-> Cache_Corporations
+Cache_Corporations -right-> Corp_Cache_DB
+
+Corp_Cache_DB --> Load_Corporations
+Load_Corporations -right-> Corp_JSON_DB
+
+Corp_JSON_DB --> Generate_Credentials
+Generate_Credentials -right-> Credential_JSON_DB
 
 folder VON_X {
   node VON_API
   database VON_Wallet
 }
+
+Credential_JSON_DB --> Submit_Credentials
+Submit_Credentials -right-> VON_API
 
 note top of Event_Processor
 For each input Event:
@@ -62,13 +75,6 @@ folder T_O_B {
 }
 
 TOB_API -down-> TOB_Wallet
-
-Event_Monitor -[hidden]right-> REST_API
-Event_API -down-> Event_JSON
-Event_JSON -down-> Event_Transform
-Event_Transform -up-> Claim_JSON
-Event_JSON -[hidden]right-> Claim_JSON
-Claim_JSON -right-> VON_API
 
 folder Sovrin_Network {
   node Distributed_Ledger
