@@ -70,13 +70,11 @@ CORPORATION -[hidden]down- DBA_CORPORATION
 
 PARTY_TYPE "1" -- "0..*" CORP_PARTY
 
-CORP_PARTY "1" -down- "1..*" ADDRESS : DELIVERY_ADDR_ID
-CORP_PARTY "1" -down- "0..*" ADDRESS : MAILING_ADDR_ID
 
 OFFICE_TYPE "1" -right- "0..*" OFFICE
 note on link : office_typ_cd in ('RG','HD','FO')
 
-CORP_PARTY "1" -right- "1..*" OFFICE : CORP_NUM
+DBA_CORPORATION "1" -down- "1..*" OFFICE : CORP_NUM
 
 OFFICE "1" -right- "1..*" ADDRESS : DELIVERY_ADDR_ID
 OFFICE "1" -right- "0..*" ADDRESS : MAILING_ADDR_ID

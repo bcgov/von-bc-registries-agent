@@ -699,8 +699,14 @@ class BCRegistries:
             cur.execute("""SELECT distinct(corp_num) from """ + BC_REGISTRIES_TABLE_PREFIX + """event
                             where event_id > %s and event_id <= %s
                             and corp_num in
-                            (SELECT corp_num from """ + BC_REGISTRIES_TABLE_PREFIX + """corporation
-                             where corp_typ_cd in ('A','LLC','BC','C','CUL','ULC'))
+                            (SELECT corp.corp_num from """ + BC_REGISTRIES_TABLE_PREFIX + """corporation corp,
+                                """ + BC_REGISTRIES_TABLE_PREFIX + """corp_state state, 
+                                """ + BC_REGISTRIES_TABLE_PREFIX + """corp_op_state op_state
+                             where corp.corp_num = state.corp_num
+                              and state.end_event_id is null
+                              and state.state_typ_cd = op_state.state_typ_cd
+                              and op_state.op_state_typ_cd = 'ACT' 
+                              and corp.corp_typ_cd in ('A','LLC','BC','C','CUL','ULC'))
                             order by corp_num;""", (last_event_id, max_event_id,))
             row = cur.fetchone()
             corps = []

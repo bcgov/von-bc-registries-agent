@@ -25,10 +25,79 @@ The following BC Registries tables provide information for Incorporation and Add
 
 ![BC Registries Corporation Data Model](https://github.com/ianco/von-bc-registries-agent/raw/master/doc/BCReg-Data-Model.png "BC Registries Corporation Data Model")
 
+For each Corporation:
+
+```
+select * from corporation
+  where corp_num = :corp_num;
+
+select * from jurisdiction j, jurisdiction_type jt
+  where corp_num = :corp_num and end_event_id is null
+    and j.can_jur_typ_cd = jt.can_jur_typ_cd;
+
+select * from corp_type
+  where corp_typ_cd = :corp_typ_cd from corporation;
+
+-- assume one record selected for each name query?
+select * from corp_name
+  where corp_num = :corp_num and end_event_id is null
+    and corp_name_typ_cd in ('CO','NB');  -- org_names
+
+select * from corp_name
+  where corp_num = :corp_num and end_event_id is null
+    and corp_name_typ_cd in ('AS');  -- org_name_assumed
+
+select * from corp_name
+  where corp_num = :corp_num and end_event_id is null
+    and corp_name_typ_cd in ('TR', 'NO');  -- org_name_trans
+
+select * from office
+  where corp_num = :corp_num and end_event_id is null
+    and office_typ_cd in ('RG','HD','FO');  -- assume 1 record?
+    -- RG = BC registered corps
+    -- HD = XPRO registered corps
+    -- FO = DBA corps
+
+-- for each office, get address for mailing and delivery id's:
+select * from address
+  where addr_id = :addr_id from office record
+
+select state.corp_num corp_num, state.start_event_id start_event_id, state.end_event_id end_event_id,
+    state.state_typ_cd state_typ_cd, state.dd_corp_num dd_corp_num,
+    op_state.op_state_typ_cd op_state_typ_cd, op_state.short_desc short_desc,
+    op_state.full_desc full_desc
+  from corp_state state, corp_op_state op_state
+  where corp_num = :corp_num and end_event_id is null
+    and op_state.state_typ_cd = state.state_typ_cd;
+
+-- corp state date is determined based on inspecting the corporation's event history
+
+select * from tilma_involved
+  where corp_num = :corp_num and end_event_id is null
+    and involved_ind = 'Y'
+```
+
 The following BC Registries tables are used to determine DBA relationships:
 
 ![BC Registries DBA Data Model](https://github.com/ianco/von-bc-registries-agent/raw/master/doc/BCReg-DBA-Data-Model.png "BC Registries DBA Data Model")
 
+For each Corporation:
+
+```
+select * from corp_party
+  where bus_company_num = :corp_num and end_event_id is null
+    and party_typ_cd = 'FBO'
+```
+
+Then for each corp_party record:
+
+```
+:dba_corp_num = SELECT corp_num from the corp_party record, as selected above
+```
+
+... and select the same information as above for each DBA corporation (corporation, corp_state, address, etc.)
+
+Question - should the DBA corporation generate Address credentials based on the address id's in the corp_party record?  Or from the DBA corporation's linked office (of type 'FO')?
 
 ## BC Registries Initial Data Load
 
@@ -66,6 +135,14 @@ Note that for the initial data load the event id is not used (credentials are ge
 The Incorporation, Address and DBA Credentials are generated per the above data model, based on the corporation's current status.
 
 ## BC Registries Event Monitoring
+
+After the initial data load, the event processor will process new Events that can be:
+
+* Events that indicate a new Corporation
+* Events that provide updates to existing Corporation credentials
+* Events that cancel, or disable, existing Corporate credentials
+
+In all update scenarios, the existing credential will be expired (by setting end_date = event_date) and new Credentials created.
 
 ## Event Processor Data Model
 
