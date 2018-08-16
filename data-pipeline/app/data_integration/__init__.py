@@ -9,7 +9,8 @@ from mara_app.monkey_patch import patch
 
 import app.config
 
-from bcreg.bcreg_pipelines import db_init_pipeline, bc_reg_test_corps, bc_reg_pipeline, bc_reg_pipeline_status, bc_reg_pipeline_jsonbender
+from bcreg.bcreg_pipelines import db_init_pipeline, bc_reg_pipeline, bc_reg_pipeline_status, bc_reg_pipeline_load_active, bc_reg_pipeline_load_historical
+from bcreg.bcreg_pipelines import bc_reg_test_corps, bc_reg_pipeline_jsonbender
 
 patch(data_integration.config.data_dir)(lambda: app.config.data_dir())
 patch(data_integration.config.first_date)(lambda: app.config.first_date())
@@ -24,9 +25,11 @@ def root_pipeline():
         id = 'holder_for_pipeline_versions',
         description = 'Holder for the different versions of the BC Registries pipeline.')
 
-    parent_pipeline.add(db_init_pipeline())
     parent_pipeline.add(bc_reg_pipeline())
     parent_pipeline.add(bc_reg_pipeline_status())
+    parent_pipeline.add(bc_reg_pipeline_load_active())
+    parent_pipeline.add(bc_reg_pipeline_load_historical())
+    parent_pipeline.add(db_init_pipeline())
 
     test_pipeline = Pipeline(
         id = 'test_and_demo_tasks',
