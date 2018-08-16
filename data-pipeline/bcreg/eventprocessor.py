@@ -19,6 +19,8 @@ dba_credential = 'DBA'
 dba_schema = 'doing_business_as.bc_registries'
 dba_version = '1.0.31'
 
+CORP_BATCH_SIZE = 500
+
 
 class DateTimeEncoder(json.JSONEncoder):
     def default(self, o):
@@ -412,10 +414,12 @@ class EventProcessor:
     def process_corp_event_queue_internal(self, load_regs=True, generate_creds=False, use_cache=False):
         sql1 = """SELECT RECORD_ID, SYSTEM_TYPE_CD, PREV_EVENT_ID, LAST_EVENT_ID, CORP_NUM, ENTRY_DATE
                  FROM EVENT_BY_CORP_FILING
-                 WHERE PROCESS_DATE is null"""
+                 WHERE PROCESS_DATE is null
+                 LIMIT """ + str(CORP_BATCH_SIZE)
         sql1a = """SELECT RECORD_ID, SYSTEM_TYPE_CD, PREV_EVENT_ID, LAST_EVENT_ID, CORP_NUM, CORP_JSON, ENTRY_DATE
                  FROM CORP_HISTORY_LOG
-                 WHERE PROCESS_DATE is null"""
+                 WHERE PROCESS_DATE is null
+                 LIMIT """ + str(CORP_BATCH_SIZE)
 
         sql2 = """INSERT INTO CORP_HISTORY_LOG (SYSTEM_TYPE_CD, PREV_EVENT_ID, LAST_EVENT_ID, CORP_NUM, CORP_JSON, ENTRY_DATE)
                   VALUES(%s, %s, %s, %s, %s, %s) RETURNING RECORD_ID;"""
@@ -431,86 +435,88 @@ class EventProcessor:
 
         cur = None
         try:
-            corps = []
-            specific_corps = []
-            if load_regs:
-                # we are loading data from BC Registries based on the corp event queue
-                cur = self.conn.cursor()
-                cur.execute(sql1)
-                row = cur.fetchone()
-                while row is not None:
-                    corps.append({'RECORD_ID':row[0], 'SYSTEM_TYPE_CD':row[1], 'PREV_EVENT_ID':row[2], 'LAST_EVENT_ID':row[3], 
-                                    'CORP_NUM':row[4], 'ENTRY_DATE':row[5]})
-                    specific_corps.append(row[4])
-                    row = cur.fetchone()
-                cur.close()
-                cur = None
-            else:
-                # not loading from BC Reg, just processing data already loaded in corp_history
-                cur = self.conn.cursor()
-                cur.execute(sql1a)
-                row = cur.fetchone()
-                while row is not None:
-                    # print(row)
-                    corps.append({'RECORD_ID':row[0], 'SYSTEM_TYPE_CD':row[1], 'PREV_EVENT_ID':row[2], 'LAST_EVENT_ID':row[3], 
-                                'CORP_NUM':row[4], 'CORP_JSON':row[5], 'ENTRY_DATE':row[6]})
-                    specific_corps.append(row[4])
-                    row = cur.fetchone()
-                cur.close()
-                cur = None
-
-            with BCRegistries(use_cache) as bc_registries:
-                if use_cache:
-                    bc_registries.cache_bcreg_corps(specific_corps)
-                for i,corp in enumerate(corps): 
-                    print('>>> Processing {} of {} corporations.'.format(i+1, len(corps)))
-                    if load_regs:
-                        # fetch corp info from bc_registries
-                        corp_info = bc_registries.get_bc_reg_corp_info(corp['CORP_NUM'], corp['LAST_EVENT_ID'])
-                    else:
-                        corp_info = corp['CORP_JSON']
-
-                    if generate_creds:
-                        # generate and store credentials
-                        cur = self.conn.cursor()
-                        corp_creds = self.generate_credentials(corp['SYSTEM_TYPE_CD'], corp['PREV_EVENT_ID'], corp['LAST_EVENT_ID'], corp['CORP_NUM'],
-                                                corp_info)
-                        self.store_credentials(cur, corp['SYSTEM_TYPE_CD'], corp['PREV_EVENT_ID'], corp['LAST_EVENT_ID'], corp['CORP_NUM'],
-                                                corp_info, corp_creds)
-                        cur.close()
-                        cur = None
-
-                        # store corporate info 
-                        if load_regs:
-                            cur = self.conn.cursor()
-                            cur.execute(sql2a, (corp['SYSTEM_TYPE_CD'], corp['PREV_EVENT_ID'], corp['LAST_EVENT_ID'], corp['CORP_NUM'], 
-                                                bc_registries.to_json(corp_info), datetime.datetime.now(), datetime.datetime.now(),))
-                            cur.close()
-                            cur = None
-                        else:
-                            # update process date
-                            cur = self.conn.cursor()
-                            cur.execute(sql3a, (datetime.datetime.now(), corp['RECORD_ID'], ))
-                            cur.close()
-                            cur = None
-
-                    elif load_regs:
-                        # store corporate info for future generation of credentials
-                        cur = self.conn.cursor()
-                        cur.execute(sql2, (corp['SYSTEM_TYPE_CD'], corp['PREV_EVENT_ID'], corp['LAST_EVENT_ID'], corp['CORP_NUM'], 
-                                            bc_registries.to_json(corp_info), datetime.datetime.now(),))
-                        cur.close()
-                        cur = None
-
-                    # update process date
+            continue_loop = True
+            while continue_loop:
+                corps = []
+                specific_corps = []
+                if load_regs:
+                    # we are loading data from BC Registries based on the corp event queue
                     cur = self.conn.cursor()
-                    cur.execute(sql3, (datetime.datetime.now(), corp['RECORD_ID'], ))
-                    self.conn.commit()
+                    cur.execute(sql1)
+                    row = cur.fetchone()
+                    while row is not None:
+                        corps.append({'RECORD_ID':row[0], 'SYSTEM_TYPE_CD':row[1], 'PREV_EVENT_ID':row[2], 'LAST_EVENT_ID':row[3], 
+                                        'CORP_NUM':row[4], 'ENTRY_DATE':row[5]})
+                        specific_corps.append(row[4])
+                        row = cur.fetchone()
+                    cur.close()
+                    cur = None
+                else:
+                    # not loading from BC Reg, just processing data already loaded in corp_history
+                    cur = self.conn.cursor()
+                    cur.execute(sql1a)
+                    row = cur.fetchone()
+                    while row is not None:
+                        # print(row)
+                        corps.append({'RECORD_ID':row[0], 'SYSTEM_TYPE_CD':row[1], 'PREV_EVENT_ID':row[2], 'LAST_EVENT_ID':row[3], 
+                                    'CORP_NUM':row[4], 'CORP_JSON':row[5], 'ENTRY_DATE':row[6]})
+                        specific_corps.append(row[4])
+                        row = cur.fetchone()
                     cur.close()
                     cur = None
 
-                    # commit the changes to the database
-                    self.conn.commit()
+                if len(specific_corps) == 0:
+                    continue_loop = False
+                else:
+                    with BCRegistries(use_cache) as bc_registries:
+                        if use_cache:
+                            bc_registries.cache_bcreg_corps(specific_corps)
+                        for i,corp in enumerate(corps): 
+                            print('>>> Processing {} of {} corporations.'.format(i+1, len(corps)))
+                            if load_regs:
+                                # fetch corp info from bc_registries
+                                corp_info = bc_registries.get_bc_reg_corp_info(corp['CORP_NUM'], corp['LAST_EVENT_ID'])
+                            else:
+                                corp_info = corp['CORP_JSON']
+
+                            if generate_creds:
+                                # generate and store credentials
+                                cur = self.conn.cursor()
+                                corp_creds = self.generate_credentials(corp['SYSTEM_TYPE_CD'], corp['PREV_EVENT_ID'], corp['LAST_EVENT_ID'], corp['CORP_NUM'],
+                                                        corp_info)
+                                self.store_credentials(cur, corp['SYSTEM_TYPE_CD'], corp['PREV_EVENT_ID'], corp['LAST_EVENT_ID'], corp['CORP_NUM'],
+                                                        corp_info, corp_creds)
+                                cur.close()
+                                cur = None
+
+                                # store corporate info 
+                                if load_regs:
+                                    cur = self.conn.cursor()
+                                    cur.execute(sql2a, (corp['SYSTEM_TYPE_CD'], corp['PREV_EVENT_ID'], corp['LAST_EVENT_ID'], corp['CORP_NUM'], 
+                                                        bc_registries.to_json(corp_info), datetime.datetime.now(), datetime.datetime.now(),))
+                                    cur.close()
+                                    cur = None
+                                else:
+                                    # update process date
+                                    cur = self.conn.cursor()
+                                    cur.execute(sql3a, (datetime.datetime.now(), corp['RECORD_ID'], ))
+                                    cur.close()
+                                    cur = None
+
+                            elif load_regs:
+                                # store corporate info for future generation of credentials
+                                cur = self.conn.cursor()
+                                cur.execute(sql2, (corp['SYSTEM_TYPE_CD'], corp['PREV_EVENT_ID'], corp['LAST_EVENT_ID'], corp['CORP_NUM'], 
+                                                    bc_registries.to_json(corp_info), datetime.datetime.now(),))
+                                cur.close()
+                                cur = None
+
+                            # update process date
+                            cur = self.conn.cursor()
+                            cur.execute(sql3, (datetime.datetime.now(), corp['RECORD_ID'], ))
+                            self.conn.commit()
+                            cur.close()
+                            cur = None
 
         except (Exception, psycopg2.DatabaseError) as error:
             print(error)
@@ -551,5 +557,33 @@ class EventProcessor:
         finally:
             if cur is not None:
                 cur.close()
+            cur = None
+
+    def display_event_processing_status(self):
+        tables = ['event_by_corp_filing', 'corp_history_log', 'credential_log']
+        sql_ct_select = 'select count(*) from'
+        sql_corp_ct_processed   = 'where process_date is not null'
+        sql_corp_ct_outstanding = 'where process_date is null'
+
+        cur = None
+        try:
+            cur = self.conn.cursor()
+            for table in tables:
+                sql = sql_ct_select + ' ' + table + ' ' + sql_corp_ct_processed
+                cur.execute(sql)
+                process_ct = cur.fetchone()[0]
+                sql = sql_ct_select + ' ' + table + ' ' + sql_corp_ct_outstanding
+                cur.execute(sql)
+                outstanding_ct = cur.fetchone()[0]
+                print('Table:', table, 'Processed:', process_ct, 'Outstanding:', outstanding_ct)
+            cur.close()
+            cur = None
+        except (Exception, psycopg2.DatabaseError) as error:
+            print(error)
+            raise
+        finally:
+            if cur is not None:
+                cur.close()
+            cur = None
 
 

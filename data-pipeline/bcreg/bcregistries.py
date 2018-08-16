@@ -706,8 +706,8 @@ class BCRegistries:
                               and state.end_event_id is null
                               and state.state_typ_cd = op_state.state_typ_cd
                               and op_state.op_state_typ_cd = 'ACT' 
-                              and corp.corp_typ_cd in ('A','LLC','BC','C','CUL','ULC'))
-                            order by corp_num;""", (last_event_id, max_event_id,))
+                              and corp.corp_typ_cd in ('A','LLC','BC','C','CUL','ULC'))""", 
+                            (last_event_id, max_event_id,))
             row = cur.fetchone()
             corps = []
             while row is not None:

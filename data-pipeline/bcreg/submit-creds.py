@@ -27,6 +27,8 @@ from bcreg.config import config
 
 AGENT_URL = os.environ.get('VONX_API_URL', 'http://localhost:5000/bcreg')
 
+CREDS_BATCH_SIZE = 500
+
 
 async def submit_cred(http_client, attrs, schema, version):
     #print(attrs)
@@ -54,7 +56,8 @@ async def process_credential_queue(http_client):
     sql1 = """SELECT RECORD_ID, SYSTEM_TYPE_CD, PREV_EVENT_ID, LAST_EVENT_ID, CORP_NUM, CREDENTIAL_TYPE_CD, 
                     CREDENTIAL_JSON, SCHEMA_NAME, SCHEMA_VERSION, ENTRY_DATE
               FROM CREDENTIAL_LOG 
-              WHERE PROCESS_DATE is null"""
+              WHERE PROCESS_DATE is null
+              LIMIT """ + str(CREDS_BATCH_SIZE)
 
     sql1a = """SELECT count(*) cnt
               FROM CREDENTIAL_LOG 
@@ -86,51 +89,64 @@ async def process_credential_queue(http_client):
         cur.close()
         cur = None
 
-        # create a cursor
-        cur = conn.cursor()
-        cur.execute(sql1)
-        row = cur.fetchone()
-
         i = 0
-        while row is not None:
-            i = i + 1
-            print('>>> Processing {} of {} credentials.'.format(i, cred_count))
-            credential = {'RECORD_ID':row[0], 'SYSTEM_TYP_CD':row[1], 'PREV_EVENT_ID':row[2], 'LAST_EVENT_ID':row[3], 'CORP_NUM':row[4], 
-                          'CREDENTIAL_TYPE_CD':row[5], 'CREDENTIAL_JSON':row[6], 'SCHEMA_NAME':row[7], 'SCHEMA_VERSION':row[8], 'ENTRY_DATE':row[9]}
-            
-            # post credential
-            try:
-                result_json = await submit_cred(http_client, credential['CREDENTIAL_JSON'], credential['SCHEMA_NAME'], credential['SCHEMA_VERSION'])
+        cred_count_remaining = cred_count
 
-                result = result_json # json.loads(result_json)[0]
-                if result['success']:
-                    #print("log success to database")
-                    cur2 = conn.cursor()
-                    cur2.execute(sql2, (datetime.datetime.now(), credential['RECORD_ID'],))
-                    cur2.close()
-                    cur2 = None
-                else:
-                    #print("log error to database")
-                    cur2 = conn.cursor()
-                    if 255 < len(result['result']):
-                        res = result['result'][:250] + '...'
-                    else:
-                        res = result['result']
-                    cur2.execute(sql3, (datetime.datetime.now(), res, credential['RECORD_ID'],))
-                    cur2.close()
-                    cur2 = None
-
-            except (Exception) as error:
-                #print("log exception to database")
-                cur2 = conn.cursor()
-                cur2.execute(sql3, (datetime.datetime.now(), str(error), credential['RECORD_ID'],))
-                cur2.close()
-                cur2 = None
-
+        while 0 < cred_count_remaining:
+            # create a cursor
+            cur = conn.cursor()
+            cur.execute(sql1)
             row = cur.fetchone()
+            while row is not None:
+                i = i + 1
+                print('>>> Processing {} of {} credentials.'.format(i, cred_count))
+                credential = {'RECORD_ID':row[0], 'SYSTEM_TYP_CD':row[1], 'PREV_EVENT_ID':row[2], 'LAST_EVENT_ID':row[3], 'CORP_NUM':row[4], 
+                              'CREDENTIAL_TYPE_CD':row[5], 'CREDENTIAL_JSON':row[6], 'SCHEMA_NAME':row[7], 'SCHEMA_VERSION':row[8], 'ENTRY_DATE':row[9]}
+                
+                # post credential
+                try:
+                    result_json = await submit_cred(http_client, credential['CREDENTIAL_JSON'], credential['SCHEMA_NAME'], credential['SCHEMA_VERSION'])
 
-        cur.close()
-        cur = None
+                    result = result_json # json.loads(result_json)[0]
+                    if result['success']:
+                        #print("log success to database")
+                        cur2 = conn.cursor()
+                        cur2.execute(sql2, (datetime.datetime.now(), credential['RECORD_ID'],))
+                        conn.commit()
+                        cur2.close()
+                        cur2 = None
+                    else:
+                        #print("log error to database")
+                        cur2 = conn.cursor()
+                        if 255 < len(result['result']):
+                            res = result['result'][:250] + '...'
+                        else:
+                            res = result['result']
+                        cur2.execute(sql3, (datetime.datetime.now(), res, credential['RECORD_ID'],))
+                        conn.commit()
+                        cur2.close()
+                        cur2 = None
+
+                except (Exception) as error:
+                    #print("log exception to database")
+                    cur2 = conn.cursor()
+                    cur2.execute(sql3, (datetime.datetime.now(), str(error), credential['RECORD_ID'],))
+                    conn.commit()
+                    cur2.close()
+                    cur2 = None
+
+                row = cur.fetchone()
+
+            cur.close()
+            cur = None
+
+            cur = conn.cursor()
+            cur.execute(sql1a)
+            row = cur.fetchone()
+            if row is not None:
+                cred_count_remaining = row[0]
+            cur.close()
+            cur = None
     except (Exception, psycopg2.DatabaseError) as error:
         print(error)
     finally:

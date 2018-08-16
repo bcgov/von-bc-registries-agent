@@ -50,6 +50,18 @@ def bc_reg_pipeline():
 
     return pipeline1
 
+def bc_reg_pipeline_status():
+    import bcreg
+
+    pipeline = Pipeline(
+        id='bc_reg_pipeline_status',
+        description='Display overall event processing status.')
+
+    pipeline.add(Task(id='display_pipeline_status', description='Display status of the overall pipeline processing status',
+                        commands=[ExecutePython('./bcreg/display_pipeline_status.py')]))
+
+    return pipeline
+
 def bc_reg_pipeline_jsonbender():
     import bcreg
 
