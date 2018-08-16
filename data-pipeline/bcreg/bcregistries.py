@@ -14,7 +14,7 @@ system_type = 'BC_REG'
 
 BC_REGISTRIES_TABLE_PREFIX = 'bc_registries.'
 INMEM_CACHE_TABLE_PREFIX   = ''
-MAX_WHERE_IN = 500
+MAX_WHERE_IN = 1000
 
 
 def adapt_decimal(d):
@@ -503,7 +503,7 @@ class BCRegistries:
                 corp_party_where = 'bus_company_num in (' + corp_list + ')'
                 #print(self.other_tables[0])
                 party_rows = self.get_bcreg_table(self.other_tables[0], corp_party_where, '', True, generate_individual_sql)
-                #print(self.other_tables[0], len(party_rows))
+                print(self.other_tables[0], len(party_rows))
 
                 # include all corp_num from the parties just returned (dba related companies)
                 for party in party_rows:
@@ -526,7 +526,7 @@ class BCRegistries:
                 event_where = 'corp_num in (' + corp_nums_list + ')'
                 #print(self.other_tables[1])
                 event_rows = self.get_bcreg_table(self.other_tables[1], event_where, '', True, generate_individual_sql)
-                #print(self.other_tables[1], len(event_rows))
+                print(self.other_tables[1], len(event_rows))
 
                 for event in event_rows:
                     event_ids.append(str(event['event_id']))
@@ -540,7 +540,7 @@ class BCRegistries:
                 filing_where = 'event_id in (' + event_list + ')'
                 #print(self.other_tables[2])
                 rows = self.get_bcreg_table(self.other_tables[2], filing_where, '', True, generate_individual_sql)
-                #print(self.other_tables[2], len(rows))
+                print(self.other_tables[2], len(rows))
 
             for corp_nums_list in specific_corps_lists:
                 corp_nums_list = self.id_where_in(corp_nums_list, True)
@@ -548,12 +548,12 @@ class BCRegistries:
                 for corp_table in self.corp_tables:
                     #print(corp_table)
                     rows = self.get_bcreg_table(corp_table, corp_num_where, '', True, generate_individual_sql)
-                    #print(corp_table, len(rows))
+                    print(corp_table, len(rows))
 
                 office_where = 'corp_num in (' + corp_nums_list + ')'
                 #print(self.other_tables[3])
                 office_rows = self.get_bcreg_table(self.other_tables[3], office_where, '', True, generate_individual_sql)
-                #print(self.other_tables[3], len(office_rows))
+                print(self.other_tables[3], len(office_rows))
 
                 for office in office_rows:
                     if office['mailing_addr_id'] is not None:
@@ -569,7 +569,7 @@ class BCRegistries:
                 address_where = 'addr_id in (' + addr_list + ')'
                 #print(self.other_tables[4])
                 rows = self.get_bcreg_table(self.other_tables[4], address_where, '', True, generate_individual_sql)
-                #print(self.other_tables[4], len(rows))
+                print(self.other_tables[4], len(rows))
 
     # load all bc registries data for the specified corps into our in-mem cache
     def cache_bcreg_code_tables(self, generate_individual_sql=False):
@@ -823,7 +823,7 @@ class BCRegistries:
                 cursor.close()
 
     def get_filing_event(self, corp_num, event_id, event_type, force_query_remote=False):
-        if event_type ne 'FILING':
+        if event_type != 'FILING':
             return {}
         sql_filing = """SELECT * from """ + self.get_table_prefix(force_query_remote) + """filing 
                         WHERE event_id = """ + self.get_db_sql_param(force_query_remote)
@@ -1179,7 +1179,7 @@ class BCRegistries:
             #print(corp['corp_num'] + ' corp_state = ' + corp['corp_state']['state_typ_cd'] + ' ' + corp['corp_state']['op_state_typ_cd'])
             if corp['corp_state'] is not None: 
                 corp['corp_state']['start_event'] = self.get_event(corp['corp_num'], corp['corp_state']['start_event_id'])
-                corp['corp_state']['start_filing_event'] = self.get_filing_event(corp['corp_num'], corp['corp_state']['start_event_id'], , corp['corp_state']['start_event']['event_typ_cd'])
+                corp['corp_state']['start_filing_event'] = self.get_filing_event(corp['corp_num'], corp['corp_state']['start_event_id'], corp['corp_state']['start_event']['event_typ_cd'])
             corp['corp_state_dt'] = self.get_corp_state_date(corp)
             #print('--> ' + corp['corp_num'] + ' corp_state_dt = ' + str(corp['corp_state_dt']))
             corp['tilma_involved'] = self.get_tilma_involveds(corp_num)

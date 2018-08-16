@@ -33,7 +33,7 @@ def bc_reg_pipeline_load_active():
 
     sub_pipeline1_2 = Pipeline(id='load_and_process_bc_reg_corps_active', description='Load Active BC Reg corps and generate credentials')
     sub_pipeline1_2.add(Task(id='register_un_processed_corps_active', description='Register un-processed active corps',
-                          commands=[ExecutePython('./bcreg/find-unprocessed-corps_active.py')]))
+                          commands=[ExecutePython('./bcreg/find-unprocessed-corps_actve.py')]))
     sub_pipeline1_2.add(Task(id='load_bc_reg_data_a', description='Load BC Registries data',
                           commands=[ExecutePython('./bcreg/process-corps.py')]), ['register_un_processed_corps_active'])
     sub_pipeline1_2.add(Task(id='create_bc_reg_credentials_a', description='Create credentials',

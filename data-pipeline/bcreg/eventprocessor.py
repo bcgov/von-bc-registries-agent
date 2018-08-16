@@ -19,7 +19,7 @@ dba_credential = 'DBA'
 dba_schema = 'doing_business_as.bc_registries'
 dba_version = '1.0.31'
 
-CORP_BATCH_SIZE = 500
+CORP_BATCH_SIZE = 3000
 
 
 class DateTimeEncoder(json.JSONEncoder):
@@ -65,6 +65,14 @@ class EventProcessor:
             )
             """,
             """
+            CREATE INDEX IF NOT EXISTS le_i1 ON LAST_EVENT 
+            (SYSTEM_TYPE_CD)
+            """,
+            """
+            CREATE INDEX IF NOT EXISTS le_i2 ON LAST_EVENT 
+            (EVENT_ID)
+            """,
+            """
             CREATE TABLE IF NOT EXISTS EVENT_BY_CORP_FILING (
                 RECORD_ID SERIAL PRIMARY KEY,
                 SYSTEM_TYPE_CD VARCHAR(255) NOT NULL, 
@@ -74,6 +82,14 @@ class EventProcessor:
                 ENTRY_DATE TIMESTAMP NOT NULL,
                 PROCESS_DATE TIMESTAMP
             )
+            """,
+            """
+            CREATE INDEX IF NOT EXISTS ebc_i1 ON EVENT_BY_CORP_FILING 
+            (SYSTEM_TYPE_CD)
+            """,
+            """
+            CREATE INDEX IF NOT EXISTS ebc_i2 ON EVENT_BY_CORP_FILING 
+            (PROCESS_DATE)
             """,
             """
             CREATE TABLE IF NOT EXISTS CORP_HISTORY_LOG (
@@ -88,6 +104,14 @@ class EventProcessor:
             )
             """,
             """
+            CREATE INDEX IF NOT EXISTS chl_i1 ON CORP_HISTORY_LOG 
+            (SYSTEM_TYPE_CD)
+            """,
+            """
+            CREATE INDEX IF NOT EXISTS chl_i2 ON CORP_HISTORY_LOG 
+            (PROCESS_DATE)
+            """,
+            """
             CREATE TABLE IF NOT EXISTS CREDENTIAL_TRANSFORM (
                 RECORD_ID SERIAL PRIMARY KEY,
                 SYSTEM_TYPE_CD VARCHAR(255) NOT NULL, 
@@ -96,6 +120,14 @@ class EventProcessor:
                 SCHEMA_VERSION VARCHAR(255) NOT NULL,
                 MAPPING_TRANSFORM TEXT NOT NULL
             )
+            """,
+            """
+            CREATE INDEX IF NOT EXISTS ct_i1 ON CREDENTIAL_TRANSFORM 
+            (SYSTEM_TYPE_CD)
+            """,
+            """
+            CREATE INDEX IF NOT EXISTS cy_i2 ON CREDENTIAL_TRANSFORM 
+            (CREDENTIAL_TYPE_CD)
             """,
             """
             CREATE TABLE IF NOT EXISTS CREDENTIAL_LOG (
@@ -113,6 +145,14 @@ class EventProcessor:
                 PROCESS_SUCCESS CHAR,
                 PROCESS_MSG VARCHAR(255)
             )
+            """,
+            """
+            CREATE INDEX IF NOT EXISTS cl_i1 ON CREDENTIAL_LOG 
+            (SYSTEM_TYPE_CD)
+            """,
+            """
+            CREATE INDEX IF NOT EXISTS cl_i2 ON CREDENTIAL_LOG 
+            (PROCESS_DATE)
             """
             )
         cur = None

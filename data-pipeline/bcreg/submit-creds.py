@@ -27,7 +27,7 @@ from bcreg.config import config
 
 AGENT_URL = os.environ.get('VONX_API_URL', 'http://localhost:5000/bcreg')
 
-CREDS_BATCH_SIZE = 500
+CREDS_BATCH_SIZE = 3000
 
 
 async def submit_cred(http_client, attrs, schema, version):
