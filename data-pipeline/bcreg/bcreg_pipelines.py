@@ -35,9 +35,7 @@ def bc_reg_pipeline_load_active():
     sub_pipeline1_2.add(Task(id='register_un_processed_corps_active', description='Register un-processed active corps',
                           commands=[ExecutePython('./bcreg/find-unprocessed-corps_actve.py')]))
     sub_pipeline1_2.add(Task(id='load_bc_reg_data_a', description='Load BC Registries data',
-                          commands=[ExecutePython('./bcreg/process-corps.py')]), ['register_un_processed_corps_active'])
-    sub_pipeline1_2.add(Task(id='create_bc_reg_credentials_a', description='Create credentials',
-                          commands=[ExecutePython('./bcreg/generate-creds.py')]), ['load_bc_reg_data_a'])
+                          commands=[ExecutePython('./bcreg/process-corps-generate-creds.py')]), ['register_un_processed_corps_active'])
     pipeline1.add(sub_pipeline1_2)
 
     sub_pipeline1_3 = Pipeline(id='submit_bc_reg_credentials_a', description='Submit BC Reg credentials to P-X')
@@ -58,9 +56,7 @@ def bc_reg_pipeline_load_historical():
     sub_pipeline1_2.add(Task(id='register_un_processed_corps_historical', description='Register un-processed historical corps',
                           commands=[ExecutePython('./bcreg/find-unprocessed-corps_historical.py')]))
     sub_pipeline1_2.add(Task(id='load_bc_reg_data_h', description='Load BC Registries data',
-                          commands=[ExecutePython('./bcreg/process-corps.py')]), ['register_un_processed_corps_historical'])
-    sub_pipeline1_2.add(Task(id='create_bc_reg_credentials_h', description='Create credentials',
-                          commands=[ExecutePython('./bcreg/generate-creds.py')]), ['load_bc_reg_data_h'])
+                          commands=[ExecutePython('./bcreg/process-corps-generate-creds.py')]), ['register_un_processed_corps_historical'])
     pipeline1.add(sub_pipeline1_2)
 
     sub_pipeline1_3 = Pipeline(id='submit_bc_reg_credentials_h', description='Submit BC Reg credentials to P-X')
