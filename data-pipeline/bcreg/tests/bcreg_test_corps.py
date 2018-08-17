@@ -125,16 +125,16 @@ def test_generate_corp_nums():
 	            sqls = bc_cache_reg.generated_sqls
 	            fake_corp_num = bc_cache_reg.add_generated_corp_num(corp['corp_num'])
 
-            print('corp_' + corp['corp_num'] + ' = {')
-            print('            corp_num:' + "'" + corp['corp_num'] + "'" + ', ' + 'corp_typ_cd:' + "'" + corp['corp_typ_cd'] + "'" + ', ' + 
-            	    'state_typ_cd:' + "'" + corp['state_typ_cd'] + "'" + ', ' + 
-	            	'party_ct:' + str(party_ct[0]['count']) + ', ' + 'party_addr_ct:' + str(party_addr_ct[0]['count']) + ', ' + 
-	                'name_ct:' + str(name_ct[0]['count']) + ', ' + 'name_assumed_ct:' + str(name_assumed_ct[0]['count']) + ', ' + 
-	                'name_trans_ct:' + str(name_trans_ct[0]['count']) + ', ' + 'tilma_ct:' + str(tilma_ct[0]['count']) + ', ' +
-	                'juisdiction_ct:' + str(juisdiction_ct[0]['count']) + ', ')
-            print('             sqls: [')
-            for sql in sqls:
-                print('                    """' + sql.replace(' values ', '\n                    values\n                    ') + '""",')
-            print('                   ]')
-            print('             }')
+            #print('corp_' + corp['corp_num'] + ' = {')
+            #print('            corp_num:' + "'" + corp['corp_num'] + "'" + ', ' + 'corp_typ_cd:' + "'" + corp['corp_typ_cd'] + "'" + ', ' + 
+            #	    'state_typ_cd:' + "'" + corp['state_typ_cd'] + "'" + ', ' + 
+	        #    	'party_ct:' + str(party_ct[0]['count']) + ', ' + 'party_addr_ct:' + str(party_addr_ct[0]['count']) + ', ' + 
+	        #        'name_ct:' + str(name_ct[0]['count']) + ', ' + 'name_assumed_ct:' + str(name_assumed_ct[0]['count']) + ', ' + 
+	        #        'name_trans_ct:' + str(name_trans_ct[0]['count']) + ', ' + 'tilma_ct:' + str(tilma_ct[0]['count']) + ', ' +
+	        #        'juisdiction_ct:' + str(juisdiction_ct[0]['count']) + ', ')
+            #print('             sqls: [')
+            #for sql in sqls:
+            #    print('                    """' + sql.replace(' values ', '\n                    values\n                    ') + '""",')
+            #print('                   ]')
+            #print('             }')
 

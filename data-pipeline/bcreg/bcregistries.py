@@ -821,7 +821,7 @@ class BCRegistries:
                 cursor.close()
 
     def get_filing_event(self, corp_num, event_id, event_type, force_query_remote=False):
-        if event_type != 'FILING':
+        if event_type != 'FILE':
             return {}
         sql_filing = """SELECT * from """ + self.get_table_prefix(force_query_remote) + """filing 
                         WHERE event_id = """ + self.get_db_sql_param(force_query_remote)

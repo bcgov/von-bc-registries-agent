@@ -39,17 +39,17 @@ def test_generate_corp_sql():
     
     with BCRegistries(True) as bc_registries:
         for corp in specific_corps:
-            print('=========================')
+            #print('=========================')
             print('===== ',  corp)
             bc_registries.cache_bcreg_corp_tables([corp], True)
             sqls = bc_registries.generated_sqls
             fake_corp_num = bc_registries.add_generated_corp_num(corp)
             print('=============>>> ', fake_corp_num)
-            print('=========================')
-            print('sqls:')
-            for sql in sqls:
-                print('"""' + sql.replace(' values ', '\nvalues\n') + '""",')
-            print('=========================')
+            #print('=========================')
+            #print('sqls:')
+            #for sql in sqls:
+            #    print('"""' + sql.replace(' values ', '\nvalues\n') + '""",')
+            #print('=========================')
  
             with BCRegistries(True) as cached_bc_reg:
                 cached_bc_reg.cache_bcreg_code_tables()
@@ -264,14 +264,14 @@ def test_specific_corp_scenario():
 
         # try running with dummy event id zero 
         corp_info = cached_bc_reg.get_bc_reg_corp_info(corp_num, 0)
-        print('-------------------------')
-        print('corp_info:')
-        print(corp_info)
-        print('-------------------------')
+        #print('-------------------------')
+        #print('corp_info:')
+        #print(corp_info)
+        #print('-------------------------')
 
     with EventProcessor() as event_processor:
         corp_creds = event_processor.generate_credentials(system_type, 0, 0, corp_num, corp_info)
-        print('-------------------------')
-        print('corp_creds:')
-        print(corp_creds)
-        print('-------------------------')
+        #print('-------------------------')
+        #print('corp_creds:')
+        #print(corp_creds)
+        #print('-------------------------')
