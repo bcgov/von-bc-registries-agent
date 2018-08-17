@@ -45,27 +45,6 @@ def bc_reg_pipeline_load_active():
 
     return pipeline1
 
-def bc_reg_pipeline_load_historical():
-    import bcreg
-
-    pipeline1 = Pipeline(
-        id='bc_reg_corp_loader_historical',
-        description='A pipeline that does the initial data load and credentials for Historical corporations.')
-
-    sub_pipeline1_2 = Pipeline(id='load_and_process_bc_reg_corps_historical', description='Load historical BC Reg corps and generate credentials')
-    sub_pipeline1_2.add(Task(id='register_un_processed_corps_historical', description='Register un-processed historical corps',
-                          commands=[ExecutePython('./bcreg/find-unprocessed-corps_historical.py')]))
-    sub_pipeline1_2.add(Task(id='load_bc_reg_data_h', description='Load BC Registries data',
-                          commands=[ExecutePython('./bcreg/process-corps-generate-creds.py')]), ['register_un_processed_corps_historical'])
-    pipeline1.add(sub_pipeline1_2)
-
-    sub_pipeline1_3 = Pipeline(id='submit_bc_reg_credentials_h', description='Submit BC Reg credentials to P-X')
-    sub_pipeline1_3.add(Task(id='submit_credentials_h', description='Submit credentials',
-                          commands=[ExecutePython('./bcreg/submit-creds.py')]))
-    pipeline1.add(sub_pipeline1_3, ['load_and_process_bc_reg_corps_historical'])
-
-    return pipeline1
-
 def bc_reg_pipeline_status():
     import bcreg
 

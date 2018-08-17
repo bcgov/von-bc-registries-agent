@@ -693,7 +693,7 @@ class BCRegistries:
 
     # return unprocessed corporations, based on active or historical
     # use for initial data load
-    def get_unprocessed_corps_data_load(self, last_event_id, max_event_id, active=True):
+    def get_unprocessed_corps_data_load(self, last_event_id, max_event_id):
         if active:
             state_cd = 'ACT'
         else:
@@ -707,7 +707,6 @@ class BCRegistries:
                              where corp.corp_num = state.corp_num
                               and state.end_event_id is null
                               and state.state_typ_cd = op_state.state_typ_cd
-                              and op_state.op_state_typ_cd = '""" + state_cd + """' 
                               and corp.corp_typ_cd in ('A','LLC','BC','C','CUL','ULC')""")
             row = cur.fetchone()
             corps = []
@@ -739,7 +738,6 @@ class BCRegistries:
                              where corp.corp_num = state.corp_num
                               and state.end_event_id is null
                               and state.state_typ_cd = op_state.state_typ_cd
-                              and op_state.op_state_typ_cd = 'ACT' 
                               and corp.corp_typ_cd in ('A','LLC','BC','C','CUL','ULC'))""", 
                             (last_event_id, max_event_id,))
             row = cur.fetchone()

@@ -53,7 +53,7 @@ async def submit_cred(http_client, attrs, schema, version):
 
 
 async def process_credential_queue(http_client):
-    sql1 = """SELECT RECORD_ID, SYSTEM_TYPE_CD, PREV_EVENT_ID, LAST_EVENT_ID, CORP_NUM, CREDENTIAL_TYPE_CD, 
+    sql1 = """SELECT RECORD_ID, SYSTEM_TYPE_CD, PREV_EVENT_ID, LAST_EVENT_ID, CORP_NUM, CORP_STATE, CREDENTIAL_TYPE_CD, CREDENTIAL_ID, 
                     CREDENTIAL_JSON, SCHEMA_NAME, SCHEMA_VERSION, ENTRY_DATE
               FROM CREDENTIAL_LOG 
               WHERE PROCESS_DATE is null
@@ -100,8 +100,9 @@ async def process_credential_queue(http_client):
             while row is not None:
                 i = i + 1
                 print('>>> Processing {} of {} credentials.'.format(i, cred_count))
-                credential = {'RECORD_ID':row[0], 'SYSTEM_TYP_CD':row[1], 'PREV_EVENT_ID':row[2], 'LAST_EVENT_ID':row[3], 'CORP_NUM':row[4], 
-                              'CREDENTIAL_TYPE_CD':row[5], 'CREDENTIAL_JSON':row[6], 'SCHEMA_NAME':row[7], 'SCHEMA_VERSION':row[8], 'ENTRY_DATE':row[9]}
+                credential = {'RECORD_ID':row[0], 'SYSTEM_TYP_CD':row[1], 'PREV_EVENT_ID':row[2], 'LAST_EVENT_ID':row[3], 'CORP_NUM':row[4], 'CORP_STATE':row[5],
+                              'CREDENTIAL_TYPE_CD':row[6], 'CREDENTIAL_ID':row[7], 'CREDENTIAL_JSON':row[7], 'SCHEMA_NAME':row[8], 'SCHEMA_VERSION':row[10], 
+                              'ENTRY_DATE':row[11]}
                 
                 # post credential
                 try:

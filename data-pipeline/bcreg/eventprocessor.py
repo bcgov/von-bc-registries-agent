@@ -96,6 +96,7 @@ class EventProcessor:
                 RECORD_ID SERIAL PRIMARY KEY,
                 SYSTEM_TYPE_CD VARCHAR(255) NOT NULL, 
                 CORP_NUM VARCHAR(255) NOT NULL,
+                CORP_STATE VARCHAR(255) NOT NULL,
                 PREV_EVENT_ID INTEGER NOT NULL, 
                 LAST_EVENT_ID INTEGER NOT NULL, 
                 CORP_JSON JSON NOT NULL,
@@ -134,13 +135,16 @@ class EventProcessor:
                 RECORD_ID SERIAL PRIMARY KEY,
                 SYSTEM_TYPE_CD VARCHAR(255) NOT NULL, 
                 CORP_NUM VARCHAR(255) NOT NULL,
+                CORP_STATE VARCHAR(255) NOT NULL,
                 PREV_EVENT_ID INTEGER NOT NULL, 
                 LAST_EVENT_ID INTEGER NOT NULL, 
                 CREDENTIAL_TYPE_CD VARCHAR(255) NOT NULL,
+                CREDENTIAL_ID VARCHAR(255) NOT NULL,
                 SCHEMA_NAME VARCHAR(255) NOT NULL,
                 SCHEMA_VERSION VARCHAR(255) NOT NULL,
                 CREDENTIAL_JSON JSON NOT NULL,
                 ENTRY_DATE TIMESTAMP NOT NULL,
+                END_DATE TIMESTAMP,
                 PROCESS_DATE TIMESTAMP,
                 PROCESS_SUCCESS CHAR,
                 PROCESS_MSG VARCHAR(255)
@@ -272,14 +276,14 @@ class EventProcessor:
                 cur.close()
 
     # insert data for one corp into the history table
-    def insert_corp_history(self, system_type, prev_event_id, last_event_id, corp_num, corp_json):
+    def insert_corp_history(self, system_type, prev_event_id, last_event_id, corp_num, corp_state, corp_json):
         """ insert a new corps into the corps table """
-        sql = """INSERT INTO CORP_HISTORY_LOG (SYSTEM_TYPE_CD, PREV_EVENT_ID, LAST_EVENT_ID, CORP_NUM, CORP_JSON, ENTRY_DATE)
-                 VALUES(%s, %s, %s, %s, %s, %s) RETURNING RECORD_ID;"""
+        sql = """INSERT INTO CORP_HISTORY_LOG (SYSTEM_TYPE_CD, PREV_EVENT_ID, LAST_EVENT_ID, CORP_NUM, CORP_STATE, CORP_JSON, ENTRY_DATE)
+                 VALUES(%s, %s, %s, %s, %s, %s, %s) RETURNING RECORD_ID;"""
         cur = None
         try:
             cur = self.conn.cursor()
-            cur.execute(sql, (system_type, prev_event_id, last_event_id, corp_num, corp_json, datetime.datetime.now(),))
+            cur.execute(sql, (system_type, prev_event_id, last_event_id, corp_num, corp_state, corp_json, datetime.datetime.now(),))
             record_id = cur.fetchone()[0]
             self.conn.commit()
             cur.close()
@@ -292,12 +296,12 @@ class EventProcessor:
                 cur.close()
 
     # insert a generated JSON credential into our log
-    def insert_json_credential(self, cur, system_cd, prev_event_id, last_event_id, corp_num, cred_type, schema_name, schema_version, credential):
-        sql = """INSERT INTO CREDENTIAL_LOG (SYSTEM_TYPE_CD, PREV_EVENT_ID, LAST_EVENT_ID, CORP_NUM, CREDENTIAL_TYPE_CD, 
+    def insert_json_credential(self, cur, system_cd, prev_event_id, last_event_id, corp_num, corp_state, cred_type, cred_id, schema_name, schema_version, credential):
+        sql = """INSERT INTO CREDENTIAL_LOG (SYSTEM_TYPE_CD, PREV_EVENT_ID, LAST_EVENT_ID, CORP_NUM, CORP_STATE, CREDENTIAL_TYPE_CD, CREDENTIAL_ID, 
                 SCHEMA_NAME, SCHEMA_VERSION, CREDENTIAL_JSON, ENTRY_DATE)
-                VALUES(%s, %s, %s, %s, %s, %s, %s, %s, %s) RETURNING RECORD_ID;"""
+                VALUES(%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s) RETURNING RECORD_ID;"""
         # create row(s) for corp creds json info
-        cur.execute(sql, (system_cd, prev_event_id, last_event_id, corp_num, cred_type, 
+        cur.execute(sql, (system_cd, prev_event_id, last_event_id, corp_num, corp_state, cred_type, cred_id, 
                     schema_name, schema_version, json.dumps(credential, cls=DateTimeEncoder), datetime.datetime.now(),))
 
     # determine jurisdiction for corp
@@ -357,10 +361,10 @@ class EventProcessor:
         return addr_cred
 
     # store credentials for the provided corp
-    def store_credentials(self, cur, system_typ_cd, prev_event_id, last_event_id, corp_num, corp_info, corp_creds):
+    def store_credentials(self, cur, system_typ_cd, prev_event_id, last_event_id, corp_num, corp_state, corp_info, corp_creds):
         for corp_cred in corp_creds:
-            self.insert_json_credential(cur, system_typ_cd, prev_event_id, last_event_id, corp_num, 
-                                    corp_cred['cred_type'], corp_cred['schema'], corp_cred['version'], corp_cred['credential'])
+            self.insert_json_credential(cur, system_typ_cd, prev_event_id, last_event_id, corp_num, corp_state, 
+                                    corp_cred['cred_type'], 'TBD cred_id', corp_cred['schema'], corp_cred['version'], corp_cred['credential'])
 
     def build_credential_dict(self, cred_type, schema, version, credential):
         cred = {}
@@ -461,10 +465,10 @@ class EventProcessor:
                  WHERE PROCESS_DATE is null
                  LIMIT """ + str(CORP_BATCH_SIZE)
 
-        sql2 = """INSERT INTO CORP_HISTORY_LOG (SYSTEM_TYPE_CD, PREV_EVENT_ID, LAST_EVENT_ID, CORP_NUM, CORP_JSON, ENTRY_DATE)
-                  VALUES(%s, %s, %s, %s, %s, %s) RETURNING RECORD_ID;"""
-        sql2a = """INSERT INTO CORP_HISTORY_LOG (SYSTEM_TYPE_CD, PREV_EVENT_ID, LAST_EVENT_ID, CORP_NUM, CORP_JSON, ENTRY_DATE, PROCESS_DATE)
+        sql2 = """INSERT INTO CORP_HISTORY_LOG (SYSTEM_TYPE_CD, PREV_EVENT_ID, LAST_EVENT_ID, CORP_NUM, CORP_STATE, CORP_JSON, ENTRY_DATE)
                   VALUES(%s, %s, %s, %s, %s, %s, %s) RETURNING RECORD_ID;"""
+        sql2a = """INSERT INTO CORP_HISTORY_LOG (SYSTEM_TYPE_CD, PREV_EVENT_ID, LAST_EVENT_ID, CORP_NUM, CORP_STATE, CORP_JSON, ENTRY_DATE, PROCESS_DATE)
+                  VALUES(%s, %s, %s, %s, %s, %s, %s, %s) RETURNING RECORD_ID;"""
 
         sql3 = """UPDATE EVENT_BY_CORP_FILING
                   SET PROCESS_DATE = %s
@@ -525,14 +529,14 @@ class EventProcessor:
                                 corp_creds = self.generate_credentials(corp['SYSTEM_TYPE_CD'], corp['PREV_EVENT_ID'], corp['LAST_EVENT_ID'], corp['CORP_NUM'],
                                                         corp_info)
                                 self.store_credentials(cur, corp['SYSTEM_TYPE_CD'], corp['PREV_EVENT_ID'], corp['LAST_EVENT_ID'], corp['CORP_NUM'],
-                                                        corp_info, corp_creds)
+                                                        corp_info['corp_state']['op_state_typ_cd'], corp_info, corp_creds)
                                 cur.close()
                                 cur = None
 
                                 # store corporate info 
                                 if load_regs:
                                     cur = self.conn.cursor()
-                                    cur.execute(sql2a, (corp['SYSTEM_TYPE_CD'], corp['PREV_EVENT_ID'], corp['LAST_EVENT_ID'], corp['CORP_NUM'], 
+                                    cur.execute(sql2a, (corp['SYSTEM_TYPE_CD'], corp['PREV_EVENT_ID'], corp['LAST_EVENT_ID'], corp['CORP_NUM'], corp_info['corp_state']['op_state_typ_cd'], 
                                                         bc_registries.to_json(corp_info), datetime.datetime.now(), datetime.datetime.now(),))
                                     cur.close()
                                     cur = None
@@ -546,7 +550,7 @@ class EventProcessor:
                             elif load_regs:
                                 # store corporate info for future generation of credentials
                                 cur = self.conn.cursor()
-                                cur.execute(sql2, (corp['SYSTEM_TYPE_CD'], corp['PREV_EVENT_ID'], corp['LAST_EVENT_ID'], corp['CORP_NUM'], 
+                                cur.execute(sql2, (corp['SYSTEM_TYPE_CD'], corp['PREV_EVENT_ID'], corp['LAST_EVENT_ID'], corp['CORP_NUM'], corp_info['corp_state']['op_state_typ_cd'], 
                                                     bc_registries.to_json(corp_info), datetime.datetime.now(),))
                                 cur.close()
                                 cur = None
