@@ -34,13 +34,21 @@ Instructions will be added when the OpenShift integration is implemented.
 
 Pipeline processes are available through the Mara console, and via bash scripts (for scheduled processing).
 
-![Event Processor Dashboard](https://raw.githubusercontent.com/bcgov/von-bc-registries-agent/master/data-pipeline/docs/bc_registries_dashboard.png "Event Processor Dashboard")
+![Event Processor Dashboard](https://raw.githubusercontent.com/ianco/von-bc-registries-agent/master/data-pipeline/docs/bc_registries_dashboard.png "Event Processor Dashboard")
 
-bc_reg_migrate.py
-bc_reg_pipeline_initial_load.py
-bc_reg_pipeline_post_credentials.py
+The "bc reg event processor" pipeline monitors the BC Registry event queue, loads corporation data, creates and posts credentials.  This job should be run on a schedule (and corresponds to the "bcreg/bc_reg_pipeline.py" script) to continually monitor the BC Registries database for updates.
 
-bc_reg_pipeline.py
+The "bc reg pipeline status" pipeline lists the number of processed/outstanding records in each stage of the pipeline.  This can be run from the console, or via a script ("bcreg/display_pipeline_status.py").
+
+The "initialization and load tasks" consists of several tasks that are run only once, and correspond to the following scripts:
+
+![Event Processor Dashboard](https://raw.githubusercontent.com/ianco/von-bc-registries-agent/master/data-pipeline/docs/bc_registries_dashboard_init.png "Event Processor Dashboard")
+
+* "bc reg db init" - bcreg/bc_reg_migrate.py
+* "bc reg corp loader" - bcreg/bc_reg_pipeline_initial_load.py
+* "bc reg credential poster" - bcreg/bc_reg_pipeline_post_credentials.py
+
+Pipelines under "test and demo tasks" are for test and demonstration purposes only.
 
 There are four data processing pipelines defined:
 
