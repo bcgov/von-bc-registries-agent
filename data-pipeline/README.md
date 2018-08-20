@@ -97,6 +97,10 @@ cd mara-example-project/scripts
 BC_REG_DB_USER=<user> BC_REG_DB_PASSWORD=<pwd> MARA_DB_HOST=localhost MARA_DB_PORT=5444 ./run-step.sh bcreg/bc_reg_pipeline.py
 ```
 
+Hint:  If you want to test out the "bc_reg_pipeline.py" script, run the following sub-task under "test and demo tasks" in the Mara console first:
+
+* "bc reg test data"
+
 ## Extending Event Processor
 
 The mara setup itself is generic, as long as you run from the provided docker scripts.
