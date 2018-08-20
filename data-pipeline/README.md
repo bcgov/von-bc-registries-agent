@@ -18,15 +18,15 @@ The dependencies for the core framework are described in the root Mara project. 
 
 Generated credentials are submitted using bcreg-x, a configured instance of VON-X, to TheOrgBook.  Currently the versions used are:
 
-* VON-Network = https://github.com/bcgov/von-network.git, branch origin/v1.1.2
-* TheOrgBook = https://github.com/nrempel/TheOrgBook.git, branch origin/v1.1.2
-* BCReg-X = https://github.com/bcgov/con-bc-registries-agent/bcreg-x, master branch
+* VON-Network = https://github.com/bcgov/von-network.git, branch master
+* TheOrgBook = https://github.com/nrempel/TheOrgBook.git, branch master
+* BCReg-X = https://github.com/bcgov/con-bc-registries-agent/bcreg-x, branch master
 
 ## Running the Event Processor using docker
 
-See the instructions in the [docker folder README](docker/README.MD).
+See the instructions in the [docker folder README](../docker/README.MD).
 
-## Runnning the Event Processor using OpenShift
+## Running the Event Processor using OpenShift
 
 Instructions will be added when the OpenShift integration is implemented.
 
@@ -34,7 +34,7 @@ Instructions will be added when the OpenShift integration is implemented.
 
 Pipeline processes are available through the Mara console, and via bash scripts (for scheduled processing).
 
-![Event Processor Dashboard](https://raw.githubusercontent.com/ianco/von-bc-registries-agent/master/data-pipeline/docs/bc_registries_dashboard.png "Event Processor Dashboard")
+![Event Processor Dashboard](https://raw.githubusercontent.com/bcgov/von-bc-registries-agent/master/data-pipeline/docs/bc_registries_dashboard.png "Event Processor Dashboard")
 
 The "bc reg event processor" pipeline monitors the BC Registry event queue, loads corporation data, creates and posts credentials.  This job should be run on a schedule (and corresponds to the "bcreg/bc_reg_pipeline.py" script) to continually monitor the BC Registries database for updates.
 
@@ -42,7 +42,7 @@ The "bc reg pipeline status" pipeline lists the number of processed/outstanding 
 
 The "initialization and load tasks" consists of several tasks that are run only once, and correspond to the following scripts:
 
-![Event Processor Dashboard](https://raw.githubusercontent.com/ianco/von-bc-registries-agent/master/data-pipeline/docs/bc_registries_dashboard_init.png "Event Processor Dashboard")
+![Event Processor Dashboard](https://raw.githubusercontent.com/bcgov/von-bc-registries-agent/master/data-pipeline/docs/bc_registries_dashboard_init.png "Event Processor Dashboard")
 
 * "bc reg db init" - bcreg/bc_reg_migrate.py
 * "bc reg corp loader" - bcreg/bc_reg_pipeline_initial_load.py
@@ -58,7 +58,7 @@ Use the fifth command shell (or open another - why not?) to run the script(s), f
 
 ```
 cd mara-example-project/scripts
-BC_REG_DB_USER=<user> BC_REG_DB_PASSWORD=<pwd> MARA_DB_HOST=localhost MARA_DB_PORT=5444 ./run-step.sh bcreg/bc_reg_migrate.py
+BC_REG_DB_USER=<usr> BC_REG_DB_PASSWORD=<pwd> MARA_DB_HOST=localhost MARA_DB_PORT=5444 ./run-step.sh bcreg/<script>.py
 ```
 
 The logs and run stats can be viewed in the UI.
@@ -72,17 +72,19 @@ The following will perform database initialization and do the initial corporatio
 ```
 cd mara-example-project/scripts
 
-BC_REG_DB_USER=<user> BC_REG_DB_PASSWORD=<pwd> MARA_DB_HOST=localhost MARA_DB_PORT=5444 ./run-step.sh bcreg/bc_reg_migrate.py
+BC_REG_DB_USER=<usr> BC_REG_DB_PASSWORD=<pwd> MARA_DB_HOST=localhost MARA_DB_PORT=5444 ./run-step.sh bcreg/bc_reg_migrate.py
 
-BC_REG_DB_USER=<user> BC_REG_DB_PASSWORD=<pwd> MARA_DB_HOST=localhost MARA_DB_PORT=5444 ./run-step.sh bcreg/bc_reg_pipeline_initial_load.py
+BC_REG_DB_USER=<usr> BC_REG_DB_PASSWORD=<pwd> MARA_DB_HOST=localhost MARA_DB_PORT=5444 ./run-step.sh bcreg/bc_reg_pipeline_initial_load.py
 ```
 
-The initial load will load over 930,000 corporations and process almost 2 million credentials.  It will run for almost 12 hours.  The following can be run at the same time (in a separate console window) to post credentials to TOB:
+The initial load will load over 930,000 corporations and process almost 2 million credentials.  It will run for almost 12 hours.  
+
+The following can be run at the same time (in a separate console window) to post credentials to TOB (wait for ~15-20 minutes to allow the initial load to start populating the outbound credential queue):
 
 ```
 cd mara-example-project/scripts
 
-BC_REG_DB_USER=<user> BC_REG_DB_PASSWORD=<pwd> MARA_DB_HOST=localhost MARA_DB_PORT=5444 ./run-step.sh bcreg/bc_reg_migrate.py
+BC_REG_DB_USER=<usr> BC_REG_DB_PASSWORD=<pwd> MARA_DB_HOST=localhost MARA_DB_PORT=5444 ./run-step.sh bcreg/bc_reg_migrate.py
 ```
 
 ## Running Pipelines to Perform Initialization and Data Load
