@@ -58,8 +58,8 @@ DBA_MAPPING = """{
 
 with EventProcessor() as event_processor:
     # insert last event
-    event_processor.insert_last_event(system_type, 9240000)
-    #event_processor.insert_last_event(system_type, 0)
+    #event_processor.insert_last_event(system_type, 9240000)
+    event_processor.insert_last_event(system_type, 0)
     
     # insert jsonbender mappers
     event_processor.insert_credential_transform(system_type, corp_credential, CORP_MAPPING, corp_schema, corp_version)

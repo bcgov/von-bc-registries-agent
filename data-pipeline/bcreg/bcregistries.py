@@ -694,10 +694,6 @@ class BCRegistries:
     # return unprocessed corporations, based on active or historical
     # use for initial data load
     def get_unprocessed_corps_data_load(self, last_event_id, max_event_id):
-        if active:
-            state_cd = 'ACT'
-        else:
-            state_cd = 'HIS'
         cur = None
         try:
             cur = self.conn.cursor()

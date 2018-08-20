@@ -16,7 +16,7 @@ with BCRegistries() as bc_registries:
         
         # get unprocessed corps (there are about 2700)
         print("Get unprocessed corps")
-        corps = bc_registries.get_unprocessed_corps_data_load(prev_event_id, max_event_id, True)
+        corps = bc_registries.get_unprocessed_corps_data_load(prev_event_id, max_event_id)
         
         print("Update our queue")
         event_processor.update_corp_event_queue(system_type, corps, max_event_id)

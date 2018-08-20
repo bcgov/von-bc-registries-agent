@@ -57,11 +57,23 @@ async def process_credential_queue(http_client):
                     CREDENTIAL_JSON, SCHEMA_NAME, SCHEMA_VERSION, ENTRY_DATE
               FROM CREDENTIAL_LOG 
               WHERE PROCESS_DATE is null
+              ORDER BY RECORD_ID
               LIMIT """ + str(CREDS_BATCH_SIZE)
 
     sql1a = """SELECT count(*) cnt
               FROM CREDENTIAL_LOG 
               WHERE PROCESS_DATE is null"""
+
+    sql1_active = """SELECT RECORD_ID, SYSTEM_TYPE_CD, PREV_EVENT_ID, LAST_EVENT_ID, CORP_NUM, CORP_STATE, CREDENTIAL_TYPE_CD, CREDENTIAL_ID, 
+                    CREDENTIAL_JSON, SCHEMA_NAME, SCHEMA_VERSION, ENTRY_DATE
+              FROM CREDENTIAL_LOG 
+              WHERE corp_state = 'ACT' and PROCESS_DATE is null
+              ORDER BY RECORD_ID
+              LIMIT """ + str(CREDS_BATCH_SIZE)
+
+    sql1a_active = """SELECT count(*) cnt
+              FROM CREDENTIAL_LOG 
+              WHERE corp_state = 'ACT' and PROCESS_DATE is null"""
 
     sql2 = """UPDATE CREDENTIAL_LOG
               SET PROCESS_DATE = %s, PROCESS_SUCCESS = 'Y'
@@ -93,15 +105,27 @@ async def process_credential_queue(http_client):
         cred_count_remaining = cred_count
 
         while 0 < cred_count_remaining:
+            active_cred_count = 0
+            cur = conn.cursor()
+            cur.execute(sql1a_active)
+            row = cur.fetchone()
+            if row is not None:
+                active_cred_count = row[0]
+            cur.close()
+            cur = None
+
             # create a cursor
             cur = conn.cursor()
-            cur.execute(sql1)
+            if 0 < active_cred_count:
+                cur.execute(sql1_active)
+            else:
+                cur.execute(sql1)
             row = cur.fetchone()
             while row is not None:
                 i = i + 1
                 print('>>> Processing {} of {} credentials.'.format(i, cred_count))
                 credential = {'RECORD_ID':row[0], 'SYSTEM_TYP_CD':row[1], 'PREV_EVENT_ID':row[2], 'LAST_EVENT_ID':row[3], 'CORP_NUM':row[4], 'CORP_STATE':row[5],
-                              'CREDENTIAL_TYPE_CD':row[6], 'CREDENTIAL_ID':row[7], 'CREDENTIAL_JSON':row[7], 'SCHEMA_NAME':row[8], 'SCHEMA_VERSION':row[10], 
+                              'CREDENTIAL_TYPE_CD':row[6], 'CREDENTIAL_ID':row[7], 'CREDENTIAL_JSON':row[8], 'SCHEMA_NAME':row[9], 'SCHEMA_VERSION':row[10], 
                               'ENTRY_DATE':row[11]}
                 
                 # post credential
@@ -110,14 +134,14 @@ async def process_credential_queue(http_client):
 
                     result = result_json # json.loads(result_json)[0]
                     if result['success']:
-                        #print("log success to database")
+                        print("log success to database")
                         cur2 = conn.cursor()
                         cur2.execute(sql2, (datetime.datetime.now(), credential['RECORD_ID'],))
                         conn.commit()
                         cur2.close()
                         cur2 = None
                     else:
-                        #print("log error to database")
+                        print("log error to database")
                         cur2 = conn.cursor()
                         if 255 < len(result['result']):
                             res = result['result'][:250] + '...'
@@ -129,7 +153,7 @@ async def process_credential_queue(http_client):
                         cur2 = None
 
                 except (Exception) as error:
-                    #print("log exception to database")
+                    print("log exception to database")
                     cur2 = conn.cursor()
                     cur2.execute(sql3, (datetime.datetime.now(), str(error), credential['RECORD_ID'],))
                     conn.commit()
