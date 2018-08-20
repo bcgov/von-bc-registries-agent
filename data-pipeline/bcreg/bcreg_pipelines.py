@@ -24,24 +24,33 @@ def bc_reg_pipeline():
 
     return pipeline1
 
-def bc_reg_pipeline_load_active():
+def bc_reg_pipeline_initial_load():
     import bcreg
 
     pipeline1 = Pipeline(
-        id='bc_reg_corp_loader_active',
-        description='A pipeline that does the initial data load and credentials for Active corporations.')
+        id='bc_reg_corp_loader',
+        description='A pipeline that does the initial data load and credentials for all corporations.')
 
-    sub_pipeline1_2 = Pipeline(id='load_and_process_bc_reg_corps_active', description='Load Active BC Reg corps and generate credentials')
-    sub_pipeline1_2.add(Task(id='register_un_processed_corps_active', description='Register un-processed active corps',
+    sub_pipeline1_2 = Pipeline(id='load_and_process_bc_reg_corps', description='Load Active BC Reg corps and generate credentials')
+    sub_pipeline1_2.add(Task(id='register_un_processed_corps', description='Register un-processed active corps',
                           commands=[ExecutePython('./bcreg/find-unprocessed-corps_actve.py')]))
     sub_pipeline1_2.add(Task(id='load_bc_reg_data_a', description='Load BC Registries data',
-                          commands=[ExecutePython('./bcreg/process-corps-generate-creds.py')]), ['register_un_processed_corps_active'])
+                          commands=[ExecutePython('./bcreg/process-corps-generate-creds.py')]), ['register_un_processed_corps'])
     pipeline1.add(sub_pipeline1_2)
+
+    return pipeline1
+
+def bc_reg_pipeline_post_credentials():
+    import bcreg
+
+    pipeline1 = Pipeline(
+        id='bc_reg_credential_poster',
+        description='A pipeline that posts generated credentials to TOB.')
 
     sub_pipeline1_3 = Pipeline(id='submit_bc_reg_credentials_a', description='Submit BC Reg credentials to P-X')
     sub_pipeline1_3.add(Task(id='submit_credentials_a', description='Submit credentials',
                           commands=[ExecutePython('./bcreg/submit-creds.py')]))
-    pipeline1.add(sub_pipeline1_3, ['load_and_process_bc_reg_corps_active'])
+    pipeline1.add(sub_pipeline1_3)
 
     return pipeline1
 
@@ -68,6 +77,18 @@ def db_init_pipeline():
                         commands=[ExecutePython('./bcreg/create.py')]))
     pipeline.add(Task(id='initialize_tables', description='Insert configuration data',
                         commands=[ExecutePython('./bcreg/insert.py')]), ['create_tables'])
+
+    return pipeline
+
+def bc_init_test_data():
+    import bcreg
+
+    pipeline = Pipeline(
+        id='bc_reg_test_data',
+        description='A pipeline that initializes event processor database for testing.')
+
+    pipeline.add(Task(id='register_test_corps', description='Insert some test data for processing',
+                        commands=[ExecutePython('./bcreg/insert-test.py')]))
 
     return pipeline
 

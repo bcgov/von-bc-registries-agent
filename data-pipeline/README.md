@@ -32,7 +32,15 @@ Instructions will be added when the OpenShift integration is implemented.
 
 ## The Data Pipelines
 
+Pipeline processes are available through the Mara console, and via bash scripts (for scheduled processing).
+
 ![Event Processor Dashboard](https://raw.githubusercontent.com/bcgov/von-bc-registries-agent/master/data-pipeline/docs/bc_registries_dashboard.png "Event Processor Dashboard")
+
+bc_reg_migrate.py
+bc_reg_pipeline_initial_load.py
+bc_reg_pipeline_post_credentials.py
+
+bc_reg_pipeline.py
 
 There are four data processing pipelines defined:
 
