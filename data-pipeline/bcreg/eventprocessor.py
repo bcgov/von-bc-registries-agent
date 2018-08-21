@@ -364,14 +364,15 @@ class EventProcessor:
     def store_credentials(self, cur, system_typ_cd, prev_event_id, last_event_id, corp_num, corp_state, corp_info, corp_creds):
         for corp_cred in corp_creds:
             self.insert_json_credential(cur, system_typ_cd, prev_event_id, last_event_id, corp_num, corp_state, 
-                                    corp_cred['cred_type'], 'TBD cred_id', corp_cred['schema'], corp_cred['version'], corp_cred['credential'])
+                                    corp_cred['cred_type'], corp_cred['id'], corp_cred['schema'], corp_cred['version'], corp_cred['credential'])
 
-    def build_credential_dict(self, cred_type, schema, version, credential):
+    def build_credential_dict(self, cred_type, schema, version, cred_id, credential):
         cred = {}
         cred['cred_type'] = cred_type
         cred['schema'] = schema
         cred['version'] = version
         cred['credential'] = credential
+        cred['id'] = cred_id
         return cred
 
     # generate credentials for the provided corp
@@ -410,14 +411,15 @@ class EventProcessor:
         corp_cred['home_jurisdiction'] = self.get_corp_jurisdiction(corp_info)
         corp_cred['end_date'] = ""
 
-        corp_creds.append(self.build_credential_dict(corp_credential, corp_schema, corp_version, corp_cred))
+        corp_creds.append(self.build_credential_dict(corp_credential, corp_schema, corp_version, corp_num, corp_cred))
 
         # generate addr credential(s)
         for office in corp_info['office']:
             if 'office_typ_cd' in office:
                 if 'delivery_addr' in office and 'local_addr' in office['delivery_addr']:
                     addr_cred = self.generate_address_credential(corp_num, corp_info, office, office['delivery_addr'], "", "")
-                    corp_creds.append(self.build_credential_dict(addr_credential, addr_schema, addr_version, addr_cred))
+                    corp_creds.append(self.build_credential_dict(addr_credential, addr_schema, addr_version, 
+                                                                corp_num + ',' + office['office_typ_cd'], addr_cred))
 
         # generate dba credential(s)
         if 'parties' in corp_info:
@@ -436,7 +438,8 @@ class EventProcessor:
                     else:
                         dba_cred['effective_date'] = dba_name['start_event']['event_timestmp']
                     dba_cred['end_date'] = ""
-                    corp_creds.append(self.build_credential_dict(dba_credential, dba_schema, dba_version, dba_cred))
+                    corp_creds.append(self.build_credential_dict(dba_credential, dba_schema, dba_version, 
+                                                                dba_cred['dba_corp_num'], dba_cred))
 
                 # generate addr credential(s)
                 for office in party['corp_info']['office']:
@@ -447,10 +450,11 @@ class EventProcessor:
                         else:
                             party_dba_name = party['business_nme']
                         if 'delivery_addr' in office and 'local_addr' in office['delivery_addr']:
+                            dba_corp_num = self.corp_num_with_prefix(party['corp_info']['corp_typ_cd'], party['corp_info']['corp_num'])
                             addr_cred = self.generate_address_credential(corp_num, corp_info, office, office['delivery_addr'], 
-                                            self.corp_num_with_prefix(party['corp_info']['corp_typ_cd'], party['corp_info']['corp_num']), 
-                                            party_dba_name)
-                            corp_creds.append(self.build_credential_dict(addr_credential, addr_schema, addr_version, addr_cred))
+                                            dba_corp_num, party_dba_name)
+                            corp_creds.append(self.build_credential_dict(addr_credential, addr_schema, addr_version, 
+                                                                        dba_corp_num + ',' + office['office_typ_cd'], addr_cred))
 
         return corp_creds
 
@@ -483,6 +487,9 @@ class EventProcessor:
             while continue_loop:
                 corps = []
                 specific_corps = []
+
+                # load data from BC Registries for the corporations we need to process (max of 3000 per chunk)
+                # this data may be pulled directly, or pulled from a "cache" in the event processor database
                 if load_regs:
                     # we are loading data from BC Registries based on the corp event queue
                     cur = self.conn.cursor()
@@ -512,6 +519,7 @@ class EventProcessor:
                 if len(specific_corps) == 0:
                     continue_loop = False
                 else:
+                    # now generate credentials from the corporate data
                     with BCRegistries(use_cache) as bc_registries:
                         if use_cache:
                             bc_registries.cache_bcreg_corps(specific_corps)
@@ -521,6 +529,7 @@ class EventProcessor:
                                 # fetch corp info from bc_registries
                                 corp_info = bc_registries.get_bc_reg_corp_info(corp['CORP_NUM'], corp['LAST_EVENT_ID'])
                             else:
+                                # json blob is cached in event processor database
                                 corp_info = corp['CORP_JSON']
 
                             if generate_creds:
