@@ -375,6 +375,7 @@ class EventProcessor:
             cur = self.conn.cursor()
             cur.execute(sql, (system_typ_cd, corp_num, corp_state, cred_type, cred_id,))
             row = cur.fetchone()
+            existing_cred = ''
             if row is not None:
                 existing_cred = row[0]
             cur.close()
