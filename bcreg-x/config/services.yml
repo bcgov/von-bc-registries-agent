@@ -47,10 +47,10 @@ issuers:
             input: incorporation
             from: value
           source_id:
-            input: dba_corp_num
+            input: org_registry_id
             from: claim
           type:
-            input: doing_business_as
+            input: incorporation
             from: value
         mapping:
           - model: name
