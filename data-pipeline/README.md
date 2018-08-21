@@ -87,7 +87,7 @@ cd mara-example-project/scripts
 BC_REG_DB_USER=<usr> BC_REG_DB_PASSWORD=<pwd> MARA_DB_HOST=localhost MARA_DB_PORT=5444 ./run-step.sh bcreg/bc_reg_migrate.py
 ```
 
-## Running Pipelines to Perform Initialization and Data Load
+## Running Pipelines to Perform On-going Event Monitoring and Credential Updates
 
 The following should be run at regular intervals (e.g. 15 minutes) on a scheduler:
 

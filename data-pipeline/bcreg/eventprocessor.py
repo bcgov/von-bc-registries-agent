@@ -360,11 +360,41 @@ class EventProcessor:
 
         return addr_cred
 
+    # check if the newly generated credential is the same as the previously issued credential (if applicable)
+    def same_as_existing_cred(self, system_typ_cd, corp_num, corp_state, cred_type, cred_id, credential):
+        sql = """SELECT CREDENTIAL_JSON FROM CREDENTIAL_LOG 
+                 WHERE SYSTEM_TYPE_CD = %s
+                   AND CORP_NUM = %s
+                   AND CORP_STATE = %s
+                   AND CREDENTIAL_TYPE_CD = %s
+                   AND CREDENTIAL_ID = %s
+                 ORDER BY RECORD_ID DESC"""
+        cur = None
+        try:
+            # check whatever is the most recent "version" of this credential
+            cur = self.conn.cursor()
+            cur.execute(sql, (system_typ_cd, corp_num, corp_state, cred_type, cred_id,))
+            row = cur.fetchone()
+            if row is not None:
+                existing_cred = row[0]
+            cur.close()
+            cur = None
+            return (existing_cred == credential)
+        except (Exception, psycopg2.DatabaseError) as error:
+            print(error)
+            raise
+        finally:
+            if cur is not None:
+                cur.close()
+        return False
+
     # store credentials for the provided corp
     def store_credentials(self, cur, system_typ_cd, prev_event_id, last_event_id, corp_num, corp_state, corp_info, corp_creds):
         for corp_cred in corp_creds:
-            self.insert_json_credential(cur, system_typ_cd, prev_event_id, last_event_id, corp_num, corp_state, 
-                                    corp_cred['cred_type'], corp_cred['id'], corp_cred['schema'], corp_cred['version'], corp_cred['credential'])
+            # check if the credential already exists, and (if so) if our new credential has changed
+            if (not self.same_as_existing_cred(system_typ_cd, corp_num, corp_state, corp_cred['cred_type'], corp_cred['id'], corp_cred['credential'])):
+                self.insert_json_credential(cur, system_typ_cd, prev_event_id, last_event_id, corp_num, corp_state, 
+                                        corp_cred['cred_type'], corp_cred['id'], corp_cred['schema'], corp_cred['version'], corp_cred['credential'])
 
     def build_credential_dict(self, cred_type, schema, version, cred_id, credential):
         cred = {}
