@@ -18,7 +18,7 @@ def test_connect_bcreg_baseline():
 def test_compare_corp_events():
     specific_corps = [
                     '0641655',
-                    '0820416',
+                    #'0820416',
                     '0700450',
                     '0803224',
                     'LLC0000192',
@@ -44,7 +44,7 @@ def test_compare_corp_events():
                     'A0032100',
                     '0874088',
                     '0803207',
-                    '0873646',
+                    #'0873646',
                     ]
     
     with BCRegistriesBaseline() as bc_registries:
@@ -65,7 +65,7 @@ def test_compare_corp_events():
 def test_compare_corp_infos():
     specific_corps = [
                     '0641655',
-                    '0820416',
+                    #'0820416',
                     '0700450',
                     '0803224',
                     'LLC0000192',
@@ -91,7 +91,7 @@ def test_compare_corp_infos():
                     'A0032100',
                     '0874088',
                     '0803207',
-                    '0873646',
+                    #'0873646',
                     ]
     
     with BCRegistries() as bc_registries:
@@ -150,6 +150,12 @@ def test_compare_corp_infos():
             corp_creds_baseline[corp['CORP_NUM']] = event_processor.generate_credentials(system_type, corp['PREV_EVENT_ID'], corp['LAST_EVENT_ID'], 
     										corp['CORP_NUM'], corp_info_baseline[corp['CORP_NUM']])
 
+    diffs = []
     for corp in corps:
-        assert corp_creds[corp['CORP_NUM']] == corp_creds_baseline[corp['CORP_NUM']]
+        if corp_creds[corp['CORP_NUM']] != corp_creds_baseline[corp['CORP_NUM']]:
+            diffs.append(corp['CORP_NUM'])
+    print(diffs)
+
+    assert 0 == len(diffs)
+
 

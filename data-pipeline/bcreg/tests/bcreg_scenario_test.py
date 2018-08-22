@@ -8,44 +8,44 @@ from bcreg.eventprocessor import EventProcessor
 def test_generate_corp_sql():
     specific_corps = [
                     '0641655',
-                    '0820416',
-                    '0700450',
-                    '0803224',
-                    'LLC0000192',
-                    'C0277609',
-                    'A0072972',
-                    'A0051862',
-                    'C0874156',
-                    '0874244',
-                    '0593707',
-                    'A0068919',
-                    'A0064760',
-                    'LLC0000234',
-                    'A0077118',
-                    'A0062459',
-                    '0708325',
-                    '0679026',
-                    '0707774',
-                    'C0874057',
-                    'A0028374',
-                    'A0053381',
-                    'A0051632',
-                    '0578221',
-                    'A0032100',
-                    '0874088',
-                    '0803207',
-                    '0873646',
+                    #'0820416',
+                    #'0700450',
+                    #'0803224',
+                    #'LLC0000192',
+                    #'C0277609',
+                    #'A0072972',
+                    #'A0051862',
+                    #'C0874156',
+                    #'0874244',
+                    #'0593707',
+                    #'A0068919',
+                    #'A0064760',
+                    #'LLC0000234',
+                    #'A0077118',
+                    #'A0062459',
+                    #'0708325',
+                    #'0679026',
+                    #'0707774',
+                    #'C0874057',
+                    #'A0028374',
+                    #'A0053381',
+                    #'A0051632',
+                    #'0578221',
+                    #'A0032100',
+                    #'0874088',
+                    #'0803207',
+                    #'0873646',
                     ]
     
     with BCRegistries(True) as bc_registries:
         for corp in specific_corps:
-            print('=========================')
+            #print('=========================')
             print('===== ',  corp)
             bc_registries.cache_bcreg_corp_tables([corp], True)
             sqls = bc_registries.generated_sqls
             fake_corp_num = bc_registries.add_generated_corp_num(corp)
-            print('=============>>> ',  fake_corp_num)
-            print('=========================')
+            print('=============>>> ', fake_corp_num)
+            #print('=========================')
             #print('sqls:')
             #for sql in sqls:
             #    print('"""' + sql.replace(' values ', '\nvalues\n') + '""",')
@@ -264,14 +264,14 @@ def test_specific_corp_scenario():
 
         # try running with dummy event id zero 
         corp_info = cached_bc_reg.get_bc_reg_corp_info(corp_num, 0)
-        print('-------------------------')
-        print('corp_info:')
-        print(corp_info)
-        print('-------------------------')
+        #print('-------------------------')
+        #print('corp_info:')
+        #print(corp_info)
+        #print('-------------------------')
 
     with EventProcessor() as event_processor:
         corp_creds = event_processor.generate_credentials(system_type, 0, 0, corp_num, corp_info)
-        print('-------------------------')
-        print('corp_creds:')
-        print(corp_creds)
-        print('-------------------------')
+        #print('-------------------------')
+        #print('corp_creds:')
+        #print(corp_creds)
+        #print('-------------------------')
