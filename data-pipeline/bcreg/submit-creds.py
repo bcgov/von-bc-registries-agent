@@ -218,7 +218,7 @@ async def process_credential_queue():
     except (Exception, psycopg2.DatabaseError) as error:
         print(error)
     finally:
-        http_client.close()
+        await http_client.close()
         if cur is not None:
             cur.close()
         if conn is not None:
