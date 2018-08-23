@@ -25,8 +25,8 @@ mara_password = os.environ.get('MARA_DB_PASSWORD')
 mara_db.config.databases \
     = lambda: {'mara': mara_db.dbs.PostgreSQLDB(user=mara_user, password=mara_password, host=mara_host, database=mara_database, port=mara_port)}
 
-(initial_load_pipeline, success) = data_integration.pipelines.find_node(['initialization_and_load_tasks','bc_reg_corp_loader']) 
+(status_pipeline, success) = data_integration.pipelines.find_node(['bc_reg_pipeline_status']) 
 if success:
-	run_pipeline(initial_load_pipeline)
+	run_pipeline(status_pipeline)
 else:
 	print("Pipeline not found")

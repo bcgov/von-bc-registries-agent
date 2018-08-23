@@ -5,7 +5,16 @@ import mara_db.auto_migration
 import mara_db.config
 import mara_db.dbs
 import data_integration
-from bcreg.bcreg_pipelines import bc_reg_pipeline
+import data_integration.config
+from mara_app.monkey_patch import patch
+from bcreg.bcreg_pipelines import bc_reg_root_pipeline
+
+
+patch(data_integration.config.system_statistics_collection_period)(lambda: 15)
+
+@patch(data_integration.config.root_pipeline)
+def root_pipeline():
+    return bc_reg_root_pipeline()
 
 mara_host = os.environ.get('MARA_DB_HOST', 'bcregdb')
 mara_database = os.environ.get('MARA_DB_DATABASE', 'mara_db')
@@ -16,12 +25,8 @@ mara_password = os.environ.get('MARA_DB_PASSWORD')
 mara_db.config.databases \
     = lambda: {'mara': mara_db.dbs.PostgreSQLDB(user=mara_user, password=mara_password, host=mara_host, database=mara_database, port=mara_port)}
 
-parent_pipeline = Pipeline(
-    id = 'holder_for_pipeline_versions',
-    description = 'Holder for the different versions of the BC Registries pipeline.')
-
-parent_pipeline.add(bc_reg_pipeline())
-
-run_pipeline(parent_pipeline)
-
-
+(child_pipeline, success) = data_integration.pipelines.find_node(['bc_reg_event_processor']) 
+if success:
+	run_pipeline(child_pipeline)
+else:
+	print("Pipeline not found")

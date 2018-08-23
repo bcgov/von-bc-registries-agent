@@ -43,7 +43,7 @@ async def submit_cred(http_client, attrs, schema, version):
                 'Credential could not be processed: {}'.format(await response.text())
             )
         result_json = await response.json()
-        print('Response from von-x:\n{}\n'.format(result_json))
+        #print('Response from von-x:\n{}\n'.format(result_json))
         return result_json
     except Exception as exc:
         print(exc)
@@ -69,7 +69,7 @@ async def post_credentials(http_client, conn, credentials):
 
             result = result_json 
             if result['success']:
-                print("log success to database")
+                #print("log success to database")
                 cur2 = conn.cursor()
                 cur2.execute(sql2, (datetime.datetime.now(), result['result'], credential['RECORD_ID'],))
                 conn.commit()
@@ -174,9 +174,9 @@ async def process_credential_queue():
             row = cur.fetchone()
             credentials = []
             cred_owner_id = ''
+            print('>>> Processing {} of {} credentials.'.format(i+1, cred_count))
             while row is not None:
                 i = i + 1
-                print('>>> Processing {} of {} credentials.'.format(i, cred_count))
                 credential = {'RECORD_ID':row[0], 'SYSTEM_TYP_CD':row[1], 'PREV_EVENT_ID':row[2], 'LAST_EVENT_ID':row[3], 'CORP_NUM':row[4], 'CORP_STATE':row[5],
                               'CREDENTIAL_TYPE_CD':row[6], 'CREDENTIAL_ID':row[7], 'CREDENTIAL_JSON':row[8], 'SCHEMA_NAME':row[9], 'SCHEMA_VERSION':row[10], 
                               'ENTRY_DATE':row[11]}
@@ -224,7 +224,6 @@ async def process_credential_queue():
         if conn is not None:
             conn.commit()
             conn.close()
-
 
 loop = asyncio.get_event_loop()
 loop.run_until_complete(process_credential_queue())

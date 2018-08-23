@@ -555,7 +555,8 @@ class EventProcessor:
                         if use_cache:
                             bc_registries.cache_bcreg_corps(specific_corps)
                         for i,corp in enumerate(corps): 
-                            print('>>> Processing {} of {} corporations.'.format(i+1, len(corps)))
+                            if (i % 100 == 0) or (i+1 == len(corps)):
+                                print('>>> Processing {} of {} corporations.'.format(i+1, len(corps)))
                             if load_regs:
                                 # fetch corp info from bc_registries
                                 corp_info = bc_registries.get_bc_reg_corp_info(corp['CORP_NUM'], corp['LAST_EVENT_ID'])
@@ -608,7 +609,7 @@ class EventProcessor:
         finally:
             if cur is not None:
                 cur.close()
-                print('Cursor closed.')
+                #print('Cursor closed.')
 
     # process corps that have been queued - update data from bc_registries
     def process_corp_event_queue(self, use_cache=False):
