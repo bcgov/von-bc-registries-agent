@@ -154,8 +154,11 @@ async def process_credential_queue():
 
         i = 0
         cred_count_remaining = cred_count
+        start_time = time.perf_counter()
+        processing_time = 0
+        max_processing_time = 10 * 60
 
-        while 0 < cred_count_remaining:
+        while 0 < cred_count_remaining and processing_time < max_processing_time:
             active_cred_count = 0
             cur = conn.cursor()
             cur.execute(sql1a_active)
@@ -206,6 +209,9 @@ async def process_credential_queue():
             for response in await asyncio.gather(*tasks):
                 pass # print('response:' + response)
             tasks = []
+
+            processing_time = time.perf_counter() - start_time
+            print('Processing: ' + str(processing_time))
 
             cur = conn.cursor()
             cur.execute(sql1a)

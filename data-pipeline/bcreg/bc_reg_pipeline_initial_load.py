@@ -8,6 +8,7 @@ import data_integration
 import data_integration.config
 from mara_app.monkey_patch import patch
 from bcreg.bcreg_pipelines import bc_reg_root_pipeline
+from bcreg.eventprocessor import EventProcessor
 
 
 patch(data_integration.config.system_statistics_collection_period)(lambda: 15)
@@ -27,6 +28,11 @@ mara_db.config.databases \
 
 (initial_load_pipeline, success) = data_integration.pipelines.find_node(['initialization_and_load_tasks','bc_reg_corp_loader']) 
 if success:
-	run_pipeline(initial_load_pipeline)
+	corps_ct = 1
+	while 0 < corps_ct:
+		# run at least once to get an initial data load
+		run_pipeline(initial_load_pipeline)
+		with EventProcessor() as eventprocessor:
+			corps_ct = eventprocessor.get_outstanding_corps_record_count()
 else:
 	print("Pipeline not found")

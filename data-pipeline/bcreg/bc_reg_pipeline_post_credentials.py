@@ -8,6 +8,7 @@ import data_integration
 import data_integration.config
 from mara_app.monkey_patch import patch
 from bcreg.bcreg_pipelines import bc_reg_root_pipeline
+from bcreg.eventprocessor import EventProcessor
 
 
 patch(data_integration.config.system_statistics_collection_period)(lambda: 15)
@@ -27,6 +28,12 @@ mara_db.config.databases \
 
 (post_credential_pipeline, success) = data_integration.pipelines.find_node(['initialization_and_load_tasks','bc_reg_credential_poster']) 
 if success:
-	run_pipeline(post_credential_pipeline)
+	creds_ct = 0
+	with EventProcessor() as eventprocessor:
+		creds_ct = eventprocessor.get_outstanding_creds_record_count()
+	while 0 < creds_ct:
+		run_pipeline(post_credential_pipeline)
+		with EventProcessor() as eventprocessor:
+			creds_ct = eventprocessor.get_outstanding_creds_record_count()
 else:
 	print("Pipeline not found")

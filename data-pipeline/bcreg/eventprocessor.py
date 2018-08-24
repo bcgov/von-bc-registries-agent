@@ -3,6 +3,7 @@
 import psycopg2
 import datetime
 import json
+import time
 from bcreg.config import config
 from bcreg.bcregistries import BCRegistries
 
@@ -513,9 +514,12 @@ class EventProcessor:
                   WHERE RECORD_ID = %s"""
 
         cur = None
+        start_time = time.perf_counter()
+        processing_time = 0
+        max_processing_time = 10 * 60
         try:
             continue_loop = True
-            while continue_loop:
+            while continue_loop and processing_time < max_processing_time:
                 corps = []
                 specific_corps = []
 
@@ -603,6 +607,9 @@ class EventProcessor:
                             cur.close()
                             cur = None
 
+                processing_time = time.perf_counter() - start_time
+                print('Processing: ' + str(processing_time))
+
         except (Exception, psycopg2.DatabaseError) as error:
             print(error)
             raise
@@ -646,23 +653,34 @@ class EventProcessor:
 
     def display_event_processing_status(self):
         tables = ['event_by_corp_filing', 'corp_history_log', 'credential_log']
+
+        for table in tables:
+            process_ct     = self.get_record_count(table, False)
+            outstanding_ct = self.get_record_count(table, True)
+            print('Table:', table, 'Processed:', process_ct, 'Outstanding:', outstanding_ct)
+
+    def get_outstanding_corps_record_count(self):
+        return self.get_record_count('event_by_corp_filing')
+        
+    def get_outstanding_creds_record_count(self):
+        return self.get_record_count('credential_log')
+        
+    def get_record_count(self, table, unprocessed=True):
+        tables = ['event_by_corp_filing', 'corp_history_log', 'credential_log']
         sql_ct_select = 'select count(*) from'
         sql_corp_ct_processed   = 'where process_date is not null'
         sql_corp_ct_outstanding = 'where process_date is null'
 
+        sql = sql_ct_select + ' ' + table + ' ' + (sql_corp_ct_outstanding if unprocessed else sql_corp_ct_processed)
+
         cur = None
         try:
             cur = self.conn.cursor()
-            for table in tables:
-                sql = sql_ct_select + ' ' + table + ' ' + sql_corp_ct_processed
-                cur.execute(sql)
-                process_ct = cur.fetchone()[0]
-                sql = sql_ct_select + ' ' + table + ' ' + sql_corp_ct_outstanding
-                cur.execute(sql)
-                outstanding_ct = cur.fetchone()[0]
-                print('Table:', table, 'Processed:', process_ct, 'Outstanding:', outstanding_ct)
+            cur.execute(sql)
+            ct = cur.fetchone()[0]
             cur.close()
             cur = None
+            return ct
         except (Exception, psycopg2.DatabaseError) as error:
             print(error)
             raise
