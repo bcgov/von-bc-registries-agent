@@ -158,6 +158,10 @@ class EventProcessor:
             """
             CREATE INDEX IF NOT EXISTS cl_i2 ON CREDENTIAL_LOG 
             (PROCESS_DATE)
+            """,
+            """
+            CREATE INDEX IF NOT EXISTS cl_i3 ON CREDENTIAL_LOG 
+            (SYSTEM_TYPE_CD, CORP_NUM, CORP_STATE, CREDENTIAL_TYPE_CD, CREDENTIAL_ID)
             """
             )
         cur = None
