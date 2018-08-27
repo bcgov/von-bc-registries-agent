@@ -8,7 +8,6 @@ import data_integration
 import data_integration.config
 from mara_app.monkey_patch import patch
 from bcreg.bcreg_pipelines import bc_reg_root_pipeline
-from bcreg.eventprocessor import EventProcessor
 
 
 patch(data_integration.config.system_statistics_collection_period)(lambda: 15)
@@ -26,13 +25,8 @@ mara_password = os.environ.get('MARA_DB_PASSWORD')
 mara_db.config.databases \
     = lambda: {'mara': mara_db.dbs.PostgreSQLDB(user=mara_user, password=mara_password, host=mara_host, database=mara_database, port=mara_port)}
 
-(initial_load_pipeline, success) = data_integration.pipelines.find_node(['initialization_and_load_tasks','bc_reg_corp_loader']) 
+(status_pipeline, success) = data_integration.pipelines.find_node(['bc_reg_pipeline_status']) 
 if success:
-	corps_ct = 1
-	while 0 < corps_ct:
-		# run at least once to get an initial data load
-		run_pipeline(initial_load_pipeline)
-		with EventProcessor() as eventprocessor:
-			corps_ct = eventprocessor.get_outstanding_corps_record_count()
+	run_pipeline(status_pipeline)
 else:
 	print("Pipeline not found")

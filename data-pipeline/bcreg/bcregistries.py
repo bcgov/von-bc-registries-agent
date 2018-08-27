@@ -490,6 +490,7 @@ class BCRegistries:
     # load all bc registries data for the specified corps into our in-mem cache
     def cache_bcreg_corp_tables(self, specific_corps, generate_individual_sql=False):
         if self.use_local_cache():
+            print('Caching data for parties and events ...')
             self.generated_sqls = []
             self.generated_corp_nums = {}
             # ensure we have a unique list
@@ -503,7 +504,7 @@ class BCRegistries:
                 corp_party_where = 'bus_company_num in (' + corp_list + ')'
                 #print(self.other_tables[0])
                 party_rows = self.get_bcreg_table(self.other_tables[0], corp_party_where, '', True, generate_individual_sql)
-                print(self.other_tables[0], len(party_rows))
+                #print(self.other_tables[0], len(party_rows))
 
                 # include all corp_num from the parties just returned (dba related companies)
                 for party in party_rows:
@@ -526,7 +527,7 @@ class BCRegistries:
                 event_where = 'corp_num in (' + corp_nums_list + ')'
                 #print(self.other_tables[1])
                 event_rows = self.get_bcreg_table(self.other_tables[1], event_where, '', True, generate_individual_sql)
-                print(self.other_tables[1], len(event_rows))
+                #print(self.other_tables[1], len(event_rows))
 
                 for event in event_rows:
                     event_ids.append(str(event['event_id']))
@@ -540,20 +541,21 @@ class BCRegistries:
                 filing_where = 'event_id in (' + event_list + ')'
                 #print(self.other_tables[2])
                 rows = self.get_bcreg_table(self.other_tables[2], filing_where, '', True, generate_individual_sql)
-                print(self.other_tables[2], len(rows))
+                #print(self.other_tables[2], len(rows))
 
+            print('Caching data for corporations ...')
             for corp_nums_list in specific_corps_lists:
                 corp_nums_list = self.id_where_in(corp_nums_list, True)
                 corp_num_where = 'corp_num in (' + corp_nums_list + ')'
                 for corp_table in self.corp_tables:
                     #print(corp_table)
                     rows = self.get_bcreg_table(corp_table, corp_num_where, '', True, generate_individual_sql)
-                    print(corp_table, len(rows))
+                    #print(corp_table, len(rows))
 
                 office_where = 'corp_num in (' + corp_nums_list + ')'
                 #print(self.other_tables[3])
                 office_rows = self.get_bcreg_table(self.other_tables[3], office_where, '', True, generate_individual_sql)
-                print(self.other_tables[3], len(office_rows))
+                #print(self.other_tables[3], len(office_rows))
 
                 for office in office_rows:
                     if office['mailing_addr_id'] is not None:
@@ -569,11 +571,12 @@ class BCRegistries:
                 address_where = 'addr_id in (' + addr_list + ')'
                 #print(self.other_tables[4])
                 rows = self.get_bcreg_table(self.other_tables[4], address_where, '', True, generate_individual_sql)
-                print(self.other_tables[4], len(rows))
+                #print(self.other_tables[4], len(rows))
 
     # load all bc registries data for the specified corps into our in-mem cache
     def cache_bcreg_code_tables(self, generate_individual_sql=False):
         if self.use_local_cache():
+            print('Caching data for code tables ...')
             self.generated_sqls = []
             self.generated_corp_nums = {}
             for code_table in self.code_tables:
