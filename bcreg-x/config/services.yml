@@ -50,7 +50,7 @@ issuers:
             input: registration_id
             from: claim
           type:
-            input: relationship
+            input: registration
             from: value
 
       - description: Corporate Address

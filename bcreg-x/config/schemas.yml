@@ -37,7 +37,7 @@
   version: '1.0.32'
   attributes:
     - registration_id
-    - associated_registry_id
+    - associated_registration_id
     - relationship
     - relationship_description
     - relationship_status

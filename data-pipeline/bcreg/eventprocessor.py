@@ -464,19 +464,20 @@ class EventProcessor:
         if is_parent:
             if 'parties' in corp_info:
                 for party in corp_info['parties']:
-                    dba_cred = {}
-                    dba_cred['registration_id'] = self.corp_num_with_prefix(corp_info['corp_typ_cd'], corp_info['corp_num'])
-                    dba_cred['associated_registration_id'] = self.corp_num_with_prefix(party['corp_info']['corp_typ_cd'], party['corp_info']['corp_num'])
-                    dba_cred['relationship'] = 'Owns'
-                    dba_cred['relationship_description'] = 'Does Business As'
-                    dba_cred['relationship_status'] = 'ACT'
-                    if 'effective_dt' in party['start_filing_event']:
-                        dba_cred['effective_date'] = party['start_filing_event']['effective_dt']
-                    else:
-                        dba_cred['effective_date'] = party['start_event']['event_timestmp']
-                    dba_cred['relationship_status_effective'] = dba_cred['effective_date']
-                    corp_creds.append(self.build_credential_dict(dba_credential, dba_schema, dba_version, 
-                                                                dba_cred['registration_id'], dba_cred))
+                    if party['corp_info']['corp_typ_cd'] == 'SP' or party['corp_info']['corp_typ_cd'] == 'MF':
+                        dba_cred = {}
+                        dba_cred['registration_id'] = self.corp_num_with_prefix(corp_info['corp_typ_cd'], corp_info['corp_num'])
+                        dba_cred['associated_registration_id'] = self.corp_num_with_prefix(party['corp_info']['corp_typ_cd'], party['corp_info']['corp_num'])
+                        dba_cred['relationship'] = 'Owns'
+                        dba_cred['relationship_description'] = 'Does Business As'
+                        dba_cred['relationship_status'] = 'ACT'
+                        if 'effective_dt' in party['start_filing_event']:
+                            dba_cred['effective_date'] = party['start_filing_event']['effective_dt']
+                        else:
+                            dba_cred['effective_date'] = party['start_event']['event_timestmp']
+                        dba_cred['relationship_status_effective'] = dba_cred['effective_date']
+                        corp_creds.append(self.build_credential_dict(dba_credential, dba_schema, dba_version, 
+                                                                    dba_cred['registration_id'], dba_cred))
 
         return corp_creds
 
@@ -485,10 +486,12 @@ class EventProcessor:
         sql1 = """SELECT RECORD_ID, SYSTEM_TYPE_CD, PREV_EVENT_ID, LAST_EVENT_ID, CORP_NUM, ENTRY_DATE
                  FROM EVENT_BY_CORP_FILING
                  WHERE PROCESS_DATE is null
+                 ORDER BY RECORD_ID
                  LIMIT """ + str(CORP_BATCH_SIZE)
         sql1a = """SELECT RECORD_ID, SYSTEM_TYPE_CD, PREV_EVENT_ID, LAST_EVENT_ID, CORP_NUM, CORP_JSON, ENTRY_DATE
                  FROM CORP_HISTORY_LOG
                  WHERE PROCESS_DATE is null
+                 ORDER BY RECORD_ID
                  LIMIT """ + str(CORP_BATCH_SIZE)
 
         sql2 = """INSERT INTO CORP_HISTORY_LOG (SYSTEM_TYPE_CD, PREV_EVENT_ID, LAST_EVENT_ID, CORP_NUM, CORP_STATE, CORP_JSON, ENTRY_DATE)
