@@ -16,78 +16,55 @@ issuers:
       seed: $WALLET_SEED_BCREG
 
     credential_types:
-      - description: Incorporation
-        schema: incorporation.bc_registries
+      - description: Registration
+        schema: registration.bc_registries
         issuer_url: $APPLICATION_URL_INCORP
         topic:
           source_id:
-            input: corp_num
+            input: registration_id
             from: claim
           type:
-            input: incorporation
+            input: registration
             from: value
         mapping:
           - model: name
             fields:
               text:
-                input: legal_name
+                input: entity_name
                 from: claim
               type:
-                input: legal_name
+                input: entity_name
                 from: value
 
-      - description: Doing Business As
-        schema: doing_business_as.bc_registries
+      - description: Relationship
+        schema: relationship.bc_registries
         issuer_url: $APPLICATION_URL_DBA
         topic:
-          parent_source_id:
-            input: org_registry_id
+          related_source_id:
+            input: associated_registration_id
             from: claim
-          parent_type:
-            input: incorporation
+          related_type:
+            input: registration
             from: value
           source_id:
-            input: org_registry_id
+            input: registration_id
             from: claim
           type:
-            input: incorporation
+            input: relationship
             from: value
-        mapping:
-          - model: name
-            fields:
-              text:
-                input: dba_name
-                from: claim
-              type:
-                input: dba_name
-                from: value
 
       - description: Corporate Address
         schema: address.bc_registries
         issuer_url: $APPLICATION_URL_ADDRESS
         topic:
-          -
-            parent_source_id:
-              input: org_registry_id
-              from: claim
-            parent_type:
-              input: incorporation
-              from: value
-            source_id:
-              input: dba_corp_num
-              from: claim
-            type:
-              input: doing_business_as
-              from: value
-          -
-            source_id:
-              input: org_registry_id
-              from: claim
-            type:
-              input: incorporation
-              from: value
+          source_id:
+            input: registration_id
+            from: claim
+          type:
+            input: registration
+            from: value
         cardinality_fields:
-          - addr_type
+          - address_type
         mapping:
           - model: address
             fields:
@@ -95,7 +72,7 @@ issuers:
                 input: addressee
                 from: claim
               civic_address:
-                input: local_address
+                input: civic_address
                 from: claim
               city:
                 input: municipality
@@ -110,10 +87,7 @@ issuers:
                 input: country
                 from: claim
               type:
-                input: addr_type
-                from: claim
-              end_date:
-                input: end_date
+                input: address_type
                 from: claim
 
 verifiers:
@@ -132,22 +106,20 @@ proof_requests:
     schemas:
       - key:
           # did: DtjQTjwNq7ZyStCE7zwL4r
-          name: incorporation.bc_registries
-          version: '1.0.31'
+          name: registration.bc_registries
+          version: '1.0.32'
         attributes:
-          - legal_entity_id
-          - corp_num
-          - legal_name
-          - org_name_effective
-          - org_name_assumed
-          - org_name_assumed_effective
-          - org_name_trans
-          - org_name_trans_effective
-          - org_reg_status
-          - org_status_effective
-          - org_type
+          - registration_id
+          - entity_name
+          - entity_name_effective
+          - entity_name_assumed
+          - entity_name_assumed_effective
+          - entity_name_trans
+          - entity_name_trans_effective
+          - entity_status
+          - entity_status_effective
+          - entity_type
           - registered_jurisdiction
           - registration_type
           - home_jurisdiction
           - effective_date
-          - end_date
