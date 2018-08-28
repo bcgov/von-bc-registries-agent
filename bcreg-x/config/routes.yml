@@ -1,10 +1,10 @@
 forms:
   bcreg-incorp:
-    path: /bcreg/incorporation
+    path: /bcreg/registration
     type: issue-credential
-    schema_name: incorporation.bc_registries
+    schema_name: registration.bc_registries
     page_title: BC Corporate Registry
-    title: Incorporation
+    title: Registration
     template: bcgov.index.html
     description: >
       BC Registries and Online Services administers and supports the legal framework
@@ -17,7 +17,7 @@ forms:
       - src: js/bc_registries.js
 
     fields:
-      - name: legal_name
+      - name: entity_name
         label: Legal Name
         type: text
         required: true
@@ -29,15 +29,15 @@ forms:
 
     mapping:
       attributes:
-        - name: legal_entity_id
+        - name: registration_id
           from: helper
           source: uuid
 
-        - name: corp_num
+        - name: registration_id
           from: previous
-          source: legal_entity_id
+          source: registration_id
 
-        - name: org_type
+        - name: entity_type
           from: literal
           source: CO
 
@@ -45,14 +45,10 @@ forms:
           from: helper
           source: now
 
-        - name: end_date
-          from: literal
-          source: null
-
   bcreg-dba:
     path: /bcreg/dba
     type: issue-credential
-    schema_name: doing_business_as.bc_registries
+    schema_name: relationship.bc_registries
     page_title: BC Corporate Registry
     title: Doing Business As
     template: bcgov.index.html
@@ -66,13 +62,13 @@ forms:
     proof_request:
       name: registration
       params:
-        source_id: org_id
+        source_id: registration_id
 
     js_includes:
       - src: js/bc_registries.js
 
     hidden:
-      - legal_entity_id
+      - registration_id
 
     fields:
       - name: doing_business_as_name
@@ -91,6 +87,3 @@ forms:
           from: helper
           source: now
 
-        - name: end_date
-          from: literal
-          source: null
