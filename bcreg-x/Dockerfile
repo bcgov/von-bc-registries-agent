@@ -3,11 +3,6 @@ FROM bcgovimages/von-image:py36-1.6-0
 
 WORKDIR $HOME
 
-RUN pip install --no-cache-dir \
-   gunicorn
-#    git+https://github.com/PSPC-SPAC-buyandsell/didauth.git@v1.2 \
-#    git+https://github.com/PSPC-SPAC-buyandsell/von-x.git@indy-1.6
-
 # `ADD --chown=` is not available in OpenShift yet.
 # ADD --chown=indy:indy . $HOME
 ADD . $HOME
