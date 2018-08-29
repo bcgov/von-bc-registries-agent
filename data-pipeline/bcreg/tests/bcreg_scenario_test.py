@@ -3,7 +3,7 @@ import time
 
 from bcreg.bcregistries import BCRegistries, system_type
 from bcreg.eventprocessor import EventProcessor
-from bcreg.tests.sample_corps import corp_A7330600
+from bcreg.tests.sample_corps import sample_test_corps
 
 
 def test_generate_corp_sql():
@@ -277,13 +277,31 @@ def test_specific_corp_scenario():
         #print(corp_creds)
         #print('-------------------------')
 
+# no assertions, just make sure all test data is working
+def test_preset_corp_scenario_all():
+    for test_corp in sample_test_corps.keys():
+        corp_num = sample_test_corps[test_corp]['corp_num']
+        corp_sqls = sample_test_corps[test_corp]['sqls']
+
+        with BCRegistries(True) as cached_bc_reg:
+            cached_bc_reg.cache_bcreg_code_tables()
+            cached_bc_reg.insert_cache_sqls(corp_sqls)
+            corp_info = cached_bc_reg.get_bc_reg_corp_info(corp_num, 0)
+
+        with EventProcessor() as event_processor:
+            corp_creds = event_processor.generate_credentials(system_type, 0, 0, corp_num, corp_info)
+
+        #print("Corp: " + corp_num + " generated " + str(len(corp_creds)) + " credentials")
+
+# load a specific corporation and make some assertions on the generated credentials
 def test_preset_corp_scenario_3dbas():
     # use corp corp_A7330600
-    corp_num = corp_A7330600['corp_num']
+    corp_num = sample_test_corps['corp_A7330600']['corp_num']
+    corp_sqls = sample_test_corps['corp_A7330600']['sqls']
 
     with BCRegistries(True) as cached_bc_reg:
         cached_bc_reg.cache_bcreg_code_tables()
-        cached_bc_reg.insert_cache_sqls(corp_A7330600['sqls'])
+        cached_bc_reg.insert_cache_sqls(corp_sqls)
         corp_info = cached_bc_reg.get_bc_reg_corp_info(corp_num, 0)
 
     with EventProcessor() as event_processor:
