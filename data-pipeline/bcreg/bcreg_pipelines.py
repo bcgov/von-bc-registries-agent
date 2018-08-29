@@ -1,6 +1,38 @@
 from data_integration.pipelines import Pipeline, Task
 from data_integration.commands.python import ExecutePython
 
+def bc_reg_root_pipeline():
+    import bcreg
+
+    parent_pipeline = Pipeline(
+        id = 'holder_for_pipeline_versions',
+        description = 'Holder for the different versions of the BC Registries pipeline.')
+
+    parent_pipeline.add(bc_reg_pipeline())
+    parent_pipeline.add(bc_reg_pipeline_status())
+
+    init_pipeline = Pipeline(
+        id = 'initialization_and_load_tasks',
+        description = 'One-time initialization and data load tasks')
+
+    init_pipeline.add(db_init_pipeline())
+    init_pipeline.add(bc_reg_pipeline_initial_load())
+    init_pipeline.add(bc_reg_pipeline_post_credentials())
+
+    parent_pipeline.add(init_pipeline)
+
+    test_pipeline = Pipeline(
+        id = 'test_and_demo_tasks',
+        description = 'Holder for test and demo tasks.')
+
+    test_pipeline.add(bc_init_test_data())
+    test_pipeline.add(bc_reg_test_corps())
+    test_pipeline.add(bc_reg_pipeline_jsonbender())
+
+    parent_pipeline.add(test_pipeline)
+
+    return parent_pipeline
+
 def bc_reg_pipeline():
     import bcreg
 

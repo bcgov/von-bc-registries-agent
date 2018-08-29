@@ -23,16 +23,15 @@ import json
 import os
 import sys
 import aiohttp
+import time
 from bcreg.config import config
 
 AGENT_URL = os.environ.get('VONX_API_URL', 'http://localhost:5000/bcreg')
 
-CREDS_BATCH_SIZE = 3000
+CREDS_BATCH_SIZE = 100 
 
 
 async def submit_cred(http_client, attrs, schema, version):
-    #print(attrs)
-
     try:
         response = await http_client.post(
             '{}/issue-credential'.format(AGENT_URL),
@@ -44,15 +43,73 @@ async def submit_cred(http_client, attrs, schema, version):
                 'Credential could not be processed: {}'.format(await response.text())
             )
         result_json = await response.json()
-        print('Response from von-x:\n{}\n'.format(result_json))
+        #print('Response from von-x:\n{}\n'.format(result_json))
         return result_json
     except Exception as exc:
         print(exc)
         raise
-        # raise RuntimeError('Could not submit credential. Are von-x and TheOrgBook running?') from exc
 
 
-async def process_credential_queue(http_client):
+async def post_credentials(http_client, conn, credentials):
+    sql2 = """UPDATE CREDENTIAL_LOG
+              SET PROCESS_DATE = %s, PROCESS_SUCCESS = 'Y', PROCESS_MSG = %s
+              WHERE RECORD_ID = %s"""
+
+    sql3 = """UPDATE CREDENTIAL_LOG
+              SET PROCESS_DATE = %s, PROCESS_SUCCESS = 'N', PROCESS_MSG = %s
+              WHERE RECORD_ID = %s"""
+
+    success = 0
+    failed = 0
+    for credential in credentials:
+        # post credential
+        cur2 = None
+        try:
+            result_json = await submit_cred(http_client, credential['CREDENTIAL_JSON'], credential['SCHEMA_NAME'], credential['SCHEMA_VERSION'])
+
+            result = result_json 
+            if result['success']:
+                #print("log success to database")
+                cur2 = conn.cursor()
+                cur2.execute(sql2, (datetime.datetime.now(), result['result'], credential['RECORD_ID'],))
+                conn.commit()
+                cur2.close()
+                cur2 = None
+                success = success + 1
+            else:
+                print("log error to database")
+                cur2 = conn.cursor()
+                if 255 < len(result['result']):
+                    res = result['result'][:250] + '...'
+                else:
+                    res = result['result']
+                cur2.execute(sql3, (datetime.datetime.now(), res, credential['RECORD_ID'],))
+                conn.commit()
+                cur2.close()
+                cur2 = None
+                failed = failed + 1
+
+        except (Exception) as error:
+            print("log exception to database")
+            if cur2 is not None:
+                cur2.close()
+                cur2 = None
+            cur2 = conn.cursor()
+            res = str(error)
+            if 255 < len(res):
+                res = res[:250] + '...'
+            cur2.execute(sql3, (datetime.datetime.now(), res, credential['RECORD_ID'],))
+            conn.commit()
+            cur2.close()
+            cur2 = None
+            failed = failed + 1
+        finally:
+            if cur2 is not None:
+                cur2.close()
+    return '{' + str(success) + ',' + str(failed) + '}'
+
+
+async def process_credential_queue():
     sql1 = """SELECT RECORD_ID, SYSTEM_TYPE_CD, PREV_EVENT_ID, LAST_EVENT_ID, CORP_NUM, CORP_STATE, CREDENTIAL_TYPE_CD, CREDENTIAL_ID, 
                     CREDENTIAL_JSON, SCHEMA_NAME, SCHEMA_VERSION, ENTRY_DATE
               FROM CREDENTIAL_LOG 
@@ -75,21 +132,15 @@ async def process_credential_queue(http_client):
               FROM CREDENTIAL_LOG 
               WHERE corp_state = 'ACT' and PROCESS_DATE is null"""
 
-    sql2 = """UPDATE CREDENTIAL_LOG
-              SET PROCESS_DATE = %s, PROCESS_SUCCESS = 'Y'
-              WHERE RECORD_ID = %s"""
-
-    sql3 = """UPDATE CREDENTIAL_LOG
-              SET PROCESS_DATE = %s, PROCESS_SUCCESS = 'N', PROCESS_MSG = %s
-              WHERE RECORD_ID = %s"""
-
     """ Connect to the PostgreSQL database server """
     conn = None
     cur = None
-    cur2 = None
     try:
         params = config(section='event_processor')
         conn = psycopg2.connect(**params)
+        loop = asyncio.get_event_loop()
+        tasks = []
+        http_client = aiohttp.ClientSession()
 
         # create a cursor
         cred_count = 0
@@ -103,8 +154,11 @@ async def process_credential_queue(http_client):
 
         i = 0
         cred_count_remaining = cred_count
+        start_time = time.perf_counter()
+        processing_time = 0
+        max_processing_time = 10 * 60
 
-        while 0 < cred_count_remaining:
+        while 0 < cred_count_remaining and processing_time < max_processing_time:
             active_cred_count = 0
             cur = conn.cursor()
             cur.execute(sql1a_active)
@@ -121,49 +175,43 @@ async def process_credential_queue(http_client):
             else:
                 cur.execute(sql1)
             row = cur.fetchone()
+            credentials = []
+            cred_owner_id = ''
+            print('>>> Processing {} of {} credentials.'.format(i+1, cred_count))
             while row is not None:
                 i = i + 1
-                print('>>> Processing {} of {} credentials.'.format(i, cred_count))
                 credential = {'RECORD_ID':row[0], 'SYSTEM_TYP_CD':row[1], 'PREV_EVENT_ID':row[2], 'LAST_EVENT_ID':row[3], 'CORP_NUM':row[4], 'CORP_STATE':row[5],
                               'CREDENTIAL_TYPE_CD':row[6], 'CREDENTIAL_ID':row[7], 'CREDENTIAL_JSON':row[8], 'SCHEMA_NAME':row[9], 'SCHEMA_VERSION':row[10], 
                               'ENTRY_DATE':row[11]}
+
+                # gather all credentials for the same client id
+                if 0 < len(credentials) and credential['CORP_NUM'] != cred_owner_id:
+                    post_creds = credentials.copy()
+                    tasks.append(loop.create_task(post_credentials(http_client, conn, post_creds)))
+                    credentials = []
+                    cred_owner_id = ''
+
+                credentials.append(credential)
+                cred_owner_id = credential['CORP_NUM']
                 
-                # post credential
-                try:
-                    result_json = await submit_cred(http_client, credential['CREDENTIAL_JSON'], credential['SCHEMA_NAME'], credential['SCHEMA_VERSION'])
-
-                    result = result_json # json.loads(result_json)[0]
-                    if result['success']:
-                        print("log success to database")
-                        cur2 = conn.cursor()
-                        cur2.execute(sql2, (datetime.datetime.now(), credential['RECORD_ID'],))
-                        conn.commit()
-                        cur2.close()
-                        cur2 = None
-                    else:
-                        print("log error to database")
-                        cur2 = conn.cursor()
-                        if 255 < len(result['result']):
-                            res = result['result'][:250] + '...'
-                        else:
-                            res = result['result']
-                        cur2.execute(sql3, (datetime.datetime.now(), res, credential['RECORD_ID'],))
-                        conn.commit()
-                        cur2.close()
-                        cur2 = None
-
-                except (Exception) as error:
-                    print("log exception to database")
-                    cur2 = conn.cursor()
-                    cur2.execute(sql3, (datetime.datetime.now(), str(error), credential['RECORD_ID'],))
-                    conn.commit()
-                    cur2.close()
-                    cur2 = None
-
                 row = cur.fetchone()
 
             cur.close()
             cur = None
+
+            if 0 < len(credentials):
+                post_creds = credentials.copy()
+                tasks.append(loop.create_task(post_credentials(http_client, conn, post_creds)))
+                credentials = []
+                cred_owner_id = ''
+
+            # wait for the current batch of credential posts to complete
+            for response in await asyncio.gather(*tasks):
+                pass # print('response:' + response)
+            tasks = []
+
+            processing_time = time.perf_counter() - start_time
+            print('Processing: ' + str(processing_time))
 
             cur = conn.cursor()
             cur.execute(sql1a)
@@ -172,19 +220,17 @@ async def process_credential_queue(http_client):
                 cred_count_remaining = row[0]
             cur.close()
             cur = None
+
     except (Exception, psycopg2.DatabaseError) as error:
         print(error)
     finally:
+        await http_client.close()
         if cur is not None:
             cur.close()
-        if cur2 is not None:
-            cur2.close()
         if conn is not None:
             conn.commit()
             conn.close()
 
-async def submit_all():
-    async with aiohttp.ClientSession() as http_client:
-        await process_credential_queue(http_client)
+loop = asyncio.get_event_loop()
+loop.run_until_complete(process_credential_queue())
 
-asyncio.get_event_loop().run_until_complete(submit_all())

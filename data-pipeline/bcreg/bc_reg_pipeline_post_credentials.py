@@ -5,7 +5,17 @@ import mara_db.auto_migration
 import mara_db.config
 import mara_db.dbs
 import data_integration
-from bcreg.bcreg_pipelines import bc_reg_pipeline_post_credentials
+import data_integration.config
+from mara_app.monkey_patch import patch
+from bcreg.bcreg_pipelines import bc_reg_root_pipeline
+from bcreg.eventprocessor import EventProcessor
+
+
+patch(data_integration.config.system_statistics_collection_period)(lambda: 15)
+
+@patch(data_integration.config.root_pipeline)
+def root_pipeline():
+    return bc_reg_root_pipeline()
 
 mara_host = os.environ.get('MARA_DB_HOST', 'bcregdb')
 mara_database = os.environ.get('MARA_DB_DATABASE', 'mara_db')
@@ -16,12 +26,14 @@ mara_password = os.environ.get('MARA_DB_PASSWORD')
 mara_db.config.databases \
     = lambda: {'mara': mara_db.dbs.PostgreSQLDB(user=mara_user, password=mara_password, host=mara_host, database=mara_database, port=mara_port)}
 
-parent_pipeline = Pipeline(
-    id = 'holder_for_pipeline_versions',
-    description = 'Holder for the different versions of the BC Registries pipeline.')
-
-parent_pipeline.add(bc_reg_pipeline_post_credentials())
-
-run_pipeline(parent_pipeline)
-
-
+(post_credential_pipeline, success) = data_integration.pipelines.find_node(['initialization_and_load_tasks','bc_reg_credential_poster']) 
+if success:
+	creds_ct = 0
+	with EventProcessor() as eventprocessor:
+		creds_ct = eventprocessor.get_outstanding_creds_record_count()
+	while 0 < creds_ct:
+		run_pipeline(post_credential_pipeline)
+		with EventProcessor() as eventprocessor:
+			creds_ct = eventprocessor.get_outstanding_creds_record_count()
+else:
+	print("Pipeline not found")
