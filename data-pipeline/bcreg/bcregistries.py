@@ -275,7 +275,10 @@ class BCRegistries:
                     if row['bus_company_num'] is not None and 0 < len(row['bus_company_num']):
                         gen_row['bus_company_num'] = self.add_generated_corp_num(row['bus_company_num'])
                     if row['business_nme'] is not None and 0 < len(row['business_nme']):
-                        gen_row['business_nme'] = row['bus_company_num'] + self.random_alpha_string(20, True)
+                        if row['bus_company_num'] is not None and 0 < len(row['bus_company_num']):
+                            gen_row['business_nme'] = row['bus_company_num'] + self.random_alpha_string(20, True)
+                        else:
+                            gen_row['business_nme'] = self.random_alpha_string(20, True)
                 else:
                     # for any table, replace corp_num with the corresponding random value
                     if 'corp_num' in row:
