@@ -137,7 +137,8 @@ def test_generate_corp_nums():
 	            sqls = bc_cache_reg.generated_sqls
 	            fake_corp_num = bc_cache_reg.add_generated_corp_num(corp['corp_num'])
 
-            print('corp_' + fake_corp_num + ' = {')
+            print('sample_test_corps = {')
+            print('    "corp_' + fake_corp_num + '": {')
             print('            "corp_num":' + "'" + fake_corp_num + "'" + ', ' + '"corp_typ_cd":' + "'" + corp['corp_typ_cd'] + "'" + ', ' + 
             	    '"state_typ_cd":' + "'" + corp['state_typ_cd'] + "'" + ', ' + 
 	            	'"party_ct":' + str(party_ct[0]['count']) + ', ' + '"party_addr_ct":' + str(party_addr_ct[0]['count']) + ', ' + 
@@ -148,5 +149,6 @@ def test_generate_corp_nums():
             for sql in sqls:
                 print('                    """' + sql.replace(' values ', '\n                    values\n                    ') + '""",')
             print('                   ]')
-            print('             }')
+            print('             },')
+            print('}')
 
