@@ -3,6 +3,7 @@ import time
 
 from bcreg.bcregistries import BCRegistries, system_type
 from bcreg.eventprocessor import EventProcessor
+from bcreg.tests.sample_corps import corp_A7330600
 
 
 def test_generate_corp_sql():
@@ -275,3 +276,23 @@ def test_specific_corp_scenario():
         #print('corp_creds:')
         #print(corp_creds)
         #print('-------------------------')
+
+def test_preset_corp_scenario_3dbas():
+    # use corp corp_A7330600
+    corp_num = corp_A7330600['corp_num']
+
+    with BCRegistries(True) as cached_bc_reg:
+        cached_bc_reg.cache_bcreg_code_tables()
+        cached_bc_reg.insert_cache_sqls(corp_A7330600['sqls'])
+        corp_info = cached_bc_reg.get_bc_reg_corp_info(corp_num, 0)
+
+    with EventProcessor() as event_processor:
+        corp_creds = event_processor.generate_credentials(system_type, 0, 0, corp_num, corp_info)
+
+    #print(corp_creds)
+    assert len(corp_creds) == 5
+    assert corp_creds[0]['cred_type'] == 'REG'
+    assert corp_creds[1]['cred_type'] == 'ADDR'
+    assert corp_creds[2]['cred_type'] == 'REL'
+    assert corp_creds[3]['cred_type'] == 'REL'
+    assert corp_creds[4]['cred_type'] == 'REL'
