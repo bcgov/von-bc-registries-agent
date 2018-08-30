@@ -22,5 +22,5 @@ from bcreg.credssubmitter import CredsSubmitter
 
 loop = asyncio.get_event_loop()
 with CredsSubmitter() as creds_submitter:
-    loop.run_until_complete(creds_submitter.process_credential_queue(False))
+    loop.run_until_complete(creds_submitter.process_credential_queue(True))
 
