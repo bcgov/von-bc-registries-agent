@@ -84,7 +84,7 @@ The following can be run at the same time (in a separate console window) to post
 ```
 cd mara-example-project/scripts
 
-BC_REG_DB_USER=<usr> BC_REG_DB_PASSWORD=<pwd> MARA_DB_HOST=localhost MARA_DB_PORT=5444 ./run-step.sh bcreg/bc_reg_migrate.py
+BC_REG_DB_USER=<usr> BC_REG_DB_PASSWORD=<pwd> MARA_DB_HOST=localhost MARA_DB_PORT=5444 ./run-step.sh bcreg/bc_reg_pipeline_post_credentials.py
 ```
 
 ## Running Pipelines to Perform On-going Event Monitoring and Credential Updates
