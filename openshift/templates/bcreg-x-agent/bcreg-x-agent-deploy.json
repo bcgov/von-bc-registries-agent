@@ -298,7 +298,7 @@
       "displayName": "Enable gunicorn",
       "description": "A flag to indicate whether or not to use the gunicorn server.",
       "required": true,
-      "value": "1"
+      "value": "0"
     },
     {
       "name": "INDY_LEDGER_URL",

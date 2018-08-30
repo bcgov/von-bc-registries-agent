@@ -18,8 +18,27 @@ export APP_NAME=${APP_NAME:-runner}
 export HOST_IP=${HOST_IP:-0.0.0.0}
 export HOST_PORT=${HOST_PORT:-8000}
 
+isInstalled(){
+  rtnVal=$(type "$1" >/dev/null 2>&1)
+  rtnCd=$?
+  if [ ${rtnCd} -ne 0 ]; then
+    return 1
+  else
+    return 0
+  fi
+}
+
+enableGunicorn(){
+  if [ ! -z "$ENABLE_GUNICORN" ] && [ "$ENABLE_GUNICORN" = "1" ] && ! isInstalled gunicorn; then
+    echo "ENABLE_GUNICORN has been set, however gunicorn was not found."
+    echo "Setting ENABLE_GUNICORN to 0 ..."   
+    export ENABLE_GUNICORN=0
+  fi
+}
+
 CMD="$@"
 if [ -z "$CMD" ]; then
+  enableGunicorn
   if [ -z "$ENABLE_GUNICORN" ] || [ "$ENABLE_GUNICORN" = "0" ]; then
     CMD="python ${APP_NAME}.py"
   else
