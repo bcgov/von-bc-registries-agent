@@ -17,8 +17,7 @@ select_corp_sql = """select corp.corp_num, corp.corp_typ_cd, state.state_typ_cd
 						    where corp.corp_num = state.corp_num
 						      and state.end_event_id is null
 						      and state.state_typ_cd = op_state.state_typ_cd
-						      and op_state.op_state_typ_cd = 'ACT'
-						      and corp.corp_typ_cd in ('A','LLC','BC','C','CUL','ULC')))
+						      and corp.corp_typ_cd in ('A','LLC','BC','C','CUL','ULC','SP')))
 						order by corp.corp_num"""
 
 select_corp_scenario_sql = """select corp.corp_num, corp.corp_typ_cd, state.state_typ_cd
@@ -77,6 +76,19 @@ def _generate_corp_nums():
 
 def test_generate_corp_nums():
     selected_corps = [
+						'LP0450925',
+						'FM0525021',
+						'FM0508782',
+						'FM0491681',
+						'FM0491646',
+						'FM0476264',
+						'FM0443902',
+						'FM0431330',
+						'FM0407348',
+						'FM0355592',
+						'FM0283294',
+						'FM0283292',
+						'FM0137005',
 						'0043687',
 						'0384698',
 						'0446323',
@@ -125,16 +137,18 @@ def test_generate_corp_nums():
 	            sqls = bc_cache_reg.generated_sqls
 	            fake_corp_num = bc_cache_reg.add_generated_corp_num(corp['corp_num'])
 
-            #print('corp_' + corp['corp_num'] + ' = {')
-            #print('            corp_num:' + "'" + corp['corp_num'] + "'" + ', ' + 'corp_typ_cd:' + "'" + corp['corp_typ_cd'] + "'" + ', ' + 
-            #	    'state_typ_cd:' + "'" + corp['state_typ_cd'] + "'" + ', ' + 
-	        #    	'party_ct:' + str(party_ct[0]['count']) + ', ' + 'party_addr_ct:' + str(party_addr_ct[0]['count']) + ', ' + 
-	        #        'name_ct:' + str(name_ct[0]['count']) + ', ' + 'name_assumed_ct:' + str(name_assumed_ct[0]['count']) + ', ' + 
-	        #        'name_trans_ct:' + str(name_trans_ct[0]['count']) + ', ' + 'tilma_ct:' + str(tilma_ct[0]['count']) + ', ' +
-	        #        'juisdiction_ct:' + str(juisdiction_ct[0]['count']) + ', ')
-            #print('             sqls: [')
-            #for sql in sqls:
-            #    print('                    """' + sql.replace(' values ', '\n                    values\n                    ') + '""",')
-            #print('                   ]')
-            #print('             }')
+            print('sample_test_corps = {')
+            print('    "corp_' + fake_corp_num + '": {')
+            print('            "corp_num":' + "'" + fake_corp_num + "'" + ', ' + '"corp_typ_cd":' + "'" + corp['corp_typ_cd'] + "'" + ', ' + 
+            	    '"state_typ_cd":' + "'" + corp['state_typ_cd'] + "'" + ', ' + 
+	            	'"party_ct":' + str(party_ct[0]['count']) + ', ' + '"party_addr_ct":' + str(party_addr_ct[0]['count']) + ', ' + 
+	                '"name_ct":' + str(name_ct[0]['count']) + ', ' + '"name_assumed_ct":' + str(name_assumed_ct[0]['count']) + ', ' + 
+	                '"name_trans_ct":' + str(name_trans_ct[0]['count']) + ', ' + '"tilma_ct":' + str(tilma_ct[0]['count']) + ', ' +
+	                '"juisdiction_ct":' + str(juisdiction_ct[0]['count']) + ', ')
+            print('             "sqls": [')
+            for sql in sqls:
+                print('                    """' + sql.replace(' values ', '\n                    values\n                    ') + '""",')
+            print('                   ]')
+            print('             },')
+            print('}')
 

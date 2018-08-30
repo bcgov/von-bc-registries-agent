@@ -2,17 +2,15 @@
 import time
 
 from bcreg.bcregistries import BCRegistries, system_type
-from bcreg.tests.bcregistries_baseline import BCRegistriesBaseline
 from bcreg.eventprocessor import EventProcessor
-from bcreg.tests.eventprocessor_baseline import EventProcessorBaseline
 
 
 def test_connect_bcreg():
-    with BCRegistries() as bc_registries:
+    with BCRegistries(True) as bc_registries:
 	    assert True
 
 def test_connect_bcreg_baseline():
-    with BCRegistriesBaseline() as bc_registries:
+    with BCRegistries(False) as bc_registries:
 	    assert True
 
 def test_compare_corp_events():
@@ -47,13 +45,13 @@ def test_compare_corp_events():
                     #'0873646',
                     ]
     
-    with BCRegistriesBaseline() as bc_registries:
+    with BCRegistries(False) as bc_registries:
         prev_event_id = 0
         max_event_id = bc_registries.get_max_event()
         baseline_corps = bc_registries.get_specific_corps(specific_corps)
         baseline_corps = bc_registries.get_unprocessed_corp_events(prev_event_id, max_event_id, baseline_corps)
 
-    with BCRegistries() as bc_registries:
+    with BCRegistries(True) as bc_registries:
         prev_event_id = 0
         max_event_id = bc_registries.get_max_event()
         corps = bc_registries.get_specific_corps(specific_corps)
@@ -94,13 +92,13 @@ def test_compare_corp_infos():
                     #'0873646',
                     ]
     
-    with BCRegistries() as bc_registries:
+    with BCRegistries(True) as bc_registries:
         prev_event_id = 0
         max_event_id = bc_registries.get_max_event()
         corps = bc_registries.get_specific_corps(specific_corps)
         corps = bc_registries.get_unprocessed_corp_events(prev_event_id, max_event_id, corps)
     
-    with BCRegistriesBaseline() as bc_registries:
+    with BCRegistries(False) as bc_registries:
         prev_event_id = 0
         max_event_id = bc_registries.get_max_event()
         baseline_corps = bc_registries.get_specific_corps(specific_corps)
@@ -125,7 +123,7 @@ def test_compare_corp_infos():
     print('new load:', bcreg_loading_time)
 
     corp_info_baseline = {}
-    with BCRegistriesBaseline() as bc_registries:
+    with BCRegistries(False) as bc_registries:
         print('Run baseline')
         start_time = time.perf_counter()
         for corp in corps:
@@ -145,7 +143,7 @@ def test_compare_corp_infos():
     										corp['CORP_NUM'], corp_info[corp['CORP_NUM']])
 
     corp_creds_baseline = {}
-    with EventProcessorBaseline() as event_processor:
+    with EventProcessor() as event_processor:
         for corp in corps:
             corp_creds_baseline[corp['CORP_NUM']] = event_processor.generate_credentials(system_type, corp['PREV_EVENT_ID'], corp['LAST_EVENT_ID'], 
     										corp['CORP_NUM'], corp_info_baseline[corp['CORP_NUM']])
