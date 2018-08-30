@@ -1,5 +1,6 @@
 
-corp_5464412 = {
+sample_test_corps = {
+'corp_5464412': {
             "corp_num":'5464412', "corp_typ_cd":'ULC', "state_typ_cd":'ACT', "party_ct":0, "party_addr_ct":0, "name_ct":1, "name_assumed_ct":0, "name_trans_ct":0, "tilma_ct":0, "juisdiction_ct":0, 
              "sqls": [
                     """create table if not exists corp_party (corp_party_id numeric, mailing_addr_id numeric, delivery_addr_id numeric, corp_num text, party_typ_cd text, start_event_id numeric, end_event_id numeric, prev_party_id numeric, corr_typ_cd text, last_report_dt timestamp, appointment_dt timestamp, cessation_dt timestamp, last_nme text, middle_nme text, first_nme text, business_nme text, bus_company_num text, email_address text, corp_party_seq_num numeric, office_notification_dt timestamp, phone text, reason_typ_cd text)""",
@@ -79,9 +80,8 @@ corp_5464412 = {
                     values
                     (7535907, 'BC', 'CA', '42ZZ0R', 'ASJPYHJDBOQDVKNXY JTVCDRC', 'LCJA OINZOQ  SQZUDHWSBZYL', null, 'Vancouver', null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null)""",
                    ]
-             }
-
-corp_A7330600 = {
+             },
+'corp_A7330600': {
             "corp_num":'A7330600', "corp_typ_cd":'A', "state_typ_cd":'ACT', "party_ct":3, "party_addr_ct":1, "name_ct":1, "name_assumed_ct":0, "name_trans_ct":0, "tilma_ct":0, "juisdiction_ct":1, 
              "sqls": [
                     """create table if not exists corp_party (corp_party_id numeric, mailing_addr_id numeric, delivery_addr_id numeric, corp_num text, party_typ_cd text, start_event_id numeric, end_event_id numeric, prev_party_id numeric, corr_typ_cd text, last_report_dt timestamp, appointment_dt timestamp, cessation_dt timestamp, last_nme text, middle_nme text, first_nme text, business_nme text, bus_company_num text, email_address text, corp_party_seq_num numeric, office_notification_dt timestamp, phone text, reason_typ_cd text)""",
@@ -482,9 +482,8 @@ corp_A7330600 = {
                     values
                     (103538935, 'QC', 'CA', 'HBYL3B', 'LCBWMOGLIAUDXRDZGSQVZMGNX', null, null, 'SAINT-LAURENT', 'FOR', null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null)""",
                    ]
-             }
-
-corp_FM7980803 = {
+             },
+'corp_FM7980803': {
             "corp_num":'FM7980803', "corp_typ_cd":'SP', "state_typ_cd":'ACT', "party_ct":0, "party_addr_ct":0, "name_ct":1, "name_assumed_ct":0, "name_trans_ct":0, "tilma_ct":0, "juisdiction_ct":0, 
              "sqls": [
                     """create table if not exists corp_party (corp_party_id numeric, mailing_addr_id numeric, delivery_addr_id numeric, corp_num text, party_typ_cd text, start_event_id numeric, end_event_id numeric, prev_party_id numeric, corr_typ_cd text, last_report_dt timestamp, appointment_dt timestamp, cessation_dt timestamp, last_nme text, middle_nme text, first_nme text, business_nme text, bus_company_num text, email_address text, corp_party_seq_num numeric, office_notification_dt timestamp, phone text, reason_typ_cd text)""",
@@ -531,9 +530,8 @@ corp_FM7980803 = {
                     values
                     (103503750, 'BC', 'CA', 'JWTGN6', 'QNUGKS YUTUZCAJRMOPTHIGJJ', null, null, 'VANCOUVER', 'FOR', null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null)""",
                    ]
-             }
-
-corp_LP0737103 = {
+             },
+'corp_LP0737103': {
             "corp_num":'LP0737103', "corp_typ_cd":'LP', "state_typ_cd":'ACT', "party_ct":0, "party_addr_ct":0, "name_ct":1, "name_assumed_ct":0, "name_trans_ct":0, "tilma_ct":0, "juisdiction_ct":0, 
              "sqls": [
                     """create table if not exists corp_party (corp_party_id numeric, mailing_addr_id numeric, delivery_addr_id numeric, corp_num text, party_typ_cd text, start_event_id numeric, end_event_id numeric, prev_party_id numeric, corr_typ_cd text, last_report_dt timestamp, appointment_dt timestamp, cessation_dt timestamp, last_nme text, middle_nme text, first_nme text, business_nme text, bus_company_num text, email_address text, corp_party_seq_num numeric, office_notification_dt timestamp, phone text, reason_typ_cd text)""",
@@ -564,9 +562,8 @@ corp_LP0737103 = {
                     ('LP0737103', 'CO', 104900882, 0, null, 'ILCLYQJLHBQTJDWODVGD', 'XJHRO YYPDUBEBOW TXCZRBDR', null)""",
                     """create table if not exists office (corp_num text, office_typ_cd text, start_event_id numeric, end_event_id numeric, mailing_addr_id numeric, delivery_addr_id numeric, dd_corp_num text, email_address text)""",
                    ]
-             }
-
-corp_8539182 = {
+             },
+'corp_8539182': {
             "corp_num":'8539182', "corp_typ_cd":'BC', "state_typ_cd":'ACT', "party_ct":1, "party_addr_ct":0, "name_ct":1, "name_assumed_ct":0, "name_trans_ct":0, "tilma_ct":0, "juisdiction_ct":0, 
              "sqls": [
                     """create table if not exists corp_party (corp_party_id numeric, mailing_addr_id numeric, delivery_addr_id numeric, corp_num text, party_typ_cd text, start_event_id numeric, end_event_id numeric, prev_party_id numeric, corr_typ_cd text, last_report_dt timestamp, appointment_dt timestamp, cessation_dt timestamp, last_nme text, middle_nme text, first_nme text, business_nme text, bus_company_num text, email_address text, corp_party_seq_num numeric, office_notification_dt timestamp, phone text, reason_typ_cd text)""",
@@ -694,9 +691,8 @@ corp_8539182 = {
                     values
                     (7535430, 'BC', 'CA', '583392', 'UCDBJSOEQRZDHBIBDSEJAAXOZ', null, null, 'VANCOUVER', null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null)""",
                    ]
-             }
-
-corp_FM9737693 = {
+             },
+'corp_FM9737693': {
             "corp_num":'FM9737693', "corp_typ_cd":'SP', "state_typ_cd":'ACT', "party_ct":0, "party_addr_ct":0, "name_ct":1, "name_assumed_ct":0, "name_trans_ct":0, "tilma_ct":0, "juisdiction_ct":0, 
              "sqls": [
                     """create table if not exists corp_party (corp_party_id numeric, mailing_addr_id numeric, delivery_addr_id numeric, corp_num text, party_typ_cd text, start_event_id numeric, end_event_id numeric, prev_party_id numeric, corr_typ_cd text, last_report_dt timestamp, appointment_dt timestamp, cessation_dt timestamp, last_nme text, middle_nme text, first_nme text, business_nme text, bus_company_num text, email_address text, corp_party_seq_num numeric, office_notification_dt timestamp, phone text, reason_typ_cd text)""",
@@ -743,9 +739,8 @@ corp_FM9737693 = {
                     values
                     (103490415, 'BC', 'CA', '0YCSVW', 'CELBICTZMHCZHZPWOQBGWEBVX', null, null, 'VANCOUVER', 'FOR', null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null)""",
                    ]
-             }
-
-corp_FM4265857 = {
+             },
+'corp_FM4265857': {
             "corp_num":'FM4265857', "corp_typ_cd":'SP', "state_typ_cd":'ACT', "party_ct":0, "party_addr_ct":0, "name_ct":1, "name_assumed_ct":0, "name_trans_ct":0, "tilma_ct":0, "juisdiction_ct":0, 
              "sqls": [
                     """create table if not exists corp_party (corp_party_id numeric, mailing_addr_id numeric, delivery_addr_id numeric, corp_num text, party_typ_cd text, start_event_id numeric, end_event_id numeric, prev_party_id numeric, corr_typ_cd text, last_report_dt timestamp, appointment_dt timestamp, cessation_dt timestamp, last_nme text, middle_nme text, first_nme text, business_nme text, bus_company_num text, email_address text, corp_party_seq_num numeric, office_notification_dt timestamp, phone text, reason_typ_cd text)""",
@@ -795,9 +790,8 @@ corp_FM4265857 = {
                     values
                     (103538935, 'QC', 'CA', '5L7KRP', 'JIJOXNJIQYUUGDKVXBZYMONEL', null, null, 'SAINT-LAURENT', 'FOR', null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null)""",
                    ]
-             }
-
-corp_A4138183 = {
+             },
+'corp_A4138183': {
             "corp_num":'A4138183', "corp_typ_cd":'A', "state_typ_cd":'ACT', "party_ct":0, "party_addr_ct":0, "name_ct":1, "name_assumed_ct":0, "name_trans_ct":0, "tilma_ct":0, "juisdiction_ct":1, 
              "sqls": [
                     """create table if not exists corp_party (corp_party_id numeric, mailing_addr_id numeric, delivery_addr_id numeric, corp_num text, party_typ_cd text, start_event_id numeric, end_event_id numeric, prev_party_id numeric, corr_typ_cd text, last_report_dt timestamp, appointment_dt timestamp, cessation_dt timestamp, last_nme text, middle_nme text, first_nme text, business_nme text, bus_company_num text, email_address text, corp_party_seq_num numeric, office_notification_dt timestamp, phone text, reason_typ_cd text)""",
@@ -967,9 +961,8 @@ corp_A4138183 = {
                     values
                     (7536013, 'BC', 'CA', 'U9LWZD', 'FRAVXC LVPXWPCYLXDSSAOQON', 'ISAXIQT SPV XRXFVOHZCQ LK', null, 'Vancouver', 'FOR', 'DHMJJXYTLEYYXSH ZERTPAFMMVIVSYDXZTYUMRTE', 'PRPJFGYNBIZTFEE FLPX', null, null, null, null, null, null, null, null, null, null, null, null, null, null, null)""",
                    ]
-             }
-
-corp_FM9935965 = {
+             },
+'corp_FM9935965': {
             "corp_num":'FM9935965', "corp_typ_cd":'SP', "state_typ_cd":'ACT', "party_ct":0, "party_addr_ct":0, "name_ct":1, "name_assumed_ct":0, "name_trans_ct":0, "tilma_ct":0, "juisdiction_ct":0, 
              "sqls": [
                     """create table if not exists corp_party (corp_party_id numeric, mailing_addr_id numeric, delivery_addr_id numeric, corp_num text, party_typ_cd text, start_event_id numeric, end_event_id numeric, prev_party_id numeric, corr_typ_cd text, last_report_dt timestamp, appointment_dt timestamp, cessation_dt timestamp, last_nme text, middle_nme text, first_nme text, business_nme text, bus_company_num text, email_address text, corp_party_seq_num numeric, office_notification_dt timestamp, phone text, reason_typ_cd text)""",
@@ -1016,9 +1009,8 @@ corp_FM9935965 = {
                     values
                     (103555698, 'BC', 'CA', 'H8L89O', 'QYSYMU PIYXRUJBECVOZQHSTL', null, null, 'DELTA', 'FOR', null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null)""",
                    ]
-             }
-
-corp_9143683 = {
+             },
+'corp_9143683': {
             "corp_num":'9143683', "corp_typ_cd":'BC', "state_typ_cd":'ACT', "party_ct":2, "party_addr_ct":1, "name_ct":1, "name_assumed_ct":0, "name_trans_ct":0, "tilma_ct":0, "juisdiction_ct":0, 
              "sqls": [
                     """create table if not exists corp_party (corp_party_id numeric, mailing_addr_id numeric, delivery_addr_id numeric, corp_num text, party_typ_cd text, start_event_id numeric, end_event_id numeric, prev_party_id numeric, corr_typ_cd text, last_report_dt timestamp, appointment_dt timestamp, cessation_dt timestamp, last_nme text, middle_nme text, first_nme text, business_nme text, bus_company_num text, email_address text, corp_party_seq_num numeric, office_notification_dt timestamp, phone text, reason_typ_cd text)""",
@@ -1260,9 +1252,8 @@ corp_9143683 = {
                     values
                     (103592726, 'BC', 'CA', 'AOTZUH', 'YDAN AFNDJVBIYGUQIFGSYUAL', null, null, 'WEST VANCOUVER', 'FOR', null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null)""",
                    ]
-             }
-
-corp_A8503135 = {
+             },
+'corp_A8503135': {
             "corp_num":'A8503135', "corp_typ_cd":'A', "state_typ_cd":'ACT', "party_ct":1, "party_addr_ct":0, "name_ct":1, "name_assumed_ct":0, "name_trans_ct":1, "tilma_ct":0, "juisdiction_ct":1, 
              "sqls": [
                     """create table if not exists corp_party (corp_party_id numeric, mailing_addr_id numeric, delivery_addr_id numeric, corp_num text, party_typ_cd text, start_event_id numeric, end_event_id numeric, prev_party_id numeric, corr_typ_cd text, last_report_dt timestamp, appointment_dt timestamp, cessation_dt timestamp, last_nme text, middle_nme text, first_nme text, business_nme text, bus_company_num text, email_address text, corp_party_seq_num numeric, office_notification_dt timestamp, phone text, reason_typ_cd text)""",
@@ -1483,9 +1474,8 @@ corp_A8503135 = {
                     values
                     (7535987, 'BC', 'CA', '6KAIP8', 'WTUSNXCZIFRPCQMQELTFLYIOG', 'FZLYKQYZEDITDYOL KOQG URI', null, 'Vancouver', 'FOR', 'YDMSJJNZDUPMBPEZWROKFNMNTYSSBHVIMDAXEQAV', 'IDJLRWQEXBSLCWQHQEVP', null, null, null, null, null, null, null, null, null, null, null, null, null, null, null)""",
                    ]
-             }
-
-corp_FM4575576 = {
+             },
+'corp_FM4575576': {
             "corp_num":'FM4575576', "corp_typ_cd":'SP', "state_typ_cd":'ACT', "party_ct":0, "party_addr_ct":0, "name_ct":1, "name_assumed_ct":0, "name_trans_ct":0, "tilma_ct":0, "juisdiction_ct":0, 
              "sqls": [
                     """create table if not exists corp_party (corp_party_id numeric, mailing_addr_id numeric, delivery_addr_id numeric, corp_num text, party_typ_cd text, start_event_id numeric, end_event_id numeric, prev_party_id numeric, corr_typ_cd text, last_report_dt timestamp, appointment_dt timestamp, cessation_dt timestamp, last_nme text, middle_nme text, first_nme text, business_nme text, bus_company_num text, email_address text, corp_party_seq_num numeric, office_notification_dt timestamp, phone text, reason_typ_cd text)""",
@@ -1532,9 +1522,8 @@ corp_FM4575576 = {
                     values
                     (103555735, 'BC', 'CA', 'IIGEIJ', 'TUDUAFHDENTPFN RHTGKMKFVQ', null, null, 'DELTA', 'FOR', null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null)""",
                    ]
-             }
-
-corp_C6706515 = {
+             },
+'corp_C6706515': {
             "corp_num":'C6706515', "corp_typ_cd":'C', "state_typ_cd":'ACT', "party_ct":0, "party_addr_ct":0, "name_ct":1, "name_assumed_ct":0, "name_trans_ct":0, "tilma_ct":0, "juisdiction_ct":1, 
              "sqls": [
                     """create table if not exists corp_party (corp_party_id numeric, mailing_addr_id numeric, delivery_addr_id numeric, corp_num text, party_typ_cd text, start_event_id numeric, end_event_id numeric, prev_party_id numeric, corr_typ_cd text, last_report_dt timestamp, appointment_dt timestamp, cessation_dt timestamp, last_nme text, middle_nme text, first_nme text, business_nme text, bus_company_num text, email_address text, corp_party_seq_num numeric, office_notification_dt timestamp, phone text, reason_typ_cd text)""",
@@ -1782,9 +1771,8 @@ corp_C6706515 = {
                     values
                     (7535661, 'BC', 'CA', '9K1GHS', 'GVFJSHIEIKTOORSZSHLSUCLJY', null, null, 'VANCOUVER', null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null)""",
                    ]
-             }
-
-corp_A4031472 = {
+             },
+'corp_A4031472': {
             "corp_num":'A4031472', "corp_typ_cd":'A', "state_typ_cd":'ACT', "party_ct":0, "party_addr_ct":0, "name_ct":1, "name_assumed_ct":1, "name_trans_ct":0, "tilma_ct":0, "juisdiction_ct":1, 
              "sqls": [
                     """create table if not exists corp_party (corp_party_id numeric, mailing_addr_id numeric, delivery_addr_id numeric, corp_num text, party_typ_cd text, start_event_id numeric, end_event_id numeric, prev_party_id numeric, corr_typ_cd text, last_report_dt timestamp, appointment_dt timestamp, cessation_dt timestamp, last_nme text, middle_nme text, first_nme text, business_nme text, bus_company_num text, email_address text, corp_party_seq_num numeric, office_notification_dt timestamp, phone text, reason_typ_cd text)""",
@@ -1867,9 +1855,8 @@ corp_A4031472 = {
                     values
                     (7536119, 'BC', 'CA', 'A5T9A8', 'YVHCYFKCEKTLXCNCRDJUAXHPP', 'GATOPIYMFBBTLEZLRSTOXPJOF', null, 'Vancouver', 'FOR', 'XCCLM BBN WUEEUOJ VFIFBRRERLZHLAHGUYN QX', 'PUZUQ FBFGQLZTPEKYSA', null, null, null, null, null, null, null, null, null, null, null, null, null, null, null)""",
                    ]
-             }
-
-corp_FM1437726 = {
+             },
+'corp_FM1437726': {
             "corp_num":'FM1437726', "corp_typ_cd":'SP', "state_typ_cd":'ACT', "party_ct":0, "party_addr_ct":0, "name_ct":1, "name_assumed_ct":0, "name_trans_ct":0, "tilma_ct":0, "juisdiction_ct":0, 
              "sqls": [
                     """create table if not exists corp_party (corp_party_id numeric, mailing_addr_id numeric, delivery_addr_id numeric, corp_num text, party_typ_cd text, start_event_id numeric, end_event_id numeric, prev_party_id numeric, corr_typ_cd text, last_report_dt timestamp, appointment_dt timestamp, cessation_dt timestamp, last_nme text, middle_nme text, first_nme text, business_nme text, bus_company_num text, email_address text, corp_party_seq_num numeric, office_notification_dt timestamp, phone text, reason_typ_cd text)""",
@@ -1916,9 +1903,8 @@ corp_FM1437726 = {
                     values
                     (103592726, 'BC', 'CA', 'IFSXS7', 'IJZM MHZB RNCDQQBWRPBASGK', null, null, 'WEST VANCOUVER', 'FOR', null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null)""",
                    ]
-             }
-
-corp_0031643 = {
+             },
+'corp_0031643': {
             "corp_num":'0031643', "corp_typ_cd":'BC', "state_typ_cd":'ACT', "party_ct":0, "party_addr_ct":0, "name_ct":1, "name_assumed_ct":0, "name_trans_ct":0, "tilma_ct":0, "juisdiction_ct":0, 
              "sqls": [
                     """create table if not exists corp_party (corp_party_id numeric, mailing_addr_id numeric, delivery_addr_id numeric, corp_num text, party_typ_cd text, start_event_id numeric, end_event_id numeric, prev_party_id numeric, corr_typ_cd text, last_report_dt timestamp, appointment_dt timestamp, cessation_dt timestamp, last_nme text, middle_nme text, first_nme text, business_nme text, bus_company_num text, email_address text, corp_party_seq_num numeric, office_notification_dt timestamp, phone text, reason_typ_cd text)""",
@@ -2220,9 +2206,8 @@ corp_0031643 = {
                     values
                     (7534923, 'BC', 'CA', 'ODPA3G', 'CFSYY FGDIZYJVVBMTXHOMGQW', null, null, 'VANCOUVER', null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null)""",
                    ]
-             }
-
-corp_8004306 = {
+             },
+'corp_8004306': {
             "corp_num":'8004306', "corp_typ_cd":'BC', "state_typ_cd":'ACT', "party_ct":0, "party_addr_ct":0, "name_ct":1, "name_assumed_ct":0, "name_trans_ct":0, "tilma_ct":0, "juisdiction_ct":0, 
              "sqls": [
                     """create table if not exists corp_party (corp_party_id numeric, mailing_addr_id numeric, delivery_addr_id numeric, corp_num text, party_typ_cd text, start_event_id numeric, end_event_id numeric, prev_party_id numeric, corr_typ_cd text, last_report_dt timestamp, appointment_dt timestamp, cessation_dt timestamp, last_nme text, middle_nme text, first_nme text, business_nme text, bus_company_num text, email_address text, corp_party_seq_num numeric, office_notification_dt timestamp, phone text, reason_typ_cd text)""",
@@ -2284,9 +2269,8 @@ corp_8004306 = {
                     values
                     (7537115, 'BC', 'CA', 'BZ3XQL', 'FWJYYRAJKOQHPHYAR UJOYWRH', null, null, 'Osoyoos', null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null)""",
                    ]
-             }
-
-corp_3394994 = {
+             },
+'corp_3394994': {
             "corp_num":'3394994', "corp_typ_cd":'BC', "state_typ_cd":'ACT', "party_ct":0, "party_addr_ct":0, "name_ct":1, "name_assumed_ct":0, "name_trans_ct":1, "tilma_ct":0, "juisdiction_ct":0, 
              "sqls": [
                     """create table if not exists corp_party (corp_party_id numeric, mailing_addr_id numeric, delivery_addr_id numeric, corp_num text, party_typ_cd text, start_event_id numeric, end_event_id numeric, prev_party_id numeric, corr_typ_cd text, last_report_dt timestamp, appointment_dt timestamp, cessation_dt timestamp, last_nme text, middle_nme text, first_nme text, business_nme text, bus_company_num text, email_address text, corp_party_seq_num numeric, office_notification_dt timestamp, phone text, reason_typ_cd text)""",
@@ -2369,9 +2353,8 @@ corp_3394994 = {
                     values
                     (7537106, 'BC', 'CA', 'BPYO1F', 'ALJXZRIMQACO HMXZNGMACBNO', null, null, 'Kelowna', null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null)""",
                    ]
-             }
-
-corp_FM6895313 = {
+             },
+'corp_FM6895313': {
             "corp_num":'FM6895313', "corp_typ_cd":'SP', "state_typ_cd":'ACT', "party_ct":0, "party_addr_ct":0, "name_ct":1, "name_assumed_ct":0, "name_trans_ct":0, "tilma_ct":0, "juisdiction_ct":0, 
              "sqls": [
                     """create table if not exists corp_party (corp_party_id numeric, mailing_addr_id numeric, delivery_addr_id numeric, corp_num text, party_typ_cd text, start_event_id numeric, end_event_id numeric, prev_party_id numeric, corr_typ_cd text, last_report_dt timestamp, appointment_dt timestamp, cessation_dt timestamp, last_nme text, middle_nme text, first_nme text, business_nme text, bus_company_num text, email_address text, corp_party_seq_num numeric, office_notification_dt timestamp, phone text, reason_typ_cd text)""",
@@ -2408,9 +2391,8 @@ corp_FM6895313 = {
                     ('FM6895313', 'CO', 104721467, 0, null, 'LGRWPVZUTISQZQEXTTFB', 'DOVAIDVCIWJVORZFVBYUOIUVU', null)""",
                     """create table if not exists office (corp_num text, office_typ_cd text, start_event_id numeric, end_event_id numeric, mailing_addr_id numeric, delivery_addr_id numeric, dd_corp_num text, email_address text)""",
                    ]
-             }
-
-corp_FM0708722 = {
+             },
+'corp_FM0708722': {
             "corp_num":'FM0708722', "corp_typ_cd":'SP', "state_typ_cd":'ACT', "party_ct":0, "party_addr_ct":0, "name_ct":1, "name_assumed_ct":0, "name_trans_ct":0, "tilma_ct":0, "juisdiction_ct":0, 
              "sqls": [
                     """create table if not exists corp_party (corp_party_id numeric, mailing_addr_id numeric, delivery_addr_id numeric, corp_num text, party_typ_cd text, start_event_id numeric, end_event_id numeric, prev_party_id numeric, corr_typ_cd text, last_report_dt timestamp, appointment_dt timestamp, cessation_dt timestamp, last_nme text, middle_nme text, first_nme text, business_nme text, bus_company_num text, email_address text, corp_party_seq_num numeric, office_notification_dt timestamp, phone text, reason_typ_cd text)""",
@@ -2441,9 +2423,8 @@ corp_FM0708722 = {
                     ('FM0708722', 'CO', 104799510, 0, null, 'DEKRLFPBKYRLURJVNTRN', 'VUBYEHJRZRYHPENYUBMMPGJFL', null)""",
                     """create table if not exists office (corp_num text, office_typ_cd text, start_event_id numeric, end_event_id numeric, mailing_addr_id numeric, delivery_addr_id numeric, dd_corp_num text, email_address text)""",
                    ]
-             }
-
-corp_A8373673 = {
+             },
+'corp_A8373673': {
             "corp_num":'A8373673', "corp_typ_cd":'A', "state_typ_cd":'ACT', "party_ct":0, "party_addr_ct":0, "name_ct":1, "name_assumed_ct":0, "name_trans_ct":0, "tilma_ct":0, "juisdiction_ct":1, 
              "sqls": [
                     """create table if not exists corp_party (corp_party_id numeric, mailing_addr_id numeric, delivery_addr_id numeric, corp_num text, party_typ_cd text, start_event_id numeric, end_event_id numeric, prev_party_id numeric, corr_typ_cd text, last_report_dt timestamp, appointment_dt timestamp, cessation_dt timestamp, last_nme text, middle_nme text, first_nme text, business_nme text, bus_company_num text, email_address text, corp_party_seq_num numeric, office_notification_dt timestamp, phone text, reason_typ_cd text)""",
@@ -2775,9 +2756,8 @@ corp_A8373673 = {
                     values
                     (7535969, 'BC', 'CA', 'NJ66W8', 'DPGFAZNOMGVQZEUSZUNDURHFG', 'HYSDRWKZTHOBPOQSKTGETBWFV', null, 'Vancouver', 'FOR', 'KNRJSMXRDOGRJVXNQPIVMKYUGJHHIAKZRTXMXQYZ', 'TWWPKUBK TWWLXVKBZZC', null, null, null, null, null, null, null, null, null, null, null, null, null, null, null)""",
                    ]
-             }
-
-corp_8451586 = {
+             },
+'corp_8451586': {
             "corp_num":'8451586', "corp_typ_cd":'BC', "state_typ_cd":'ACT', "party_ct":0, "party_addr_ct":0, "name_ct":1, "name_assumed_ct":0, "name_trans_ct":0, "tilma_ct":0, "juisdiction_ct":0, 
              "sqls": [
                     """create table if not exists corp_party (corp_party_id numeric, mailing_addr_id numeric, delivery_addr_id numeric, corp_num text, party_typ_cd text, start_event_id numeric, end_event_id numeric, prev_party_id numeric, corr_typ_cd text, last_report_dt timestamp, appointment_dt timestamp, cessation_dt timestamp, last_nme text, middle_nme text, first_nme text, business_nme text, bus_company_num text, email_address text, corp_party_seq_num numeric, office_notification_dt timestamp, phone text, reason_typ_cd text)""",
@@ -3043,9 +3023,8 @@ corp_8451586 = {
                     values
                     (7535791, 'BC', 'CA', 'EJS59G', 'VDDJRKRXFYKQZTHBXHEWFKHUJ', 'ZMRQSWAXIHKTMYQTFSZK JCXK', null, 'Vancouver', null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null)""",
                    ]
-             }
-
-corp_7633478 = {
+             },
+'corp_7633478': {
             "corp_num":'7633478', "corp_typ_cd":'BC', "state_typ_cd":'ACT', "party_ct":2, "party_addr_ct":2, "name_ct":1, "name_assumed_ct":0, "name_trans_ct":0, "tilma_ct":0, "juisdiction_ct":0, 
              "sqls": [
                     """create table if not exists corp_party (corp_party_id numeric, mailing_addr_id numeric, delivery_addr_id numeric, corp_num text, party_typ_cd text, start_event_id numeric, end_event_id numeric, prev_party_id numeric, corr_typ_cd text, last_report_dt timestamp, appointment_dt timestamp, cessation_dt timestamp, last_nme text, middle_nme text, first_nme text, business_nme text, bus_company_num text, email_address text, corp_party_seq_num numeric, office_notification_dt timestamp, phone text, reason_typ_cd text)""",
@@ -3227,9 +3206,8 @@ corp_7633478 = {
                     values
                     (103503750, 'BC', 'CA', 'TJNGVA', 'HIRS XPYOCVKLU QRLZAQQAGW', null, null, 'VANCOUVER', 'FOR', null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null)""",
                    ]
-             }
-
-corp_8793129 = {
+             },
+'corp_8793129': {
             "corp_num":'8793129', "corp_typ_cd":'BC', "state_typ_cd":'ACT', "party_ct":2, "party_addr_ct":2, "name_ct":1, "name_assumed_ct":0, "name_trans_ct":0, "tilma_ct":0, "juisdiction_ct":0, 
              "sqls": [
                     """create table if not exists corp_party (corp_party_id numeric, mailing_addr_id numeric, delivery_addr_id numeric, corp_num text, party_typ_cd text, start_event_id numeric, end_event_id numeric, prev_party_id numeric, corr_typ_cd text, last_report_dt timestamp, appointment_dt timestamp, cessation_dt timestamp, last_nme text, middle_nme text, first_nme text, business_nme text, bus_company_num text, email_address text, corp_party_seq_num numeric, office_notification_dt timestamp, phone text, reason_typ_cd text)""",
@@ -3387,9 +3365,8 @@ corp_8793129 = {
                     values
                     (103555735, 'BC', 'CA', '7WP5M5', ' KVJLL NQPSWYLOKWAJQIONEN', null, null, 'DELTA', 'FOR', null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null)""",
                    ]
-             }
-
-corp_A6497538 = {
+             },
+'corp_A6497538': {
             "corp_num":'A6497538', "corp_typ_cd":'A', "state_typ_cd":'ACT', "party_ct":0, "party_addr_ct":0, "name_ct":1, "name_assumed_ct":0, "name_trans_ct":1, "tilma_ct":0, "juisdiction_ct":1, 
              "sqls": [
                     """create table if not exists corp_party (corp_party_id numeric, mailing_addr_id numeric, delivery_addr_id numeric, corp_num text, party_typ_cd text, start_event_id numeric, end_event_id numeric, prev_party_id numeric, corr_typ_cd text, last_report_dt timestamp, appointment_dt timestamp, cessation_dt timestamp, last_nme text, middle_nme text, first_nme text, business_nme text, bus_company_num text, email_address text, corp_party_seq_num numeric, office_notification_dt timestamp, phone text, reason_typ_cd text)""",
@@ -3571,9 +3548,8 @@ corp_A6497538 = {
                     values
                     (7535989, 'BC', 'CA', 'W7F25G', 'OAUXNOKQGGJAWRRNSDYWGQ FL', 'YHLCUOYNRLTQWJCFVTKXEXUEI', null, 'Vancouver', 'FOR', 'YZVFHDK OLAOF CEWFOQ XYJOXDRJUFF ALJXNQF', 'SNTGFZKUDAQBDVOXHYCS', null, null, null, null, null, null, null, null, null, null, null, null, null, null, null)""",
                    ]
-             }
-
-corp_C1208664 = {
+             },
+'corp_C1208664': {
             "corp_num":'C1208664', "corp_typ_cd":'CUL', "state_typ_cd":'ACT', "party_ct":1, "party_addr_ct":1, "name_ct":1, "name_assumed_ct":0, "name_trans_ct":0, "tilma_ct":0, "juisdiction_ct":1, 
              "sqls": [
                     """create table if not exists corp_party (corp_party_id numeric, mailing_addr_id numeric, delivery_addr_id numeric, corp_num text, party_typ_cd text, start_event_id numeric, end_event_id numeric, prev_party_id numeric, corr_typ_cd text, last_report_dt timestamp, appointment_dt timestamp, cessation_dt timestamp, last_nme text, middle_nme text, first_nme text, business_nme text, bus_company_num text, email_address text, corp_party_seq_num numeric, office_notification_dt timestamp, phone text, reason_typ_cd text)""",
@@ -3719,9 +3695,8 @@ corp_C1208664 = {
                     values
                     (103465149, 'BC', 'CA', 'SJBC26', 'WY ZILKBDCXRPSOHFXPUIYZDL', null, null, 'VANCOUVER', 'FOR', null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null)""",
                    ]
-             }
-
-corp_1277500 = {
+             },
+'corp_1277500': {
             "corp_num":'1277500', "corp_typ_cd":'BC', "state_typ_cd":'ACT', "party_ct":0, "party_addr_ct":0, "name_ct":1, "name_assumed_ct":0, "name_trans_ct":0, "tilma_ct":0, "juisdiction_ct":0, 
              "sqls": [
                     """create table if not exists corp_party (corp_party_id numeric, mailing_addr_id numeric, delivery_addr_id numeric, corp_num text, party_typ_cd text, start_event_id numeric, end_event_id numeric, prev_party_id numeric, corr_typ_cd text, last_report_dt timestamp, appointment_dt timestamp, cessation_dt timestamp, last_nme text, middle_nme text, first_nme text, business_nme text, bus_company_num text, email_address text, corp_party_seq_num numeric, office_notification_dt timestamp, phone text, reason_typ_cd text)""",
@@ -3951,9 +3926,8 @@ corp_1277500 = {
                     values
                     (7535151, 'BC', 'CA', 'XABLQ7', 'MJLPBGUQJ NNDPGRIVQJHCFEM', null, null, 'VANCOUVER', null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null)""",
                    ]
-             }
-
-corp_FM4280968 = {
+             },
+'corp_FM4280968': {
             "corp_num":'FM4280968', "corp_typ_cd":'SP', "state_typ_cd":'ACT', "party_ct":0, "party_addr_ct":0, "name_ct":1, "name_assumed_ct":0, "name_trans_ct":0, "tilma_ct":0, "juisdiction_ct":0, 
              "sqls": [
                     """create table if not exists corp_party (corp_party_id numeric, mailing_addr_id numeric, delivery_addr_id numeric, corp_num text, party_typ_cd text, start_event_id numeric, end_event_id numeric, prev_party_id numeric, corr_typ_cd text, last_report_dt timestamp, appointment_dt timestamp, cessation_dt timestamp, last_nme text, middle_nme text, first_nme text, business_nme text, bus_company_num text, email_address text, corp_party_seq_num numeric, office_notification_dt timestamp, phone text, reason_typ_cd text)""",
@@ -3984,9 +3958,8 @@ corp_FM4280968 = {
                     ('FM4280968', 'CO', 104961111, 0, null, 'GTCHWTLRYZXWPKIACCLG', 'UWJMN GMEMXPTSIVTBSUPEGBL', null)""",
                     """create table if not exists office (corp_num text, office_typ_cd text, start_event_id numeric, end_event_id numeric, mailing_addr_id numeric, delivery_addr_id numeric, dd_corp_num text, email_address text)""",
                    ]
-             }
-
-corp_LLC8529009 = {
+             },
+'corp_LLC8529009': {
             "corp_num":'LLC8529009', "corp_typ_cd":'LLC', "state_typ_cd":'ACT', "party_ct":0, "party_addr_ct":0, "name_ct":1, "name_assumed_ct":0, "name_trans_ct":0, "tilma_ct":0, "juisdiction_ct":1, 
              "sqls": [
                     """create table if not exists corp_party (corp_party_id numeric, mailing_addr_id numeric, delivery_addr_id numeric, corp_num text, party_typ_cd text, start_event_id numeric, end_event_id numeric, prev_party_id numeric, corr_typ_cd text, last_report_dt timestamp, appointment_dt timestamp, cessation_dt timestamp, last_nme text, middle_nme text, first_nme text, business_nme text, bus_company_num text, email_address text, corp_party_seq_num numeric, office_notification_dt timestamp, phone text, reason_typ_cd text)""",
@@ -4114,9 +4087,8 @@ corp_LLC8529009 = {
                     values
                     (7536135, 'BC', 'CA', '38ZEMF', 'ANSYUXURUDUYLSPMXIAWSMTNL', 'BXJKQHZXQMKUEYRBWZUFSATIO', null, 'Vancouver', 'FOR', 'APJAKGSKSCYHTQXFPFR UMRLNMOMXCKN WCFR BB', 'OFDKXXWXUDOFKF HNEQW', null, null, null, null, null, null, null, null, null, null, null, null, null, null, null)""",
                    ]
-             }
-
-corp_9897475 = {
+             },
+'corp_9897475': {
             "corp_num":'9897475', "corp_typ_cd":'BC', "state_typ_cd":'ACT', "party_ct":0, "party_addr_ct":0, "name_ct":1, "name_assumed_ct":0, "name_trans_ct":0, "tilma_ct":0, "juisdiction_ct":0, 
              "sqls": [
                     """create table if not exists corp_party (corp_party_id numeric, mailing_addr_id numeric, delivery_addr_id numeric, corp_num text, party_typ_cd text, start_event_id numeric, end_event_id numeric, prev_party_id numeric, corr_typ_cd text, last_report_dt timestamp, appointment_dt timestamp, cessation_dt timestamp, last_nme text, middle_nme text, first_nme text, business_nme text, bus_company_num text, email_address text, corp_party_seq_num numeric, office_notification_dt timestamp, phone text, reason_typ_cd text)""",
@@ -4196,9 +4168,8 @@ corp_9897475 = {
                     values
                     (7535867, 'BC', 'CA', 'TOMNDD', 'EXHMTTUOBLPYS UGXZPVQEPME', 'JOZEGAPLXHNJZL QJHNNQSCCZ', null, 'Vancouver', null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null)""",
                    ]
-             }
-
-corp_FM5949349 = {
+             },
+'corp_FM5949349': {
             "corp_num":'FM5949349', "corp_typ_cd":'SP', "state_typ_cd":'ACT', "party_ct":0, "party_addr_ct":0, "name_ct":1, "name_assumed_ct":0, "name_trans_ct":0, "tilma_ct":0, "juisdiction_ct":0, 
              "sqls": [
                     """create table if not exists corp_party (corp_party_id numeric, mailing_addr_id numeric, delivery_addr_id numeric, corp_num text, party_typ_cd text, start_event_id numeric, end_event_id numeric, prev_party_id numeric, corr_typ_cd text, last_report_dt timestamp, appointment_dt timestamp, cessation_dt timestamp, last_nme text, middle_nme text, first_nme text, business_nme text, bus_company_num text, email_address text, corp_party_seq_num numeric, office_notification_dt timestamp, phone text, reason_typ_cd text)""",
@@ -4235,9 +4206,8 @@ corp_FM5949349 = {
                     ('FM5949349', 'CO', 104721465, 0, null, 'CRVONBXSTYKEGZKPIVJB', 'SFLOQVPFPJCSOBLFUUTVWMVFU', null)""",
                     """create table if not exists office (corp_num text, office_typ_cd text, start_event_id numeric, end_event_id numeric, mailing_addr_id numeric, delivery_addr_id numeric, dd_corp_num text, email_address text)""",
                    ]
-             }
-
-corp_9260984 = {
+             },
+'corp_9260984': {
             "corp_num":'9260984', "corp_typ_cd":'BC', "state_typ_cd":'ACT', "party_ct":1, "party_addr_ct":0, "name_ct":1, "name_assumed_ct":0, "name_trans_ct":0, "tilma_ct":0, "juisdiction_ct":0, 
              "sqls": [
                     """create table if not exists corp_party (corp_party_id numeric, mailing_addr_id numeric, delivery_addr_id numeric, corp_num text, party_typ_cd text, start_event_id numeric, end_event_id numeric, prev_party_id numeric, corr_typ_cd text, last_report_dt timestamp, appointment_dt timestamp, cessation_dt timestamp, last_nme text, middle_nme text, first_nme text, business_nme text, bus_company_num text, email_address text, corp_party_seq_num numeric, office_notification_dt timestamp, phone text, reason_typ_cd text)""",
@@ -4545,9 +4515,8 @@ corp_9260984 = {
                     values
                     (7534978, 'BC', 'CA', '2C1K34', 'CLZLNG KVAIMZKZODCDRRJFGD', null, null, 'VANCOUVER', null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null)""",
                    ]
-             }
-
-corp_C5466117 = {
+             },
+'corp_C5466117': {
             "corp_num":'C5466117', "corp_typ_cd":'C', "state_typ_cd":'ACT', "party_ct":0, "party_addr_ct":0, "name_ct":1, "name_assumed_ct":0, "name_trans_ct":0, "tilma_ct":0, "juisdiction_ct":1, 
              "sqls": [
                     """create table if not exists corp_party (corp_party_id numeric, mailing_addr_id numeric, delivery_addr_id numeric, corp_num text, party_typ_cd text, start_event_id numeric, end_event_id numeric, prev_party_id numeric, corr_typ_cd text, last_report_dt timestamp, appointment_dt timestamp, cessation_dt timestamp, last_nme text, middle_nme text, first_nme text, business_nme text, bus_company_num text, email_address text, corp_party_seq_num numeric, office_notification_dt timestamp, phone text, reason_typ_cd text)""",
@@ -4765,9 +4734,8 @@ corp_C5466117 = {
                     values
                     (7535933, 'BC', 'CA', 'NDHTIC', 'YCVOH V QSIOLBEDTIZZHWJQI', ' YCVUNWMWGJKCZOCDFDSSXMSH', null, 'Vancouver', null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null)""",
                    ]
-             }
-
-corp_0562726 = {
+             },
+'corp_0562726': {
             "corp_num":'0562726', "corp_typ_cd":'BC', "state_typ_cd":'ACT', "party_ct":0, "party_addr_ct":0, "name_ct":1, "name_assumed_ct":0, "name_trans_ct":0, "tilma_ct":0, "juisdiction_ct":0, 
              "sqls": [
                     """create table if not exists corp_party (corp_party_id numeric, mailing_addr_id numeric, delivery_addr_id numeric, corp_num text, party_typ_cd text, start_event_id numeric, end_event_id numeric, prev_party_id numeric, corr_typ_cd text, last_report_dt timestamp, appointment_dt timestamp, cessation_dt timestamp, last_nme text, middle_nme text, first_nme text, business_nme text, bus_company_num text, email_address text, corp_party_seq_num numeric, office_notification_dt timestamp, phone text, reason_typ_cd text)""",
@@ -5210,9 +5178,8 @@ corp_0562726 = {
                     values
                     (7535693, 'BC', 'CA', '3JEOW8', ' EJSVOALNJKUYYZCAZCYEVQRM', 'TFHATXMDHBXTRYWPHGOTXEBNT', null, 'Vancouver', null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null)""",
                    ]
-             }
-
-corp_FM8872572 = {
+             },
+'corp_FM8872572': {
             "corp_num":'FM8872572', "corp_typ_cd":'SP', "state_typ_cd":'ACT', "party_ct":0, "party_addr_ct":0, "name_ct":1, "name_assumed_ct":0, "name_trans_ct":0, "tilma_ct":0, "juisdiction_ct":0, 
              "sqls": [
                     """create table if not exists corp_party (corp_party_id numeric, mailing_addr_id numeric, delivery_addr_id numeric, corp_num text, party_typ_cd text, start_event_id numeric, end_event_id numeric, prev_party_id numeric, corr_typ_cd text, last_report_dt timestamp, appointment_dt timestamp, cessation_dt timestamp, last_nme text, middle_nme text, first_nme text, business_nme text, bus_company_num text, email_address text, corp_party_seq_num numeric, office_notification_dt timestamp, phone text, reason_typ_cd text)""",
@@ -5243,9 +5210,8 @@ corp_FM8872572 = {
                     ('FM8872572', 'CO', 105148056, 0, null, 'IVMGZSTMSIVJDPVLDJCQ', 'ILWPZJTYTBODA AVU RYHAWHR', null)""",
                     """create table if not exists office (corp_num text, office_typ_cd text, start_event_id numeric, end_event_id numeric, mailing_addr_id numeric, delivery_addr_id numeric, dd_corp_num text, email_address text)""",
                    ]
-             }
-
-corp_FM2240721 = {
+             },
+'corp_FM2240721': {
             "corp_num":'FM2240721', "corp_typ_cd":'SP', "state_typ_cd":'ACT', "party_ct":0, "party_addr_ct":0, "name_ct":1, "name_assumed_ct":0, "name_trans_ct":0, "tilma_ct":0, "juisdiction_ct":0, 
              "sqls": [
                     """create table if not exists corp_party (corp_party_id numeric, mailing_addr_id numeric, delivery_addr_id numeric, corp_num text, party_typ_cd text, start_event_id numeric, end_event_id numeric, prev_party_id numeric, corr_typ_cd text, last_report_dt timestamp, appointment_dt timestamp, cessation_dt timestamp, last_nme text, middle_nme text, first_nme text, business_nme text, bus_company_num text, email_address text, corp_party_seq_num numeric, office_notification_dt timestamp, phone text, reason_typ_cd text)""",
@@ -5343,4 +5309,5 @@ corp_FM2240721 = {
                     values
                     (104982591, 'BC', 'CA', '5LQJDI', 'U NKOQPZXEUMMLNJMUTNMLMU ', null, null, 'testcity', 'FOR', 'XOYISP SWTCOXWMNIWNKXPSOMYDAKHNKPAYUFGFD', 'HTUMIGJEYFAQADQEJMBC', null, null, null, null, null, null, null, null, null, null, null, null, null, null, null)""",
                    ]
-             }
+             },
+}

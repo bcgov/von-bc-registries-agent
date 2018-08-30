@@ -27,6 +27,7 @@ def bc_reg_root_pipeline():
 
     test_pipeline.add(bc_init_test_data())
     test_pipeline.add(bc_reg_test_corps())
+    test_pipeline.add(bc_reg_pipeline_single_thread())
     test_pipeline.add(bc_reg_pipeline_jsonbender())
 
     parent_pipeline.add(test_pipeline)
@@ -53,6 +54,29 @@ def bc_reg_pipeline():
     sub_pipeline1_3.add(Task(id='submit_credentials', description='Submit credentials',
                           commands=[ExecutePython('./bcreg/submit-creds.py')]))
     pipeline1.add(sub_pipeline1_3, ['load_and_process_bc_reg_data'])
+
+    return pipeline1
+
+def bc_reg_pipeline_single_thread():
+    import bcreg
+
+    pipeline1 = Pipeline(
+        id='bc_reg_event_processor_single_thread',
+        description='A pipeline that processes BC Registries events and generates credentials.')
+
+    sub_pipeline1_2 = Pipeline(id='load_and_process_bc_reg_data_single_thread', description='Load BC Reg data and generate credentials')
+    sub_pipeline1_2.add(Task(id='register_un_processed_events_single_thread', description='Register un-processed events',
+                          commands=[ExecutePython('./bcreg/find-unprocessed-events.py')]))
+    sub_pipeline1_2.add(Task(id='load_bc_reg_data_single_thread', description='Load BC Registries data',
+                          commands=[ExecutePython('./bcreg/process-corps.py')]), ['register_un_processed_events_single_thread'])
+    sub_pipeline1_2.add(Task(id='create_bc_reg_credentials_single_thread', description='Create credentials',
+                          commands=[ExecutePython('./bcreg/generate-creds.py')]), ['load_bc_reg_data_single_thread'])
+    pipeline1.add(sub_pipeline1_2)
+
+    sub_pipeline1_3 = Pipeline(id='submit_bc_reg_credentials_single_thread', description='Submit BC Reg credentials to P-X')
+    sub_pipeline1_3.add(Task(id='submit_credentials_single_thread', description='Submit credentials',
+                          commands=[ExecutePython('./bcreg/submit-creds-single-thread.py')]))
+    pipeline1.add(sub_pipeline1_3, ['load_and_process_bc_reg_data_single_thread'])
 
     return pipeline1
 
