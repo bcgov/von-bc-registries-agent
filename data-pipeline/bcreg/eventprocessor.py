@@ -8,17 +8,17 @@ from bcreg.config import config
 from bcreg.bcregistries import BCRegistries
 
 
-corp_credential = 'CORP'
-corp_schema = 'incorporation.bc_registries'
-corp_version = '1.0.31'
+corp_credential = 'REG'
+corp_schema = 'registration.bc_registries'
+corp_version = '1.0.32'
 
 addr_credential = 'ADDR'
 addr_schema = 'address.bc_registries'
-addr_version = '1.0.31'
+addr_version = '1.0.32'
 
-dba_credential = 'DBA'
-dba_schema = 'doing_business_as.bc_registries'
-dba_version = '1.0.31'
+dba_credential = 'REL'
+dba_schema = 'relationship.bc_registries'
+dba_version = '1.0.32'
 
 CORP_BATCH_SIZE = 3000
 
@@ -340,13 +340,11 @@ class EventProcessor:
     # generate address credential
     def generate_address_credential(self, corp_num, corp_info, office, address, dba_corp_num, dba_name):
         addr_cred = {}
-        addr_cred['legal_entity_id'] = self.corp_num_with_prefix(corp_info['corp_typ_cd'], corp_num)
-        addr_cred['org_registry_id'] = self.corp_num_with_prefix(corp_info['corp_typ_cd'], corp_num)
+        addr_cred['registration_id'] = self.corp_num_with_prefix(corp_info['corp_typ_cd'], corp_num)
         if 0 < len(corp_info['org_names']):
             addr_cred['addressee'] = corp_info['org_names'][0]['corp_nme']
-        addr_cred['registered_jurisdiction'] = self.get_corp_jurisdiction(corp_info)
-        addr_cred['addr_type'] = office['office_typ_cd']
-        addr_cred['local_address'] = address['local_addr']
+        addr_cred['address_type'] = office['office_typ_cd']
+        addr_cred['civic_address'] = address['local_addr']
         if 'city' in address:
             addr_cred['municipality'] = address['city']
         if 'province' in address:
@@ -356,12 +354,10 @@ class EventProcessor:
         if 'country_typ_cd' in address:
             addr_cred['country'] = address['country_typ_cd']
         if 'effective_dt' in office['start_filing_event']:
-            addr_cred['effective_date'] = office['start_filing_event']['effective_dt']
+            addr_cred['address_effective_date'] = office['start_filing_event']['effective_dt']
         else:
-            addr_cred['effective_date'] = office['start_event']['event_timestmp']
-        addr_cred['dba_corp_num'] = dba_corp_num
-        addr_cred['dba_name'] = dba_name
-        addr_cred['end_date'] = ""
+            addr_cred['address_effective_date'] = office['start_event']['event_timestmp']
+        addr_cred['effective_date'] = addr_cred['address_effective_date']
 
         return addr_cred
 
@@ -417,35 +413,36 @@ class EventProcessor:
 
         # generate corp credential
         corp_cred = {}
-        corp_cred['legal_entity_id'] = self.corp_num_with_prefix(corp_info['corp_typ_cd'], corp_info['corp_num'])
-        corp_cred['corp_num']        = self.corp_num_with_prefix(corp_info['corp_typ_cd'], corp_info['corp_num'])
+        corp_cred['registration_id'] = self.corp_num_with_prefix(corp_info['corp_typ_cd'], corp_info['corp_num'])
+        corp_cred['registration_date'] = corp_info['recognition_dts']
         corp_cred['effective_date'] = corp_info['recognition_dts']
         if 0 < len(corp_info['org_names']):
-            corp_cred['legal_name'] = corp_info['org_names'][0]['corp_nme'] 
+            corp_cred['entity_name'] = corp_info['org_names'][0]['corp_nme'] 
             if 'effectiv_dt' in corp_info['org_names'][0]['start_filing_event']:
-                corp_cred['org_name_effective'] = corp_info['org_names'][0]['start_filing_event']['effective_dt']
+                corp_cred['entity_name_effective'] = corp_info['org_names'][0]['start_filing_event']['effective_dt']
             else:
-                corp_cred['org_name_effective'] = corp_info['org_names'][0]['start_event']['event_timestmp']
+                corp_cred['entity_name_effective'] = corp_info['org_names'][0]['start_event']['event_timestmp']
         if 0 < len(corp_info['org_name_assumed']):
-            corp_cred['org_name_assumed'] = corp_info['org_name_assumed'][0]['corp_nme'] 
+            corp_cred['entity_name_assumed'] = corp_info['org_name_assumed'][0]['corp_nme'] 
             if 'effectiv_dt' in corp_info['org_name_assumed'][0]['start_filing_event']:
-                corp_cred['org_name_assumed_effective'] = corp_info['org_name_assumed'][0]['start_filing_event']['effective_dt']
+                corp_cred['entity_name_assumed_effective'] = corp_info['org_name_assumed'][0]['start_filing_event']['effective_dt']
             else:
-                corp_cred['org_name_assumed_effective'] = corp_info['org_name_assumed'][0]['start_event']['event_timestmp']
+                corp_cred['entity_name_assumed_effective'] = corp_info['org_name_assumed'][0]['start_event']['event_timestmp']
         if 0 < len(corp_info['org_name_trans']):
-            corp_cred['org_name_trans'] = corp_info['org_name_trans'][0]['corp_nme'] 
+            corp_cred['entity_name_trans'] = corp_info['org_name_trans'][0]['corp_nme'] 
             if 'effectiv_dt' in corp_info['org_name_trans'][0]['start_filing_event']:
-                corp_cred['org_name_trans_effective'] = corp_info['org_name_trans'][0]['start_filing_event']['effective_dt']
+                corp_cred['entity_name_trans_effective'] = corp_info['org_name_trans'][0]['start_filing_event']['effective_dt']
             else:
-                corp_cred['org_name_trans_effective'] = corp_info['org_name_trans'][0]['start_event']['event_timestmp']
-        corp_cred['org_reg_status'] = corp_info['corp_state']['op_state_typ_cd']
-        corp_cred['org_status_effective'] = corp_info['corp_state_dt']
-        corp_cred['org_type'] = corp_info['corp_typ_cd']
+                corp_cred['entity_name_trans_effective'] = corp_info['org_name_trans'][0]['start_event']['event_timestmp']
+        corp_cred['entity_status'] = corp_info['corp_state']['op_state_typ_cd']
+        corp_cred['entity_status_effective'] = corp_info['corp_state_dt']
+        corp_cred['entity_type'] = corp_info['corp_typ_cd']
         corp_cred['registered_jurisdiction'] = self.get_corp_jurisdiction(corp_info)
         if 'tilma_involved' in corp_info and 'tilma_jurisdiction' in corp_info['tilma_involved']:
             corp_cred['registration_type'] = corp_info['tilma_involved']['tilma_jurisdiction'] 
+        else:
+            corp_cred['registration_type'] = ''
         corp_cred['home_jurisdiction'] = self.get_corp_jurisdiction(corp_info)
-        corp_cred['end_date'] = ""
 
         corp_creds.append(self.build_credential_dict(corp_credential, corp_schema, corp_version, corp_num, corp_cred))
 
@@ -456,41 +453,31 @@ class EventProcessor:
                     addr_cred = self.generate_address_credential(corp_num, corp_info, office, office['delivery_addr'], "", "")
                     corp_creds.append(self.build_credential_dict(addr_credential, addr_schema, addr_version, 
                                                                 corp_num + ',' + office['office_typ_cd'], addr_cred))
+        
+        corp_type = corp_info['corp_typ_cd']
+        if corp_type == 'SP' or corp_type == 'MF':
+            is_parent = False
+        else:
+            is_parent = True
 
-        # generate dba credential(s)
-        if 'parties' in corp_info:
-            for party in corp_info['parties']:
-                for dba_name in party['corp_info']['org_names']:
-                    dba_cred = {}
-                    dba_cred['legal_entity_id'] = self.corp_num_with_prefix(corp_info['corp_typ_cd'], corp_info['corp_num'])
-                    dba_cred['org_registry_id'] = self.corp_num_with_prefix(corp_info['corp_typ_cd'], corp_info['corp_num'])
-                    if 0 < len(corp_info['org_names']):
-                        dba_cred['org_name'] = corp_info['org_names'][0]['corp_nme'] 
-                    dba_cred['registered_jurisdiction'] = self.get_corp_jurisdiction(party['corp_info'])
-                    dba_cred['dba_name'] = dba_name['corp_nme']
-                    dba_cred['dba_corp_num'] = self.corp_num_with_prefix(party['corp_info']['corp_typ_cd'], party['corp_info']['corp_num'])
-                    if 'effective_dt' in dba_name['start_filing_event']:
-                        dba_cred['effective_date'] = dba_name['start_filing_event']['effective_dt']
-                    else:
-                        dba_cred['effective_date'] = dba_name['start_event']['event_timestmp']
-                    dba_cred['end_date'] = ""
-                    corp_creds.append(self.build_credential_dict(dba_credential, dba_schema, dba_version, 
-                                                                dba_cred['dba_corp_num'], dba_cred))
-
-                # generate addr credential(s)
-                for office in party['corp_info']['office']:
-                    if 'office_typ_cd' in office and 'local_addr' in office:
-                        # generate address for each party
-                        if 0 < len(party['corp_info']['org_names']):
-                            party_dba_name = party['corp_info']['org_names'][0]['corp_nme']
+        # generate relationship credential(s) (only for parent right now):
+        if is_parent:
+            if 'parties' in corp_info:
+                for party in corp_info['parties']:
+                    if party['corp_info']['corp_typ_cd'] == 'SP' or party['corp_info']['corp_typ_cd'] == 'MF':
+                        dba_cred = {}
+                        dba_cred['registration_id'] = self.corp_num_with_prefix(corp_info['corp_typ_cd'], corp_info['corp_num'])
+                        dba_cred['associated_registration_id'] = self.corp_num_with_prefix(party['corp_info']['corp_typ_cd'], party['corp_info']['corp_num'])
+                        dba_cred['relationship'] = 'Owns'
+                        dba_cred['relationship_description'] = 'Does Business As'
+                        dba_cred['relationship_status'] = 'ACT'
+                        if 'effective_dt' in party['start_filing_event']:
+                            dba_cred['effective_date'] = party['start_filing_event']['effective_dt']
                         else:
-                            party_dba_name = party['business_nme']
-                        if 'delivery_addr' in office and 'local_addr' in office['delivery_addr']:
-                            dba_corp_num = self.corp_num_with_prefix(party['corp_info']['corp_typ_cd'], party['corp_info']['corp_num'])
-                            addr_cred = self.generate_address_credential(corp_num, corp_info, office, office['delivery_addr'], 
-                                            dba_corp_num, party_dba_name)
-                            corp_creds.append(self.build_credential_dict(addr_credential, addr_schema, addr_version, 
-                                                                        dba_corp_num + ',' + office['office_typ_cd'], addr_cred))
+                            dba_cred['effective_date'] = party['start_event']['event_timestmp']
+                        dba_cred['relationship_status_effective'] = dba_cred['effective_date']
+                        corp_creds.append(self.build_credential_dict(dba_credential, dba_schema, dba_version, 
+                                                                    dba_cred['registration_id'], dba_cred))
 
         return corp_creds
 
@@ -499,10 +486,12 @@ class EventProcessor:
         sql1 = """SELECT RECORD_ID, SYSTEM_TYPE_CD, PREV_EVENT_ID, LAST_EVENT_ID, CORP_NUM, ENTRY_DATE
                  FROM EVENT_BY_CORP_FILING
                  WHERE PROCESS_DATE is null
+                 ORDER BY RECORD_ID
                  LIMIT """ + str(CORP_BATCH_SIZE)
         sql1a = """SELECT RECORD_ID, SYSTEM_TYPE_CD, PREV_EVENT_ID, LAST_EVENT_ID, CORP_NUM, CORP_JSON, ENTRY_DATE
                  FROM CORP_HISTORY_LOG
                  WHERE PROCESS_DATE is null
+                 ORDER BY RECORD_ID
                  LIMIT """ + str(CORP_BATCH_SIZE)
 
         sql2 = """INSERT INTO CORP_HISTORY_LOG (SYSTEM_TYPE_CD, PREV_EVENT_ID, LAST_EVENT_ID, CORP_NUM, CORP_STATE, CORP_JSON, ENTRY_DATE)

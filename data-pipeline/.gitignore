@@ -11,3 +11,5 @@ database.ini
 /.vscode
 /.project
 .DS_Store
+src
+
