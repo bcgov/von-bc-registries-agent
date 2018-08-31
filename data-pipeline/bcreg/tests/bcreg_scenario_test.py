@@ -8,7 +8,7 @@ from bcreg.tests.sample_corps import sample_test_corps
 
 # basic BC corporation with an address and no DBA's
 def test_scenario_basic_bc_corp():
-    my_corp_num = '8539182'
+    my_corp_num = '9645624'
     my_corp_dict = sample_test_corps['corp_' + my_corp_num]
     my_creds = generate_creds_for_corp(my_corp_dict)
 
@@ -21,7 +21,7 @@ def test_scenario_basic_bc_corp():
 
 # basic BC corporation with an address and no DBA's
 def test_scenario_basic_dba_firm():
-    my_corp_num = 'FM7980803'
+    my_corp_num = 'FM7768377'
     my_corp_dict = sample_test_corps['corp_' + my_corp_num]
     my_creds = generate_creds_for_corp(my_corp_dict)
 
@@ -34,7 +34,7 @@ def test_scenario_basic_dba_firm():
 
 # basic ex-corp with a non-BC jurisdiction and an address
 def test_scenario_basic_xcorp():
-    my_corp_num = 'A4138183'
+    my_corp_num = 'A3781337'
     my_corp_dict = sample_test_corps['corp_' + my_corp_num]
     my_creds = generate_creds_for_corp(my_corp_dict)
 
@@ -47,7 +47,7 @@ def test_scenario_basic_xcorp():
 
 # basic ex-corp with an assumed name
 def test_scenario_assumed_name():
-    my_corp_num = 'A4031472'
+    my_corp_num = 'A1196902'
     my_corp_dict = sample_test_corps['corp_' + my_corp_num]
     my_creds = generate_creds_for_corp(my_corp_dict)
 
@@ -60,7 +60,7 @@ def test_scenario_assumed_name():
 
 # basic BC corp with a translated name
 def test_scenario_trans_name():
-    my_corp_num = '3394994'
+    my_corp_num = '4241301'
     my_corp_dict = sample_test_corps['corp_' + my_corp_num]
     my_creds = generate_creds_for_corp(my_corp_dict)
 
@@ -73,7 +73,7 @@ def test_scenario_trans_name():
 
 # basic corp with 1 DBA (no DBA address)
 def test_scenario_single_dba():
-    my_corp_num = '9260984'
+    my_corp_num = '2201720'
     my_corp_dict = sample_test_corps['corp_' + my_corp_num]
     my_creds = generate_creds_for_corp(my_corp_dict)
 
@@ -86,7 +86,7 @@ def test_scenario_single_dba():
 
 # basic corp with 1 DBA with an address
 def test_scenario_dba_with_address():
-    my_corp_num = 'C1208664'  
+    my_corp_num = 'C6020509'  
     my_corp_dict = sample_test_corps['corp_' + my_corp_num]
     my_creds = generate_creds_for_corp(my_corp_dict)
 
@@ -99,7 +99,7 @@ def test_scenario_dba_with_address():
 
 # basic corp with multiple DBA's (3)
 def test_scenario_multi_dbas():
-    my_corp_num = 'A7330600'
+    my_corp_num = 'A5589691'
     my_corp_dict = sample_test_corps['corp_' + my_corp_num]
     my_creds = generate_creds_for_corp(my_corp_dict)
 
