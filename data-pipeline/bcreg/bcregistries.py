@@ -515,11 +515,13 @@ class BCRegistries:
                 for party in party_rows:
                     specific_corps.append(party['corp_num'])
 
-                for party in party_rows:
-                    if party['mailing_addr_id'] is not None:
-                        addr_id_list.append(str(party['mailing_addr_id']))
-                    if party['delivery_addr_id'] is not None:
-                        addr_id_list.append(str(party['delivery_addr_id']))
+                # TODO leave out for now, just look at office addresses
+                # address id (416674) gives a sql error 
+                #for party in party_rows:
+                #    if party['mailing_addr_id'] is not None:
+                #        addr_id_list.append(str(party['mailing_addr_id']))
+                #    if party['delivery_addr_id'] is not None:
+                #        addr_id_list.append(str(party['delivery_addr_id']))
 
             # ensure we have a unique list
             specific_corps = list({s_corp for s_corp in specific_corps})
@@ -575,6 +577,7 @@ class BCRegistries:
                 addr_list = self.id_where_in(ids_list)
                 address_where = 'addr_id in (' + addr_list + ')'
                 #print(self.other_tables[4])
+                #print('select * from bc_registries.address where ' + address_where + ';')
                 rows = self.get_bcreg_table(self.other_tables[4], address_where, '', True, generate_individual_sql)
                 #print(self.other_tables[4], len(rows))
 
@@ -820,11 +823,12 @@ class BCRegistries:
     def get_event(self, corp_num, event_id, force_query_remote=False):
         sql = """SELECT event_id, corp_num, event_typ_cd, event_timestmp
                     FROM """ + self.get_table_prefix(force_query_remote) + """event
-                    WHERE corp_num = """ + self.get_db_sql_param(force_query_remote) + """ and event_id = """ + self.get_db_sql_param(force_query_remote)
+                    WHERE event_id = """ + self.get_db_sql_param(force_query_remote)
+                    # WHERE corp_num = """ + self.get_db_sql_param(force_query_remote) + """ and event_id = """ + self.get_db_sql_param(force_query_remote)
         cursor = None
         try:
             cursor = self.get_db_connection(force_query_remote).cursor()
-            cursor.execute(sql, (corp_num, event_id,))
+            cursor.execute(sql, (event_id,))
             desc = cursor.description
             column_names = [col[0] for col in desc]
             event = [dict(zip(column_names, row))  
