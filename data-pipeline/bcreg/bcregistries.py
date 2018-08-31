@@ -515,11 +515,13 @@ class BCRegistries:
                 for party in party_rows:
                     specific_corps.append(party['corp_num'])
 
-                for party in party_rows:
-                    if party['mailing_addr_id'] is not None:
-                        addr_id_list.append(str(party['mailing_addr_id']))
-                    if party['delivery_addr_id'] is not None:
-                        addr_id_list.append(str(party['delivery_addr_id']))
+                # TODO leave out for now, just look at office addresses
+                # address id (416674) gives a sql error 
+                #for party in party_rows:
+                #    if party['mailing_addr_id'] is not None:
+                #        addr_id_list.append(str(party['mailing_addr_id']))
+                #    if party['delivery_addr_id'] is not None:
+                #        addr_id_list.append(str(party['delivery_addr_id']))
 
             # ensure we have a unique list
             specific_corps = list({s_corp for s_corp in specific_corps})
@@ -575,6 +577,7 @@ class BCRegistries:
                 addr_list = self.id_where_in(ids_list)
                 address_where = 'addr_id in (' + addr_list + ')'
                 #print(self.other_tables[4])
+                #print('select * from bc_registries.address where ' + address_where + ';')
                 rows = self.get_bcreg_table(self.other_tables[4], address_where, '', True, generate_individual_sql)
                 #print(self.other_tables[4], len(rows))
 
@@ -820,11 +823,12 @@ class BCRegistries:
     def get_event(self, corp_num, event_id, force_query_remote=False):
         sql = """SELECT event_id, corp_num, event_typ_cd, event_timestmp
                     FROM """ + self.get_table_prefix(force_query_remote) + """event
-                    WHERE corp_num = """ + self.get_db_sql_param(force_query_remote) + """ and event_id = """ + self.get_db_sql_param(force_query_remote)
+                    WHERE event_id = """ + self.get_db_sql_param(force_query_remote)
+                    # WHERE corp_num = """ + self.get_db_sql_param(force_query_remote) + """ and event_id = """ + self.get_db_sql_param(force_query_remote)
         cursor = None
         try:
             cursor = self.get_db_connection(force_query_remote).cursor()
-            cursor.execute(sql, (corp_num, event_id,))
+            cursor.execute(sql, (event_id,))
             desc = cursor.description
             column_names = [col[0] for col in desc]
             event = [dict(zip(column_names, row))  
@@ -891,6 +895,7 @@ class BCRegistries:
             cursor = None
 
             for office in offices:
+                office['office_type'] = self.get_office_type(office['office_typ_cd'])
                 office['delivery_addr'] = self.get_address(corp_num, office['delivery_addr_id'])
                 if 'mailing_addr_id' in office and office['mailing_addr_id'] != office['delivery_addr_id']:
                     office['mailing_addr'] = self.get_address(corp_num, office['mailing_addr_id'])
@@ -1129,6 +1134,30 @@ class BCRegistries:
             if cursor is not None:
                 cursor.close()
 
+    def get_office_type(self, office_typ_cd):
+        sql_type = """SELECT office_typ_cd, short_desc, full_desc
+                        FROM """ + self.get_table_prefix() + """office_type
+                        WHERE office_typ_cd = """ + self.get_db_sql_param()
+        cursor = None
+        try:
+            cursor = self.get_db_connection().cursor()
+            cursor.execute(sql_type, (office_typ_cd,))
+            desc = cursor.description
+            column_names = [col[0] for col in desc]
+            office_type = [dict(zip(column_names, row))  
+                for row in cursor]
+            cursor.close()
+            cursor = None
+            if len(office_type) > 0:
+                return office_type[0]
+            return {}
+        except (Exception, psycopg2.DatabaseError) as error:
+            print(error)
+            raise 
+        finally:
+            if cursor is not None:
+                cursor.close()
+
     def get_corp_type(self, corp_typ_cd):
         sql_type = """SELECT corp_typ_cd, colin_ind, corp_class, short_desc, full_desc
                         FROM """ + self.get_table_prefix() + """corp_type
@@ -1270,9 +1299,9 @@ class BCRegistries:
                 corp_party['corp_num'] = row[0]
                 corp_party['corp_party_id'] = row[1]
                 corp_party['mailing_addr_id'] = row[2]
-                corp_party['mailing_addr'] = self.get_address(corp_num, row[2])
+                #corp_party['mailing_addr'] = self.get_address(corp_num, row[2])
                 corp_party['delivery_addr_id'] = row[3]
-                corp_party['delivery_addr'] = self.get_address(corp_num, row[3])
+                #corp_party['delivery_addr'] = self.get_address(corp_num, row[3])
                 corp_party['party_typ_cd'] = row[4]
                 corp_party['start_event_id'] = row[5]
                 corp_party['start_event'] = self.get_event(row[0], row[5])
