@@ -343,7 +343,7 @@ class EventProcessor:
         addr_cred['registration_id'] = self.corp_num_with_prefix(corp_info['corp_typ_cd'], corp_num)
         if 0 < len(corp_info['org_names']):
             addr_cred['addressee'] = corp_info['org_names'][0]['corp_nme']
-        addr_cred['address_type'] = office['office_typ_cd']
+        addr_cred['address_type'] = office['office_type']['full_desc']
         addr_cred['civic_address'] = address['local_addr']
         if 'city' in address:
             addr_cred['municipality'] = address['city']
@@ -436,7 +436,7 @@ class EventProcessor:
                 corp_cred['entity_name_trans_effective'] = corp_info['org_name_trans'][0]['start_event']['event_timestmp']
         corp_cred['entity_status'] = corp_info['corp_state']['op_state_typ_cd']
         corp_cred['entity_status_effective'] = corp_info['corp_state_dt']
-        corp_cred['entity_type'] = corp_info['corp_typ_cd']
+        corp_cred['entity_type'] = corp_info['corp_type']['full_desc']
         corp_cred['registered_jurisdiction'] = self.get_corp_jurisdiction(corp_info)
         if 'tilma_involved' in corp_info and 'tilma_jurisdiction' in corp_info['tilma_involved']:
             corp_cred['registration_type'] = corp_info['tilma_involved']['tilma_jurisdiction'] 

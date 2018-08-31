@@ -13,6 +13,7 @@ def test_scenario_basic_bc_corp():
     my_creds = generate_creds_for_corp(my_corp_dict)
 
     # TODO run some assertions based on what we expect
+    print("# basic BC corporation with an address and no DBA's")
     print("Corp: " + my_corp_num + " generated " + str(len(my_creds)) + " credentials")
     print(my_creds)
     assert len(my_creds) == 2
@@ -25,6 +26,7 @@ def test_scenario_basic_dba_firm():
     my_creds = generate_creds_for_corp(my_corp_dict)
 
     # TODO run some assertions based on what we expect
+    print("# basic BC corporation with an address and no DBA's")
     print("Corp: " + my_corp_num + " generated " + str(len(my_creds)) + " credentials")
     print(my_creds)
     assert len(my_creds) == 2
@@ -37,6 +39,7 @@ def test_scenario_basic_xcorp():
     my_creds = generate_creds_for_corp(my_corp_dict)
 
     # TODO run some assertions based on what we expect
+    print("# basic ex-corp with a non-BC jurisdiction and an address")
     print("Corp: " + my_corp_num + " generated " + str(len(my_creds)) + " credentials")
     print(my_creds)
     assert len(my_creds) == 2
@@ -49,6 +52,7 @@ def test_scenario_assumed_name():
     my_creds = generate_creds_for_corp(my_corp_dict)
 
     # TODO run some assertions based on what we expect
+    print("# basic ex-corp with an assumed name")
     print("Corp: " + my_corp_num + " generated " + str(len(my_creds)) + " credentials")
     print(my_creds)
     assert len(my_creds) == 2
@@ -61,6 +65,7 @@ def test_scenario_trans_name():
     my_creds = generate_creds_for_corp(my_corp_dict)
 
     # TODO run some assertions based on what we expect
+    print("# basic BC corp with a translated name")
     print("Corp: " + my_corp_num + " generated " + str(len(my_creds)) + " credentials")
     print(my_creds)
     assert len(my_creds) == 2
@@ -73,6 +78,7 @@ def test_scenario_single_dba():
     my_creds = generate_creds_for_corp(my_corp_dict)
 
     # TODO run some assertions based on what we expect
+    print("# basic corp with 1 DBA (no DBA address)")
     print("Corp: " + my_corp_num + " generated " + str(len(my_creds)) + " credentials")
     print(my_creds)
     assert len(my_creds) == 3
@@ -85,6 +91,7 @@ def test_scenario_dba_with_address():
     my_creds = generate_creds_for_corp(my_corp_dict)
 
     # TODO run some assertions based on what we expect
+    print("# basic corp with 1 DBA with an address")
     print("Corp: " + my_corp_num + " generated " + str(len(my_creds)) + " credentials")
     print(my_creds)
     assert len(my_creds) == 3
@@ -97,6 +104,7 @@ def test_scenario_multi_dbas():
     my_creds = generate_creds_for_corp(my_corp_dict)
 
     # TODO run some assertions based on what we expect
+    print("# basic corp with multiple DBA's (3)")
     print("Corp: " + my_corp_num + " generated " + str(len(my_creds)) + " credentials")
     print(my_creds)
     assert len(my_creds) == 5
