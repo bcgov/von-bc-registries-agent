@@ -652,6 +652,12 @@ class EventProcessor:
             outstanding_ct = self.get_record_count(table, True)
             print('Table:', table, 'Processed:', process_ct, 'Outstanding:', outstanding_ct)
 
+        sql = "select count(*) from credential_log where process_success = 'N'"
+        error_ct = self.get_sql_record_count(sql)
+        print('Table:', 'credential_log', 'Process Errors:', error_ct)
+        if 0 < error_ct:
+            self.print_processing_errors()
+
     def get_outstanding_corps_record_count(self):
         return self.get_record_count('event_by_corp_filing')
         
@@ -666,6 +672,9 @@ class EventProcessor:
 
         sql = sql_ct_select + ' ' + table + ' ' + (sql_corp_ct_outstanding if unprocessed else sql_corp_ct_processed)
 
+        return self.get_sql_record_count(sql)
+
+    def get_sql_record_count(self, sql):
         cur = None
         try:
             cur = self.conn.cursor()
@@ -681,5 +690,34 @@ class EventProcessor:
             if cur is not None:
                 cur.close()
             cur = None
+
+    def print_processing_errors(self):
+        sql = """select * from credential_log
+                 where process_success = 'N'
+                 order by process_date DESC
+                 limit 20"""
+        rows = self.get_sql_rows(sql)
+        print("Recent errors:")
+        print(rows)
+
+    def get_sql_rows(self, sql):
+        cursor = None
+        try:
+            cursor = self.conn.cursor()
+            cursor.execute(sql)
+            desc = cursor.description
+            column_names = [col[0] for col in desc]
+            rows = [dict(zip(column_names, row))  
+                for row in cursor]
+            cursor.close()
+            cursor = None
+            return rows
+        except (Exception, psycopg2.DatabaseError) as error:
+            print(error)
+            raise
+        finally:
+            if cursor is not None:
+                cursor.close()
+            cursor = None
 
 
