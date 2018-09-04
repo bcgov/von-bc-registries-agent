@@ -21,5 +21,5 @@ APPLICATION_DOMAIN=schema-spy-oracle-devex-von-bc-registries-agent-dev.pathfinde
 CONFIG_FILE_NAME=Caddyfile
 CONFIG_MAP_NAME=caddy-conf
 CONFIG_MOUNT_PATH=/etc/
-CPU_LIMIT=2
+CPU_LIMIT=500m
 MEMORY_LIMIT=2Gi
