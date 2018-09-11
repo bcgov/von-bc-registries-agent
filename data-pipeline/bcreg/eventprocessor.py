@@ -162,6 +162,26 @@ class EventProcessor:
             """
             CREATE INDEX IF NOT EXISTS cl_i3 ON CREDENTIAL_LOG 
             (SYSTEM_TYPE_CD, CORP_NUM, CORP_STATE, CREDENTIAL_TYPE_CD, CREDENTIAL_ID)
+            """,
+            """
+            CREATE INDEX IF NOT EXISTS cl_i4 ON CREDENTIAL_LOG 
+            (CORP_STATE, PROCESS_DATE)
+            """,
+            """
+            ALTER TABLE CREDENTIAL_LOG  
+            SET (autovacuum_vacuum_scale_factor = 0.0);
+            """,
+            """ 
+            ALTER TABLE CREDENTIAL_LOG  
+            SET (autovacuum_vacuum_threshold = 5000);
+            """,
+            """
+            ALTER TABLE CREDENTIAL_LOG  
+            SET (autovacuum_analyze_scale_factor = 0.0);
+            """,
+            """ 
+            ALTER TABLE CREDENTIAL_LOG  
+            SET (autovacuum_analyze_threshold = 5000);
             """
             )
         cur = None
