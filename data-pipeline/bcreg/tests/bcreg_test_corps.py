@@ -123,6 +123,7 @@ def test_generate_corp_nums():
     with BCRegistries(False) as bc_registries:
         sql = select_corp_scenario_sql.replace('%s', selected_corp_list)
         corp_rows = bc_registries.get_bcreg_sql('event', sql)
+        print('sample_test_corps = {')
         for corp in corp_rows:
             party_ct        = bc_registries.get_bcreg_sql('corp_party', run_corp_sql(corp['corp_num'], select_party_recs))
             party_addr_ct   = bc_registries.get_bcreg_sql('office', run_corp_sql(corp['corp_num'], select_party_addr_recs))
@@ -137,7 +138,6 @@ def test_generate_corp_nums():
 	            sqls = bc_cache_reg.generated_sqls
 	            fake_corp_num = bc_cache_reg.add_generated_corp_num(corp['corp_num'])
 
-            print('sample_test_corps = {')
             print('    "corp_' + fake_corp_num + '": {')
             print('            "corp_num":' + "'" + fake_corp_num + "'" + ', ' + '"corp_typ_cd":' + "'" + corp['corp_typ_cd'] + "'" + ', ' + 
             	    '"state_typ_cd":' + "'" + corp['state_typ_cd'] + "'" + ', ' + 
@@ -150,5 +150,6 @@ def test_generate_corp_nums():
                 print('                    """' + sql.replace(' values ', '\n                    values\n                    ') + '""",')
             print('                   ]')
             print('             },')
-            print('}')
+        
+        print('}')
 
