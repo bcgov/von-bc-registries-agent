@@ -177,11 +177,26 @@ class EventProcessor:
             (RECORD_ID ASC, PROCESS_DATE) WHERE PROCESS_DATE IS NULL;
             """,
             """
-            ALTER TABLE CREDENTIAL_LOG  
+            -- Hit when checking generated credentials
+            CREATE INDEX IF NOT EXISTS cl_ri_stc_cn_cs_ctc_ci_desc ON CREDENTIAL_LOG 
+            (RECORD_ID DESC,SYSTEM_TYPE_CD, CORP_NUM, CORP_STATE, CREDENTIAL_TYPE_CD, CREDENTIAL_ID)
+            """,
+            """
+            -- Hit for counts
+            CREATE INDEX IF NOT EXISTS cl_ps ON CREDENTIAL_LOG
+            (process_success)
+            """,
+            """
+            -- Hit for queries
+            CREATE INDEX IF NOT EXISTS cl_ps_pd_desc ON CREDENTIAL_LOG
+            (process_success, process_date DESC)
+            """,
+            """
+            ALTER TABLE CREDENTIAL_LOG
             SET (autovacuum_vacuum_scale_factor = 0.0);
             """,
             """ 
-            ALTER TABLE CREDENTIAL_LOG  
+            ALTER TABLE CREDENTIAL_LOG
             SET (autovacuum_vacuum_threshold = 5000);
             """,
             """
