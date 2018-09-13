@@ -176,7 +176,7 @@ class CredsSubmitter:
                          (
                              SELECT RECORD_ID
                              FROM CREDENTIAL_LOG 
-                             WHERE CORP_STATE 'ACT' and PROCESS_DATE is null
+                             WHERE CORP_STATE = 'ACT' and PROCESS_DATE is null
                          )                  
                          ORDER BY RECORD_ID
                          LIMIT """ + str(CREDS_BATCH_SIZE)
