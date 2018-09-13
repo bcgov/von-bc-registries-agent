@@ -364,7 +364,7 @@
       "name": "START_CRON",
       "displayName": "Start Cron Jobs",
       "description": "Start go-crond and load the cron jobs from the CRON_FOLDER.",
-      "required": true,
+      "required": false,
       "value": "1"
     },
     {
