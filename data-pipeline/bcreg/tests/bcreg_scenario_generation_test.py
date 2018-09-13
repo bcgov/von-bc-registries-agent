@@ -295,9 +295,9 @@ def test_preset_corp_scenario_all():
 
 # load a specific corporation and make some assertions on the generated credentials
 def test_preset_corp_scenario_3dbas():
-    # use corp corp_A7330600
-    corp_num = sample_test_corps['corp_A7330600']['corp_num']
-    corp_sqls = sample_test_corps['corp_A7330600']['sqls']
+    # use corp corp_A5589691
+    corp_num = sample_test_corps['corp_A5589691']['corp_num']
+    corp_sqls = sample_test_corps['corp_A5589691']['sqls']
 
     with BCRegistries(True) as cached_bc_reg:
         cached_bc_reg.cache_bcreg_code_tables()

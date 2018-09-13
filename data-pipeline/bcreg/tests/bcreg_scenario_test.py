@@ -1,113 +1,223 @@
 
 import time
+import datetime
+import json
 
 from bcreg.bcregistries import BCRegistries, system_type
 from bcreg.eventprocessor import EventProcessor
 from bcreg.tests.sample_corps import sample_test_corps
 
 
+class DateTimeEncoder(json.JSONEncoder):
+    def default(self, o):
+        if isinstance(o, datetime.datetime):
+            return o.isoformat()
+        return json.JSONEncoder.default(self, o)
+
+
 # basic BC corporation with an address and no DBA's
 def test_scenario_basic_bc_corp():
-    my_corp_num = '8539182'
+    my_corp_num = '9645624'
     my_corp_dict = sample_test_corps['corp_' + my_corp_num]
     my_creds = generate_creds_for_corp(my_corp_dict)
 
-    # TODO run some assertions based on what we expect
     print("# basic BC corporation with an address and no DBA's")
-    print("Corp: " + my_corp_num + " generated " + str(len(my_creds)) + " credentials")
-    print(my_creds)
     assert len(my_creds) == 2
-    
+
+    assert my_creds[0]['cred_type'] == 'REG'
+    assert my_creds[0]['credential']['entity_status'] == 'ACT'
+    assert my_creds[0]['credential']['entity_type'] == 'BC Company'
+    assert my_creds[0]['credential']['home_jurisdiction'] == 'BC'
+    assert my_creds[0]['credential']['registration_id'] == 'BC9645624'
+
+    assert my_creds[1]['cred_type'] == 'ADDR'
+    assert my_creds[1]['credential']['address_type'] == 'Registered Office'
+    assert my_creds[1]['credential']['municipality'] == 'VANCOUVER'
+    assert my_creds[1]['credential']['registration_id'] == 'BC9645624'
+
 
 # basic BC corporation with an address and no DBA's
 def test_scenario_basic_dba_firm():
-    my_corp_num = 'FM7980803'
+    my_corp_num = 'FM7768377'
     my_corp_dict = sample_test_corps['corp_' + my_corp_num]
     my_creds = generate_creds_for_corp(my_corp_dict)
 
-    # TODO run some assertions based on what we expect
-    print("# basic BC corporation with an address and no DBA's")
-    print("Corp: " + my_corp_num + " generated " + str(len(my_creds)) + " credentials")
-    print(my_creds)
+    print("# basic BC firm with an address and no DBA's")
     assert len(my_creds) == 2
+
+    assert my_creds[0]['cred_type'] == 'REG'
+    assert my_creds[0]['credential']['entity_status'] == 'ACT'
+    assert my_creds[0]['credential']['entity_type'] == 'Sole Proprietorship'
+    assert my_creds[0]['credential']['home_jurisdiction'] == 'BC'
+    assert my_creds[0]['credential']['registration_id'] == 'FM7768377'
+
+    assert my_creds[1]['cred_type'] == 'ADDR'
+    assert my_creds[1]['credential']['address_type'] == 'Firm Office'
+    assert my_creds[1]['credential']['municipality'] == 'DELTA'
+    assert my_creds[1]['credential']['registration_id'] == 'FM7768377'
     
 
 # basic ex-corp with a non-BC jurisdiction and an address
 def test_scenario_basic_xcorp():
-    my_corp_num = 'A4138183'
+    my_corp_num = 'A3781337'
     my_corp_dict = sample_test_corps['corp_' + my_corp_num]
     my_creds = generate_creds_for_corp(my_corp_dict)
 
-    # TODO run some assertions based on what we expect
     print("# basic ex-corp with a non-BC jurisdiction and an address")
-    print("Corp: " + my_corp_num + " generated " + str(len(my_creds)) + " credentials")
-    print(my_creds)
     assert len(my_creds) == 2
+
+    assert my_creds[0]['cred_type'] == 'REG'
+    assert my_creds[0]['credential']['entity_status'] == 'ACT'
+    assert my_creds[0]['credential']['entity_type'] == 'Extraprovincial Company'
+    assert my_creds[0]['credential']['home_jurisdiction'] == 'GB'
+    assert my_creds[0]['credential']['registered_jurisdiction'] == 'GB'
+    assert my_creds[0]['credential']['registration_id'] == 'A3781337'
+
+    assert my_creds[1]['cred_type'] == 'ADDR'
+    assert my_creds[1]['credential']['address_type'] == 'Head Office'
+    assert my_creds[1]['credential']['municipality'] == 'LONDON'
+    assert my_creds[1]['credential']['civic_address'] == 'UUBCWY DKNOCDWWNEVFSCKY O, LONDON, H8IU1N, GB'
+    assert my_creds[1]['credential']['registration_id'] == 'A3781337'
     
 
 # basic ex-corp with an assumed name
 def test_scenario_assumed_name():
-    my_corp_num = 'A4031472'
+    my_corp_num = 'A1196902'
     my_corp_dict = sample_test_corps['corp_' + my_corp_num]
     my_creds = generate_creds_for_corp(my_corp_dict)
 
-    # TODO run some assertions based on what we expect
     print("# basic ex-corp with an assumed name")
-    print("Corp: " + my_corp_num + " generated " + str(len(my_creds)) + " credentials")
-    print(my_creds)
     assert len(my_creds) == 2
+
+    assert my_creds[0]['cred_type'] == 'REG'
+    assert my_creds[0]['credential']['entity_status'] == 'ACT'
+    assert my_creds[0]['credential']['entity_type'] == 'Extraprovincial Company'
+    assert my_creds[0]['credential']['home_jurisdiction'] == 'ON'
+    assert my_creds[0]['credential']['registered_jurisdiction'] == 'ON'
+    assert my_creds[0]['credential']['registration_id'] == 'A1196902'
+    assert my_creds[0]['credential']['entity_name'] == 'LFQMDNIUJYCIU  DCDRDZFYXP'
+    assert my_creds[0]['credential']['entity_name_assumed'] == 'UFTOBFEBMBKB  UVEUKHNGEMZ'
+
+    assert my_creds[1]['cred_type'] == 'ADDR'
+    assert my_creds[1]['credential']['address_type'] == 'Head Office'
+    assert my_creds[1]['credential']['municipality'] == 'Toronto'
+    assert my_creds[1]['credential']['registration_id'] == 'A1196902'
     
 
 # basic BC corp with a translated name
 def test_scenario_trans_name():
-    my_corp_num = '3394994'
+    my_corp_num = '4241301'
     my_corp_dict = sample_test_corps['corp_' + my_corp_num]
     my_creds = generate_creds_for_corp(my_corp_dict)
 
-    # TODO run some assertions based on what we expect
     print("# basic BC corp with a translated name")
-    print("Corp: " + my_corp_num + " generated " + str(len(my_creds)) + " credentials")
-    print(my_creds)
     assert len(my_creds) == 2
+
+    assert my_creds[0]['cred_type'] == 'REG'
+    assert my_creds[0]['credential']['entity_status'] == 'ACT'
+    assert my_creds[0]['credential']['entity_type'] == 'BC Company'
+    assert my_creds[0]['credential']['home_jurisdiction'] == 'BC'
+    assert my_creds[0]['credential']['registration_id'] == 'BC4241301'
+    assert my_creds[0]['credential']['entity_name'] == 'XCUBPIM YRSWHAWTLUMFRPRUZ'
+    assert my_creds[0]['credential']['entity_name_trans'] == 'MMRTKDCWLGXOFULSZYEIIHKRO'
+
+    assert my_creds[1]['cred_type'] == 'ADDR'
+    assert my_creds[1]['credential']['address_type'] == 'Registered Office'
+    assert my_creds[1]['credential']['municipality'] == 'Kelowna'
+    assert my_creds[1]['credential']['registration_id'] == 'BC4241301'
     
 
 # basic corp with 1 DBA (no DBA address)
 def test_scenario_single_dba():
-    my_corp_num = '9260984'
+    my_corp_num = '2201720'
     my_corp_dict = sample_test_corps['corp_' + my_corp_num]
     my_creds = generate_creds_for_corp(my_corp_dict)
 
-    # TODO run some assertions based on what we expect
     print("# basic corp with 1 DBA (no DBA address)")
-    print("Corp: " + my_corp_num + " generated " + str(len(my_creds)) + " credentials")
-    print(my_creds)
     assert len(my_creds) == 3
+
+    assert my_creds[0]['cred_type'] == 'REG'
+    assert my_creds[1]['cred_type'] == 'ADDR'
+    assert my_creds[2]['cred_type'] == 'REL'
+
+    my_dba_num = 'FM3035075'
+    my_corp_dict['corp_num'] = my_dba_num
+    dba_creds = generate_creds_for_corp(my_corp_dict)
+    assert len(dba_creds) == 1
     
+    assert dba_creds[0]['cred_type'] == 'REG'
+
 
 # basic corp with 1 DBA with an address
 def test_scenario_dba_with_address():
-    my_corp_num = 'C1208664'  
+    my_corp_num = 'C6020509'  
     my_corp_dict = sample_test_corps['corp_' + my_corp_num]
     my_creds = generate_creds_for_corp(my_corp_dict)
 
-    # TODO run some assertions based on what we expect
     print("# basic corp with 1 DBA with an address")
-    print("Corp: " + my_corp_num + " generated " + str(len(my_creds)) + " credentials")
-    print(my_creds)
     assert len(my_creds) == 3
+
+    my_dba_num = 'FM9129945'
+    my_corp_dict['corp_num'] = my_dba_num
+    dba_creds = generate_creds_for_corp(my_corp_dict)
+    assert len(dba_creds) == 2
     
+    assert my_creds[0]['cred_type'] == 'REG'
+    assert my_creds[0]['credential']['entity_status'] == 'ACT'
+    assert my_creds[0]['credential']['entity_type'] == 'Continuation In as a BC ULC'
+    assert my_creds[0]['credential']['home_jurisdiction'] == 'BC'
+    assert my_creds[0]['credential']['registration_id'] == 'C6020509'
+
+    assert my_creds[1]['cred_type'] == 'ADDR'
+    assert my_creds[1]['credential']['address_type'] == 'Registered Office'
+    assert my_creds[1]['credential']['municipality'] == 'testcity'
+    assert my_creds[1]['credential']['registration_id'] == 'C6020509'
+
+    assert my_creds[2]['cred_type'] == 'REL'
+    assert my_creds[2]['credential']['registration_id'] == 'C6020509'
+    assert my_creds[2]['credential']['associated_registration_id'] == 'FM9129945'
+    assert my_creds[2]['credential']['relationship'] == 'Owns'
+    assert my_creds[2]['credential']['relationship_description'] == 'Does Business As'
+    assert my_creds[2]['credential']['relationship_status'] == 'ACT'
+
+    assert dba_creds[0]['cred_type'] == 'REG'
+    assert dba_creds[0]['credential']['entity_status'] == 'ACT'
+    assert dba_creds[0]['credential']['entity_type'] == 'Sole Proprietorship'
+    assert dba_creds[0]['credential']['home_jurisdiction'] == 'BC'
+    assert dba_creds[0]['credential']['registration_id'] == 'FM9129945'
+
+    assert dba_creds[1]['cred_type'] == 'ADDR'
+    assert dba_creds[1]['credential']['address_type'] == 'Firm Office'
+    assert dba_creds[1]['credential']['municipality'] == 'VANCOUVER'
+    assert dba_creds[1]['credential']['registration_id'] == 'FM9129945'
+
 
 # basic corp with multiple DBA's (3)
 def test_scenario_multi_dbas():
-    my_corp_num = 'A7330600'
+    my_corp_num = 'A5589691'
     my_corp_dict = sample_test_corps['corp_' + my_corp_num]
     my_creds = generate_creds_for_corp(my_corp_dict)
 
-    # TODO run some assertions based on what we expect
     print("# basic corp with multiple DBA's (3)")
-    print("Corp: " + my_corp_num + " generated " + str(len(my_creds)) + " credentials")
-    print(my_creds)
     assert len(my_creds) == 5
+
+    assert my_creds[0]['cred_type'] == 'REG'
+    assert my_creds[1]['cred_type'] == 'ADDR'
+    assert my_creds[2]['cred_type'] == 'REL'
+    assert my_creds[3]['cred_type'] == 'REL'
+    assert my_creds[4]['cred_type'] == 'REL'
+
+    my_dba_nums = ['FM3834099','FM8823648','FM9877026']
+    my_dba_ct = [1,1,2]
+    i = 0
+    for my_dba_num in my_dba_nums:
+        my_corp_dict['corp_num'] = my_dba_num
+        dba_creds = generate_creds_for_corp(my_corp_dict)
+        assert len(dba_creds) == my_dba_ct[i]
+        assert dba_creds[0]['cred_type'] == 'REG'
+        if len(dba_creds) == 2:
+            assert dba_creds[1]['cred_type'] == 'ADDR'
+        i = i + 1
 
 
 # utility method to process the selected corp and generate credentails
@@ -122,5 +232,8 @@ def generate_creds_for_corp(corp_dict):
 
     with EventProcessor() as event_processor:
         corp_creds = event_processor.generate_credentials(system_type, 0, 0, corp_num, corp_info)
+
+    #print("Corp: " + corp_num + " generated " + str(len(corp_creds)) + " credentials")
+    #print(json.dumps(corp_creds, cls=DateTimeEncoder, indent=4, sort_keys=True))
 
     return corp_creds
