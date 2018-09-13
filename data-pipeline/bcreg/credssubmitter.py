@@ -133,27 +133,57 @@ class CredsSubmitter:
         pass
  
     async def process_credential_queue(self, single_thread=False):
-        sql1 = """SELECT RECORD_ID, SYSTEM_TYPE_CD, PREV_EVENT_ID, LAST_EVENT_ID, CORP_NUM, CORP_STATE, CREDENTIAL_TYPE_CD, CREDENTIAL_ID, 
-                        CREDENTIAL_JSON, SCHEMA_NAME, SCHEMA_VERSION, ENTRY_DATE
+        sql1 = """SELECT RECORD_ID, 
+                      SYSTEM_TYPE_CD, 
+                      PREV_EVENT_ID, 
+                      LAST_EVENT_ID, 
+                      CORP_NUM, 
+                      CORP_STATE, 
+                      CREDENTIAL_TYPE_CD, 
+                      CREDENTIAL_ID, 
+                      CREDENTIAL_JSON, 
+                      SCHEMA_NAME, 
+                      SCHEMA_VERSION, 
+                      ENTRY_DATE
                   FROM CREDENTIAL_LOG 
-                  WHERE PROCESS_DATE is null
+                  WHERE RECORD_ID IN
+                  (
+                      SELECT RECORD_ID
+                      FROM CREDENTIAL_LOG 
+                      WHERE PROCESS_DATE is null
+                  )                  
                   ORDER BY RECORD_ID
                   LIMIT """ + str(CREDS_BATCH_SIZE)
 
         sql1a = """SELECT count(*) cnt
-                  FROM CREDENTIAL_LOG 
-                  WHERE PROCESS_DATE is null"""
+                   FROM CREDENTIAL_LOG 
+                   WHERE PROCESS_DATE is null"""
 
-        sql1_active = """SELECT RECORD_ID, SYSTEM_TYPE_CD, PREV_EVENT_ID, LAST_EVENT_ID, CORP_NUM, CORP_STATE, CREDENTIAL_TYPE_CD, CREDENTIAL_ID, 
-                        CREDENTIAL_JSON, SCHEMA_NAME, SCHEMA_VERSION, ENTRY_DATE
-                  FROM CREDENTIAL_LOG 
-                  WHERE corp_state = 'ACT' and PROCESS_DATE is null
-                  ORDER BY RECORD_ID
-                  LIMIT """ + str(CREDS_BATCH_SIZE)
+        sql1_active = """SELECT RECORD_ID, 
+                             SYSTEM_TYPE_CD, 
+                             PREV_EVENT_ID, 
+                             LAST_EVENT_ID, 
+                             CORP_NUM, 
+                             CORP_STATE, 
+                             CREDENTIAL_TYPE_CD, 
+                             CREDENTIAL_ID, 
+                             CREDENTIAL_JSON, 
+                             SCHEMA_NAME, 
+                             SCHEMA_VERSION, 
+                             ENTRY_DATE
+                         FROM CREDENTIAL_LOG 
+                         WHERE RECORD_ID IN
+                         (
+                             SELECT RECORD_ID
+                             FROM CREDENTIAL_LOG 
+                             WHERE CORP_STATE 'ACT' and PROCESS_DATE is null
+                         )                  
+                         ORDER BY RECORD_ID
+                         LIMIT """ + str(CREDS_BATCH_SIZE)
 
         sql1a_active = """SELECT count(*) cnt
-                  FROM CREDENTIAL_LOG 
-                  WHERE corp_state = 'ACT' and PROCESS_DATE is null"""
+                          FROM CREDENTIAL_LOG 
+                          WHERE corp_state = 'ACT' and PROCESS_DATE is null"""
 
         """ Connect to the PostgreSQL database server """
         #conn = None
