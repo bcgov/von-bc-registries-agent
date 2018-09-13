@@ -152,27 +152,51 @@ class EventProcessor:
             )
             """,
             """
-            CREATE INDEX IF NOT EXISTS cl_i1 ON CREDENTIAL_LOG 
-            (SYSTEM_TYPE_CD)
+            -- Hit for counts and queries
+            CREATE INDEX IF NOT EXISTS cl_pd_null ON CREDENTIAL_LOG 
+            (PROCESS_DATE) WHERE PROCESS_DATE IS NULL;
             """,
             """
-            CREATE INDEX IF NOT EXISTS cl_i2 ON CREDENTIAL_LOG 
-            (PROCESS_DATE)
+            -- Hit for counts
+            CREATE INDEX IF NOT EXISTS cl_pd_null_cs_act ON CREDENTIAL_LOG 
+            (PROCESS_DATE, CORP_STATE) WHERE CORP_STATE = 'ACT' and PROCESS_DATE IS NULL;
             """,
             """
-            CREATE INDEX IF NOT EXISTS cl_i3 ON CREDENTIAL_LOG 
-            (SYSTEM_TYPE_CD, CORP_NUM, CORP_STATE, CREDENTIAL_TYPE_CD, CREDENTIAL_ID)
+            -- Hit for counts
+            CREATE INDEX IF NOT EXISTS cl_cs_act_pd_null_ri_asc ON CREDENTIAL_LOG 
+            (CORP_STATE, PROCESS_DATE, RECORD_ID ASC) WHERE CORP_STATE = 'ACT' and PROCESS_DATE IS NULL;
             """,
             """
-            CREATE INDEX IF NOT EXISTS cl_i4 ON CREDENTIAL_LOG 
-            (CORP_STATE, PROCESS_DATE)
+            -- Hit for queries
+            CREATE INDEX IF NOT EXISTS cl_ri_cs_act_pd_null_asc ON CREDENTIAL_LOG 
+            (RECORD_ID ASC, CORP_STATE, PROCESS_DATE) WHERE CORP_STATE = 'ACT' and PROCESS_DATE IS NULL;
             """,
             """
-            ALTER TABLE CREDENTIAL_LOG  
+            -- Hit for query
+            CREATE INDEX IF NOT EXISTS cl_ri_pd_null_asc ON CREDENTIAL_LOG 
+            (RECORD_ID ASC, PROCESS_DATE) WHERE PROCESS_DATE IS NULL;
+            """,
+            """
+            -- Hit when checking generated credentials
+            CREATE INDEX IF NOT EXISTS cl_ri_stc_cn_cs_ctc_ci_desc ON CREDENTIAL_LOG 
+            (RECORD_ID DESC,SYSTEM_TYPE_CD, CORP_NUM, CORP_STATE, CREDENTIAL_TYPE_CD, CREDENTIAL_ID)
+            """,
+            """
+            -- Hit for counts
+            CREATE INDEX IF NOT EXISTS cl_ps ON CREDENTIAL_LOG
+            (process_success)
+            """,
+            """
+            -- Hit for queries
+            CREATE INDEX IF NOT EXISTS cl_ps_pd_desc ON CREDENTIAL_LOG
+            (process_success, process_date DESC)
+            """,
+            """
+            ALTER TABLE CREDENTIAL_LOG
             SET (autovacuum_vacuum_scale_factor = 0.0);
             """,
             """ 
-            ALTER TABLE CREDENTIAL_LOG  
+            ALTER TABLE CREDENTIAL_LOG
             SET (autovacuum_vacuum_threshold = 5000);
             """,
             """
@@ -182,6 +206,12 @@ class EventProcessor:
             """ 
             ALTER TABLE CREDENTIAL_LOG  
             SET (autovacuum_analyze_threshold = 5000);
+            """,
+            """ 
+            REINDEX TABLE CREDENTIAL_LOG;
+            """,
+            """
+            VACUUM ANALYSE CREDENTIAL_LOG;
             """
             )
         cur = None
