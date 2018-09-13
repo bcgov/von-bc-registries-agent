@@ -209,9 +209,6 @@ class EventProcessor:
             """,
             """ 
             REINDEX TABLE CREDENTIAL_LOG;
-            """,
-            """
-            VACUUM ANALYSE CREDENTIAL_LOG;
             """
             )
         cur = None
