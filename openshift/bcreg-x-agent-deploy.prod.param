@@ -6,7 +6,6 @@
 # NAME=bcreg-x-agent
 # IMAGE_NAMESPACE=devex-von-bc-registries-agent-tools
 TAG_NAME=prod
-APPLICATION_DOMAIN=bcreg-x-agent-devex-von-bc-registries-agent-prod.pathfinder.gov.bc.ca
 APPLICATION_URL=https://bcreg-x-proxy-devex-von-bc-registries-agent-prod.pathfinder.gov.bc.ca
 # CONFIG_ROOT=../config
 # HOST_PORT=8080

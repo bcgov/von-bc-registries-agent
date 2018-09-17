@@ -37,7 +37,7 @@ usage () {
       - Drop and recreate the mara database.
 
     deleteWallets
-      - Delete the wallets from one or more pods.
+      - Delete the local wallets from one or more pods.
         For example;
           $0 -e dev deleteWallets bcreg-x-agent
 
@@ -123,36 +123,6 @@ resetDatabase() {
 
   echoWarning "\nThe ${_dbPodName} database has been deleted and recreated."
 }
-
-deleteWallets() {
-  _podNames=${@}
-  if [ -z "${_podNames}" ]; then
-    echo -e \\n"deleteWallets; Missing parameter!"\\n
-    exit 1
-  fi
-
-  printAndAskToContinue "If you contiune the wallets from ${_podNames} will be deleted.  All data will be lost."
-
-  switchProject
-  exitOnError
-
-  deleteFromPods "/home/indy/.indy_client/wallet/*" ${_podNames}
-}
-
-recycle() {
-  _pods=${@}
-  if [ -z "${_pods}" ]; then
-    echo -e \\n"recycle; Missing parameter!"\\n
-    exit 1
-  fi
-
-  switchProject
-  exitOnError
-
-  scaleDown ${_pods}
-  printAndWait "Wait for all of the pods (${_pods}) to scale down completely before continuing."
-  scaleUp ${_pods}  
-}
 # =================================================================================================================
 
 pushd ${SCRIPT_HOME} >/dev/null
@@ -172,10 +142,10 @@ case "${_cmd}" in
     ;;
   deletewallets)
     deleteWallets ${@}
-    recycle ${@}
+    recyclePods ${@}
     ;;
   recycle)
-    recycle ${@}
+    recyclePods ${@}
     ;;
   *)
     echoWarning "Unrecognized command; ${_cmd}"
