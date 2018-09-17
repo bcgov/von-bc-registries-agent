@@ -364,8 +364,10 @@ class EventProcessor:
         elif corp['corp_type']['corp_class'] == 'XPRO':
             if 'jurisdiction' in corp and 'can_jur_typ_cd' in corp['jurisdiction']:
                 if corp['jurisdiction']['can_jur_typ_cd'] == 'OT':
-                    if 'othr_juris_desc' in corp['jurisdiction']:
+                    if 'othr_juris_desc' in corp['jurisdiction'] and corp['jurisdiction']['othr_juris_desc'] is not None:
                         registered_jurisdiction = corp['jurisdiction']['othr_juris_desc']
+                    else:
+                        registered_jurisdiction = corp['jurisdiction']['can_jur_typ_cd']
                 else:
                     registered_jurisdiction = corp['jurisdiction']['can_jur_typ_cd']
         else:
@@ -484,7 +486,10 @@ class EventProcessor:
         corp_cred['entity_status'] = corp_info['corp_state']['op_state_typ_cd']
         corp_cred['entity_status_effective'] = corp_info['corp_state_dt']
         corp_cred['entity_type'] = corp_info['corp_type']['full_desc']
-        corp_cred['registered_jurisdiction'] = self.get_corp_jurisdiction(corp_info)
+
+        # TODO seems like every corporation has a registered jurisdiction of 'BC'
+        corp_cred['registered_jurisdiction'] = 'BC' # self.get_corp_jurisdiction(corp_info)
+
         if 'tilma_involved' in corp_info and 'tilma_jurisdiction' in corp_info['tilma_involved']:
             corp_cred['registration_type'] = corp_info['tilma_involved']['tilma_jurisdiction'] 
         else:

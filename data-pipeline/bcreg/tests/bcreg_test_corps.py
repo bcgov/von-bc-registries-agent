@@ -75,7 +75,8 @@ def _generate_corp_nums():
 	                str(juisdiction_ct[0]['count']) + ', ')
 
 def test_generate_corp_nums():
-    selected_corps = [
+    selected_corps = ['A0059733','A0040189','A0059933','A0060938','A0060045',]
+    """
 						'LP0450925',
 						'FM0525021',
 						'FM0508782',
@@ -113,6 +114,7 @@ def test_generate_corp_nums():
 						'C0874156',
 						'LLC0000221',
 					  ]
+    """
     selected_corp_list = ''
     i = 0
     for corp in selected_corps:

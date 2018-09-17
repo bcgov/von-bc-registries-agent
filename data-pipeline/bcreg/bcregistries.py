@@ -792,6 +792,8 @@ class BCRegistries:
             for i,corp in enumerate(corps): 
                 # create a cursor
                 # print(corp['CORP_NUM'])
+                if (i % 100 == 0) or (i+1 == len(corps)):
+                    print('>>> Processing {} of {} corporations.'.format(i+1, len(corps)))
                 cur = self.conn.cursor()
                 cur.execute("""SELECT max(event_id) from """ + BC_REGISTRIES_TABLE_PREFIX + """event
                                 where corp_num = %s and event_id > %s and event_id <= %s""", 
