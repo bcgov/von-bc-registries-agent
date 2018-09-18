@@ -81,7 +81,9 @@ class EventProcessor:
                 PREV_EVENT_ID INTEGER NOT NULL, 
                 LAST_EVENT_ID INTEGER NOT NULL, 
                 ENTRY_DATE TIMESTAMP NOT NULL,
-                PROCESS_DATE TIMESTAMP
+                PROCESS_DATE TIMESTAMP,
+                PROCESS_SUCCESS CHAR,
+                PROCESS_MSG VARCHAR(255)
             )
             """,
             """
@@ -102,7 +104,9 @@ class EventProcessor:
                 LAST_EVENT_ID INTEGER NOT NULL, 
                 CORP_JSON JSON NOT NULL,
                 ENTRY_DATE TIMESTAMP NOT NULL,
-                PROCESS_DATE TIMESTAMP
+                PROCESS_DATE TIMESTAMP,
+                PROCESS_SUCCESS CHAR,
+                PROCESS_MSG VARCHAR(255)
             )
             """,
             """
@@ -364,8 +368,10 @@ class EventProcessor:
         elif corp['corp_type']['corp_class'] == 'XPRO':
             if 'jurisdiction' in corp and 'can_jur_typ_cd' in corp['jurisdiction']:
                 if corp['jurisdiction']['can_jur_typ_cd'] == 'OT':
-                    if 'othr_juris_desc' in corp['jurisdiction']:
+                    if 'othr_juris_desc' in corp['jurisdiction'] and corp['jurisdiction']['othr_juris_desc'] is not None:
                         registered_jurisdiction = corp['jurisdiction']['othr_juris_desc']
+                    else:
+                        registered_jurisdiction = corp['jurisdiction']['can_jur_typ_cd']
                 else:
                     registered_jurisdiction = corp['jurisdiction']['can_jur_typ_cd']
         else:
@@ -484,7 +490,10 @@ class EventProcessor:
         corp_cred['entity_status'] = corp_info['corp_state']['op_state_typ_cd']
         corp_cred['entity_status_effective'] = corp_info['corp_state_dt']
         corp_cred['entity_type'] = corp_info['corp_type']['full_desc']
-        corp_cred['registered_jurisdiction'] = self.get_corp_jurisdiction(corp_info)
+
+        # TODO seems like every corporation has a registered jurisdiction of 'BC'
+        corp_cred['registered_jurisdiction'] = 'BC' # self.get_corp_jurisdiction(corp_info)
+
         if 'tilma_involved' in corp_info and 'tilma_jurisdiction' in corp_info['tilma_involved']:
             corp_cred['registration_type'] = corp_info['tilma_involved']['tilma_jurisdiction'] 
         else:
@@ -543,29 +552,29 @@ class EventProcessor:
 
         sql2 = """INSERT INTO CORP_HISTORY_LOG (SYSTEM_TYPE_CD, PREV_EVENT_ID, LAST_EVENT_ID, CORP_NUM, CORP_STATE, CORP_JSON, ENTRY_DATE)
                   VALUES(%s, %s, %s, %s, %s, %s, %s) RETURNING RECORD_ID;"""
-        sql2a = """INSERT INTO CORP_HISTORY_LOG (SYSTEM_TYPE_CD, PREV_EVENT_ID, LAST_EVENT_ID, CORP_NUM, CORP_STATE, CORP_JSON, ENTRY_DATE, PROCESS_DATE)
-                  VALUES(%s, %s, %s, %s, %s, %s, %s, %s) RETURNING RECORD_ID;"""
+        sql2a = """INSERT INTO CORP_HISTORY_LOG (SYSTEM_TYPE_CD, PREV_EVENT_ID, LAST_EVENT_ID, CORP_NUM, CORP_STATE, CORP_JSON, ENTRY_DATE, PROCESS_DATE, PROCESS_SUCCESS, PROCESS_MSG)
+                  VALUES(%s, %s, %s, %s, %s, %s, %s, %s, %s, %s) RETURNING RECORD_ID;"""
 
         sql3 = """UPDATE EVENT_BY_CORP_FILING
-                  SET PROCESS_DATE = %s
+                  SET PROCESS_DATE = %s, PROCESS_SUCCESS = %s, PROCESS_MSG = %s
                   WHERE RECORD_ID = %s"""
         sql3a = """UPDATE CORP_HISTORY_LOG
-                  SET PROCESS_DATE = %s
+                  SET PROCESS_DATE = %s, PROCESS_SUCCESS = %s, PROCESS_MSG = %s
                   WHERE RECORD_ID = %s"""
 
         cur = None
         start_time = time.perf_counter()
         processing_time = 0
         max_processing_time = 10 * 60
-        try:
-            continue_loop = True
-            while continue_loop and processing_time < max_processing_time:
-                corps = []
-                specific_corps = []
+        continue_loop = True
+        while continue_loop and processing_time < max_processing_time:
+            corps = []
+            specific_corps = []
 
-                # load data from BC Registries for the corporations we need to process (max of 3000 per chunk)
-                # this data may be pulled directly, or pulled from a "cache" in the event processor database
-                if load_regs:
+            # load data from BC Registries for the corporations we need to process (max of 3000 per chunk)
+            # this data may be pulled directly, or pulled from a "cache" in the event processor database
+            if load_regs:
+                try:
                     # we are loading data from BC Registries based on the corp event queue
                     cur = self.conn.cursor()
                     cur.execute(sql1)
@@ -577,7 +586,14 @@ class EventProcessor:
                         row = cur.fetchone()
                     cur.close()
                     cur = None
-                else:
+                except (Exception, psycopg2.DatabaseError) as error:
+                    print(error)
+                    raise
+                finally:
+                    if cur is not None:
+                        cur.close()
+            else:
+                try:
                     # not loading from BC Reg, just processing data already loaded in corp_history
                     cur = self.conn.cursor()
                     cur.execute(sql1a)
@@ -590,73 +606,122 @@ class EventProcessor:
                         row = cur.fetchone()
                     cur.close()
                     cur = None
+                except (Exception, psycopg2.DatabaseError) as error:
+                    print(error)
+                    raise
+                finally:
+                    if cur is not None:
+                        cur.close()
 
-                if len(specific_corps) == 0:
-                    continue_loop = False
-                else:
-                    # now generate credentials from the corporate data
-                    with BCRegistries(use_cache) as bc_registries:
-                        if use_cache:
+            if len(specific_corps) == 0:
+                continue_loop = False
+            else:
+                # now generate credentials from the corporate data
+                with BCRegistries(use_cache) as bc_registries:
+                    if use_cache:
+                        try:
                             bc_registries.cache_bcreg_corps(specific_corps)
-                        for i,corp in enumerate(corps): 
-                            if (i % 100 == 0) or (i+1 == len(corps)):
-                                print('>>> Processing {} of {} corporations.'.format(i+1, len(corps)))
-                            if load_regs:
+                        except (Exception, psycopg2.DatabaseError) as error:
+                            # raises a SQL error if error during caching
+                            print(error)
+                            raise
+
+                    for i,corp in enumerate(corps): 
+                        process_success = True
+                        process_msg = None
+                        if (i % 100 == 0) or (i+1 == len(corps)):
+                            print('>>> Processing {} of {} corporations.'.format(i+1, len(corps)))
+
+                        if load_regs:
+                            try:
                                 # fetch corp info from bc_registries
                                 corp_info = bc_registries.get_bc_reg_corp_info(corp['CORP_NUM'], corp['LAST_EVENT_ID'])
-                            else:
-                                # json blob is cached in event processor database
-                                corp_info = corp['CORP_JSON']
+                            except (Exception, psycopg2.DatabaseError) as error:
+                                print(error)
+                                process_success = False
+                                process_msg = str(error)
+                                #raise
+                        else:
+                            # json blob is cached in event processor database
+                            corp_info = corp['CORP_JSON']
 
+                        if process_success:
                             if generate_creds:
-                                # generate and store credentials
-                                cur = self.conn.cursor()
-                                corp_creds = self.generate_credentials(corp['SYSTEM_TYPE_CD'], corp['PREV_EVENT_ID'], corp['LAST_EVENT_ID'], corp['CORP_NUM'],
-                                                        corp_info)
-                                self.store_credentials(cur, corp['SYSTEM_TYPE_CD'], corp['PREV_EVENT_ID'], corp['LAST_EVENT_ID'], corp['CORP_NUM'],
-                                                        corp_info['corp_state']['op_state_typ_cd'], corp_info, corp_creds)
-                                cur.close()
-                                cur = None
+                                try:
+                                    # generate and store credentials
+                                    cur = self.conn.cursor()
+                                    corp_creds = self.generate_credentials(corp['SYSTEM_TYPE_CD'], corp['PREV_EVENT_ID'], corp['LAST_EVENT_ID'], corp['CORP_NUM'],
+                                                            corp_info)
+                                    self.store_credentials(cur, corp['SYSTEM_TYPE_CD'], corp['PREV_EVENT_ID'], corp['LAST_EVENT_ID'], corp['CORP_NUM'],
+                                                            corp_info['corp_state']['op_state_typ_cd'], corp_info, corp_creds)
+                                    cur.close()
+                                    cur = None
+                                except (Exception, psycopg2.DatabaseError) as error:
+                                    print(error)
+                                    process_success = False
+                                    process_msg = str(error)
+                                    #raise
+                                finally:
+                                    if cur is not None:
+                                        cur.close()
 
                                 # store corporate info 
+                                if process_success:
+                                    flag = 'Y'
+                                    res = None
+                                else:
+                                    flag = 'N'
+                                    if 255 < len(process_msg):
+                                        res = process_msg[:250] + '...'
+                                    else:
+                                        res = process_msg
                                 if load_regs:
                                     cur = self.conn.cursor()
                                     cur.execute(sql2a, (corp['SYSTEM_TYPE_CD'], corp['PREV_EVENT_ID'], corp['LAST_EVENT_ID'], corp['CORP_NUM'], corp_info['corp_state']['op_state_typ_cd'], 
-                                                        bc_registries.to_json(corp_info), datetime.datetime.now(), datetime.datetime.now(),))
+                                                        bc_registries.to_json(corp_info), datetime.datetime.now(), datetime.datetime.now(), flag, res,))
                                     cur.close()
                                     cur = None
                                 else:
                                     # update process date
                                     cur = self.conn.cursor()
-                                    cur.execute(sql3a, (datetime.datetime.now(), corp['RECORD_ID'], ))
+                                    cur.execute(sql3a, (datetime.datetime.now(), flag, res, corp['RECORD_ID'], ))
                                     cur.close()
                                     cur = None
 
                             elif load_regs:
-                                # store corporate info for future generation of credentials
-                                cur = self.conn.cursor()
-                                cur.execute(sql2, (corp['SYSTEM_TYPE_CD'], corp['PREV_EVENT_ID'], corp['LAST_EVENT_ID'], corp['CORP_NUM'], corp_info['corp_state']['op_state_typ_cd'], 
-                                                    bc_registries.to_json(corp_info), datetime.datetime.now(),))
-                                cur.close()
-                                cur = None
+                                try:
+                                    # store corporate info for future generation of credentials
+                                    cur = self.conn.cursor()
+                                    cur.execute(sql2, (corp['SYSTEM_TYPE_CD'], corp['PREV_EVENT_ID'], corp['LAST_EVENT_ID'], corp['CORP_NUM'], corp_info['corp_state']['op_state_typ_cd'], 
+                                                        bc_registries.to_json(corp_info), datetime.datetime.now(),))
+                                    cur.close()
+                                    cur = None
+                                except (Exception, psycopg2.DatabaseError) as error:
+                                    print(error)
+                                    process_success = False
+                                    process_msg = str(error)
+                                    raise
+                                finally:
+                                    if cur is not None:
+                                        cur.close()
 
-                            # update process date
-                            cur = self.conn.cursor()
-                            cur.execute(sql3, (datetime.datetime.now(), corp['RECORD_ID'], ))
-                            self.conn.commit()
-                            cur.close()
-                            cur = None
+                        # update process date
+                        cur = self.conn.cursor()
+                        if process_success:
+                            cur.execute(sql3, (datetime.datetime.now(), 'Y', None, corp['RECORD_ID'], ))
+                        else:
+                            if 255 < len(process_msg):
+                                res = process_msg[:250] + '...'
+                            else:
+                                res = process_msg
+                            cur.execute(sql3, (datetime.datetime.now(), 'N', res, corp['RECORD_ID'], ))
+                        self.conn.commit()
+                        cur.close()
+                        cur = None
 
                 processing_time = time.perf_counter() - start_time
                 print('Processing: ' + str(processing_time))
 
-        except (Exception, psycopg2.DatabaseError) as error:
-            print(error)
-            raise
-        finally:
-            if cur is not None:
-                cur.close()
-                #print('Cursor closed.')
 
     # process corps that have been queued - update data from bc_registries
     def process_corp_event_queue(self, use_cache=False):
@@ -699,11 +764,11 @@ class EventProcessor:
             outstanding_ct = self.get_record_count(table, True)
             print('Table:', table, 'Processed:', process_ct, 'Outstanding:', outstanding_ct)
 
-        sql = "select count(*) from credential_log where process_success = 'N'"
-        error_ct = self.get_sql_record_count(sql)
-        print('Table:', 'credential_log', 'Process Errors:', error_ct)
-        if 0 < error_ct:
-            self.print_processing_errors()
+            sql = "select count(*) from " + table + " where process_success = 'N'"
+            error_ct = self.get_sql_record_count(sql)
+            print('      ', table, 'Process Errors:', error_ct)
+            if 0 < error_ct:
+                self.print_processing_errors(table)
 
     def get_outstanding_corps_record_count(self):
         return self.get_record_count('event_by_corp_filing')
@@ -738,13 +803,13 @@ class EventProcessor:
                 cur.close()
             cur = None
 
-    def print_processing_errors(self):
-        sql = """select * from credential_log
+    def print_processing_errors(self, table):
+        sql = """select * from """ + table + """
                  where process_success = 'N'
                  order by process_date DESC
                  limit 20"""
         rows = self.get_sql_rows(sql)
-        print("Recent errors:")
+        print("       Recent errors:")
         print(rows)
 
     def get_sql_rows(self, sql):
