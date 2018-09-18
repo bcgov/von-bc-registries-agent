@@ -140,6 +140,8 @@ issuers:
           type:
             input: registration
             from: value
+        cardinality_fields:
+          - associated_registration_id
         mapping:
           - model: category
             fields:
