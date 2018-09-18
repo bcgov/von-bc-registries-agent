@@ -1,5 +1,5 @@
 #FROM vonx-base
-FROM bcgovimages/von-image:py36-1.6-2
+FROM bcgovimages/von-image:py36-1.6-2b
 
 WORKDIR $HOME
 
