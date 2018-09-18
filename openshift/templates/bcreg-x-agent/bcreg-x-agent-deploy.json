@@ -316,7 +316,7 @@
       "displayName": "TOB API URL",
       "description": "The URL of the TOB API.",
       "required": true,
-      "value": "https://angular-on-nginx-devex-von-bc-tob-dev.pathfinder.gov.bc.ca/api/"
+      "value": "https://django-devex-von-bc-tob-dev.pathfinder.gov.bc.ca/api/v2"
     },
     {
       "name": "TOB_APP_URL",
