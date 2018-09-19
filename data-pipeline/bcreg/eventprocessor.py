@@ -2,6 +2,7 @@
  
 import psycopg2
 import datetime
+import pytz
 import json
 import time
 from bcreg.config import config
@@ -22,11 +23,16 @@ dba_version = '1.0.32'
 
 CORP_BATCH_SIZE = 3000
 
+# for now, we are in PST time
+timezone = pytz.timezone("America/Los_Angeles")
+epochstart = timezone.localize(datetime.datetime(1970, 1, 1))
+
 
 class DateTimeEncoder(json.JSONEncoder):
     def default(self, o):
         if isinstance(o, datetime.datetime):
-            return o.isoformat()
+            tz_aware = timezone.localize(o)
+            return str(int((tz_aware - epochstart).total_seconds()))
         return json.JSONEncoder.default(self, o)
 
 

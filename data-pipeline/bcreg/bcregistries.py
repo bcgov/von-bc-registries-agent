@@ -2,11 +2,12 @@
 import psycopg2
 import sqlite3
 import datetime
+import pytz
 import json
 import string
 import decimal
-D=decimal.Decimal
 import random
+import types
 
 from bcreg.config import config
 
@@ -16,26 +17,36 @@ BC_REGISTRIES_TABLE_PREFIX = 'bc_registries.'
 INMEM_CACHE_TABLE_PREFIX   = ''
 MAX_WHERE_IN = 1000
 
+# for now, we are in PST time
+timezone = pytz.timezone("America/Los_Angeles")
+epochstart = timezone.localize(datetime.datetime(1970, 1, 1))
+
 
 def adapt_decimal(d):
     return str(d)
 
 def convert_decimal(s):
-    return D(s)
+    return decimal.Decimal(s)
 
 # custom encoder to convert wierd data types to strings
 class CustomJsonEncoder(json.JSONEncoder):
     def default(self, o):
+        if isinstance(o, datetime.datetime):
+            tz_aware = timezone.localize(o)
+            return str(int((tz_aware - epochstart).total_seconds()))
         if isinstance(o, (list, dict, str, int, float, bool, type(None))):
             return JSONEncoder.default(self, o)        
-        if isinstance(o, datetime.datetime):
-            return o.isoformat()
         if isinstance(o, decimal.Decimal):
             return (str(o) for o in [o])
         if isinstance(o, set):
             return list(o)
         if isinstance(o, map):
             return list(o)
+        if isinstance(o, types.GeneratorType):
+            ret = ""
+            for s in next(o):
+                ret = ret + str(s)
+            return ret
         return json.JSONEncoder.default(self, o)
 
 
@@ -54,7 +65,7 @@ class BCRegistries:
             self.conn = psycopg2.connect(**params)
 
             # Register the adapter
-            sqlite3.register_adapter(D, adapt_decimal)
+            sqlite3.register_adapter(decimal.Decimal, adapt_decimal)
             # Register the converter
             sqlite3.register_converter("decimal", convert_decimal)
             # connect to in-memory database
@@ -1341,6 +1352,6 @@ class BCRegistries:
 
     # convert object to JSON, converting data types (decimal, date) to string
     def to_json(self, data):
-        ret = json.dumps(data, cls=CustomJsonEncoder, default=str)
+        ret = json.dumps(data, cls=CustomJsonEncoder)
         return ret
 

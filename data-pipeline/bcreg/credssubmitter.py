@@ -244,7 +244,7 @@ class CredsSubmitter:
                         creds_task = loop.create_task(post_credentials(http_client, self.conn, post_creds))
                         tasks.append(creds_task)
                         if single_thread:
-                            await creds_task
+                          await creds_task
                         credentials = []
                         cred_owner_id = ''
 
