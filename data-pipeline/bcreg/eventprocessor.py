@@ -25,13 +25,14 @@ CORP_BATCH_SIZE = 3000
 
 # for now, we are in PST time
 timezone = pytz.timezone("America/Los_Angeles")
+epochstart = timezone.localize(datetime.datetime(1970, 1, 1))
 
 
 class DateTimeEncoder(json.JSONEncoder):
     def default(self, o):
         if isinstance(o, datetime.datetime):
             tz_aware = timezone.localize(o)
-            return tz_aware.isoformat()
+            return str(int((tz_aware - epochstart).total_seconds()))
         return json.JSONEncoder.default(self, o)
 
 
