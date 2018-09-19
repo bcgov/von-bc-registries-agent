@@ -6,7 +6,6 @@
 # NAME=mara
 # IMAGE_NAMESPACE=devex-von-bc-registries-agent-tools
 TAG_NAME=prod
-APPLICATION_DOMAIN=mara-devex-von-bc-registries-agent-prod.pathfinder.gov.bc.ca
 # HOST_NAME=0.0.0.0
 # HOST_PORT=8080
 # VONX_API_URL=http://bcreg-x-agent:8080/bcreg
