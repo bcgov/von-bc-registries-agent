@@ -50,6 +50,15 @@ The "initialization and load tasks" consists of several tasks that are run only 
 
 Pipelines under "test and demo tasks" are for test and demonstration purposes only.
 
+## Viewing the Mara Console when it's Deployed into OpenShift
+
+No direct routes to the Mara Console are provisioned, on purpose, by the Mara deployment configurations.  To view the console within a given environment use `oc port-forward` to forward port 8080 from the Mara pod to your local machine and view it in your preferred browser.
+
+Example:
+```
+oc port-forward mara-9-k9xpd 8080:8080 -n devex-von-bc-registries-agent-dev
+```
+
 ## Running Pipelines from the Command Line
 
 Note that these scripts depend on the database running under docker, based on the  instructions in the [docker README](docker/README.md).
