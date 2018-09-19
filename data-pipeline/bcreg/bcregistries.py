@@ -33,7 +33,10 @@ class CustomJsonEncoder(json.JSONEncoder):
     def default(self, o):
         if isinstance(o, datetime.datetime):
             tz_aware = timezone.localize(o)
-            return str(int((tz_aware - epochstart).total_seconds()))
+            if tz_aware >= epochstart:
+                return str(int((tz_aware - epochstart).total_seconds()))
+            else:
+                return tz_aware.astimezone(pytz.utc).isoformat()
         if isinstance(o, (list, dict, str, int, float, bool, type(None))):
             return JSONEncoder.default(self, o)        
         if isinstance(o, decimal.Decimal):
