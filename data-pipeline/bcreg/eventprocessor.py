@@ -481,7 +481,6 @@ class EventProcessor:
         corp_cred = {}
         corp_cred['registration_id'] = self.corp_num_with_prefix(corp_info['corp_typ_cd'], corp_info['corp_num'])
         corp_cred['registration_date'] = corp_info['recognition_dts']
-        corp_cred['effective_date'] = corp_info['recognition_dts']
         if 0 < len(corp_info['org_names']):
             corp_cred['entity_name'] = corp_info['org_names'][0]['corp_nme'] 
             if 'effectiv_dt' in corp_info['org_names'][0]['start_filing_event']:
@@ -502,6 +501,7 @@ class EventProcessor:
                 corp_cred['entity_name_trans_effective'] = corp_info['org_name_trans'][0]['start_event']['event_timestmp']
         corp_cred['entity_status'] = corp_info['corp_state']['op_state_typ_cd']
         corp_cred['entity_status_effective'] = corp_info['corp_state_dt']
+        corp_cred['effective_date'] = corp_info['corp_state_dt']
         corp_cred['entity_type'] = corp_info['corp_type']['full_desc']
 
         # TODO seems like every corporation has a registered jurisdiction of 'BC'
@@ -649,6 +649,7 @@ class EventProcessor:
                             try:
                                 # fetch corp info from bc_registries
                                 corp_info = bc_registries.get_bc_reg_corp_info(corp['CORP_NUM'], corp['LAST_EVENT_ID'])
+                                corp_info_json = bc_registries.to_json(corp_info)
                             except (Exception, psycopg2.DatabaseError) as error:
                                 print(error)
                                 process_success = False
@@ -657,6 +658,7 @@ class EventProcessor:
                         else:
                             # json blob is cached in event processor database
                             corp_info = corp['CORP_JSON']
+                            corp_info_json = corp_info
 
                         if process_success:
                             if generate_creds:
@@ -691,7 +693,7 @@ class EventProcessor:
                                 if load_regs:
                                     cur = self.conn.cursor()
                                     cur.execute(sql2a, (corp['SYSTEM_TYPE_CD'], corp['PREV_EVENT_ID'], corp['LAST_EVENT_ID'], corp['CORP_NUM'], corp_info['corp_state']['op_state_typ_cd'], 
-                                                        bc_registries.to_json(corp_info), datetime.datetime.now(), datetime.datetime.now(), flag, res,))
+                                                        corp_info_json, datetime.datetime.now(), datetime.datetime.now(), flag, res,))
                                     cur.close()
                                     cur = None
                                 else:
@@ -706,7 +708,7 @@ class EventProcessor:
                                     # store corporate info for future generation of credentials
                                     cur = self.conn.cursor()
                                     cur.execute(sql2, (corp['SYSTEM_TYPE_CD'], corp['PREV_EVENT_ID'], corp['LAST_EVENT_ID'], corp['CORP_NUM'], corp_info['corp_state']['op_state_typ_cd'], 
-                                                        bc_registries.to_json(corp_info), datetime.datetime.now(),))
+                                                        corp_info_json, datetime.datetime.now(),))
                                     cur.close()
                                     cur = None
                                 except (Exception, psycopg2.DatabaseError) as error:
