@@ -649,6 +649,7 @@ class EventProcessor:
                             try:
                                 # fetch corp info from bc_registries
                                 corp_info = bc_registries.get_bc_reg_corp_info(corp['CORP_NUM'], corp['LAST_EVENT_ID'])
+                                corp_info_json = bc_registries.to_json(corp_info)
                             except (Exception, psycopg2.DatabaseError) as error:
                                 print(error)
                                 process_success = False
@@ -657,6 +658,7 @@ class EventProcessor:
                         else:
                             # json blob is cached in event processor database
                             corp_info = corp['CORP_JSON']
+                            corp_info_json = corp_info
 
                         if process_success:
                             if generate_creds:
@@ -669,7 +671,6 @@ class EventProcessor:
                                                             corp_info['corp_state']['op_state_typ_cd'], corp_info, corp_creds)
                                     cur.close()
                                     cur = None
-                                    corp_info_json = bc_registries.to_json(corp_info)
                                 except (Exception, psycopg2.DatabaseError) as error:
                                     print(error)
                                     process_success = False
