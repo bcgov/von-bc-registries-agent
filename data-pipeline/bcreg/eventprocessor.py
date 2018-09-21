@@ -144,12 +144,33 @@ class EventProcessor:
             )
             """,
             """
-            CREATE INDEX IF NOT EXISTS chl_i1 ON CORP_HISTORY_LOG 
-            (SYSTEM_TYPE_CD)
+            -- Hit for counts and queries
+            CREATE INDEX IF NOT EXISTS chl_pd_null ON CORP_HISTORY_LOG 
+            (PROCESS_DATE) WHERE PROCESS_DATE IS NULL;
             """,
             """
-            CREATE INDEX IF NOT EXISTS chl_i2 ON CORP_HISTORY_LOG 
-            (PROCESS_DATE)
+            -- Hit for query
+            CREATE INDEX IF NOT EXISTS chl_ri_pd_null_asc ON CORP_HISTORY_LOG 
+            (RECORD_ID ASC, PROCESS_DATE) WHERE PROCESS_DATE IS NULL;	
+            """,
+            """
+            ALTER TABLE CORP_HISTORY_LOG
+            SET (autovacuum_vacuum_scale_factor = 0.0);
+            """,
+            """ 
+            ALTER TABLE CORP_HISTORY_LOG
+            SET (autovacuum_vacuum_threshold = 5000);
+            """,
+            """
+            ALTER TABLE CORP_HISTORY_LOG  
+            SET (autovacuum_analyze_scale_factor = 0.0);
+            """,
+            """ 
+            ALTER TABLE CORP_HISTORY_LOG  
+            SET (autovacuum_analyze_threshold = 5000);
+            """,
+            """ 
+            REINDEX TABLE CORP_HISTORY_LOG;
             """,
             """
             CREATE TABLE IF NOT EXISTS CREDENTIAL_TRANSFORM (
@@ -579,21 +600,32 @@ class EventProcessor:
                          LAST_EVENT_ID, 
                          CORP_NUM, 
                          ENTRY_DATE
-                         FROM EVENT_BY_CORP_FILING
-                         WHERE RECORD_ID IN
-                         (
-                            SELECT RECORD_ID
-                            FROM EVENT_BY_CORP_FILING 
-                            WHERE PROCESS_DATE is null
-                         )
+                  FROM EVENT_BY_CORP_FILING
+                  WHERE RECORD_ID IN
+                  (
+                    SELECT RECORD_ID
+                    FROM EVENT_BY_CORP_FILING 
+                    WHERE PROCESS_DATE is null
+                  )
                   ORDER BY RECORD_ID
                   LIMIT """ + str(CORP_BATCH_SIZE)
 
-        sql1a = """SELECT RECORD_ID, SYSTEM_TYPE_CD, PREV_EVENT_ID, LAST_EVENT_ID, CORP_NUM, CORP_JSON, ENTRY_DATE
-                 FROM CORP_HISTORY_LOG
-                 WHERE PROCESS_DATE is null
-                 ORDER BY RECORD_ID
-                 LIMIT """ + str(CORP_BATCH_SIZE)
+        sql1a = """SELECT RECORD_ID, 
+                          SYSTEM_TYPE_CD, 
+                          PREV_EVENT_ID, 
+                          LAST_EVENT_ID, 
+                          CORP_NUM, 
+                          CORP_JSON, 
+                          ENTRY_DATE
+                   FROM CORP_HISTORY_LOG
+                   WHERE RECORD_ID IN
+                   (
+                     SELECT RECORD_ID
+                     FROM CORP_HISTORY_LOG 
+                     WHERE PROCESS_DATE is null
+                   )
+                   ORDER BY RECORD_ID
+                   LIMIT """ + str(CORP_BATCH_SIZE)
 
         sql2 = """INSERT INTO CORP_HISTORY_LOG (SYSTEM_TYPE_CD, PREV_EVENT_ID, LAST_EVENT_ID, CORP_NUM, CORP_STATE, CORP_JSON, ENTRY_DATE)
                   VALUES(%s, %s, %s, %s, %s, %s, %s) RETURNING RECORD_ID;"""
