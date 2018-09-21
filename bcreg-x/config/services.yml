@@ -5,7 +5,7 @@ issuers:
     url: "https://www2.gov.bc.ca/gov/content/governments/organizational-structure/\
       ministries-organizations/ministries/citizens-services/bc-registries-online-services"
     email: bcreg.test.issuer@example.ca
-    url: $APPLICATION_URL
+    logo_path: ../assets/img/bcreg-logo.png
 
     connection:
       type: TheOrgBook
