@@ -79,12 +79,16 @@ class EventProcessor:
             )
             """,
             """
-            CREATE INDEX IF NOT EXISTS le_i1 ON LAST_EVENT 
-            (SYSTEM_TYPE_CD)
+            CREATE INDEX IF NOT EXISTS le_stc ON LAST_EVENT 
+            (SYSTEM_TYPE_CD);
             """,
             """
-            CREATE INDEX IF NOT EXISTS le_i2 ON LAST_EVENT 
-            (EVENT_ID)
+            CREATE INDEX IF NOT EXISTS le_ie ON LAST_EVENT 
+            (EVENT_ID);
+            """,
+            """
+            CREATE INDEX IF NOT EXISTS le_stc_ei ON LAST_EVENT 
+            (SYSTEM_TYPE_CD, EVENT_ID);
             """,
             """
             CREATE TABLE IF NOT EXISTS EVENT_BY_CORP_FILING (
@@ -183,12 +187,9 @@ class EventProcessor:
             )
             """,
             """
-            CREATE INDEX IF NOT EXISTS ct_i1 ON CREDENTIAL_TRANSFORM 
-            (SYSTEM_TYPE_CD)
-            """,
-            """
-            CREATE INDEX IF NOT EXISTS cy_i2 ON CREDENTIAL_TRANSFORM 
-            (CREDENTIAL_TYPE_CD)
+            -- Hit for query
+            CREATE INDEX IF NOT EXISTS ct_stc ON CREDENTIAL_TRANSFORM 
+            (SYSTEM_TYPE_CD);
             """,
             """
             CREATE TABLE IF NOT EXISTS CREDENTIAL_LOG (
