@@ -100,12 +100,33 @@ class EventProcessor:
             )
             """,
             """
-            CREATE INDEX IF NOT EXISTS ebc_i1 ON EVENT_BY_CORP_FILING 
-            (SYSTEM_TYPE_CD)
+            -- Hit for counts and queries
+            CREATE INDEX IF NOT EXISTS ebcf_pd_null ON EVENT_BY_CORP_FILING 
+            (PROCESS_DATE) WHERE PROCESS_DATE IS NULL;
             """,
             """
-            CREATE INDEX IF NOT EXISTS ebc_i2 ON EVENT_BY_CORP_FILING 
-            (PROCESS_DATE)
+            -- Hit for query
+            CREATE INDEX IF NOT EXISTS ebcf_ri_pd_null_asc ON EVENT_BY_CORP_FILING 
+            (RECORD_ID ASC, PROCESS_DATE) WHERE PROCESS_DATE IS NULL;
+            """,
+            """
+            ALTER TABLE EVENT_BY_CORP_FILING
+            SET (autovacuum_vacuum_scale_factor = 0.0);
+            """,
+            """ 
+            ALTER TABLE EVENT_BY_CORP_FILING
+            SET (autovacuum_vacuum_threshold = 5000);
+            """,
+            """
+            ALTER TABLE EVENT_BY_CORP_FILING  
+            SET (autovacuum_analyze_scale_factor = 0.0);
+            """,
+            """ 
+            ALTER TABLE EVENT_BY_CORP_FILING  
+            SET (autovacuum_analyze_threshold = 5000);
+            """,
+            """ 
+            REINDEX TABLE EVENT_BY_CORP_FILING;
             """,
             """
             CREATE TABLE IF NOT EXISTS CORP_HISTORY_LOG (
@@ -552,11 +573,22 @@ class EventProcessor:
 
     # process corps that have been queued - update data from bc_registries
     def process_corp_event_queue_internal(self, load_regs=True, generate_creds=False, use_cache=False):
-        sql1 = """SELECT RECORD_ID, SYSTEM_TYPE_CD, PREV_EVENT_ID, LAST_EVENT_ID, CORP_NUM, ENTRY_DATE
-                 FROM EVENT_BY_CORP_FILING
-                 WHERE PROCESS_DATE is null
-                 ORDER BY RECORD_ID
-                 LIMIT """ + str(CORP_BATCH_SIZE)
+        sql1 = """SELECT RECORD_ID, 
+                         SYSTEM_TYPE_CD, 
+                         PREV_EVENT_ID, 
+                         LAST_EVENT_ID, 
+                         CORP_NUM, 
+                         ENTRY_DATE
+                         FROM EVENT_BY_CORP_FILING
+                         WHERE RECORD_ID IN
+                         (
+                            SELECT RECORD_ID
+                            FROM EVENT_BY_CORP_FILING 
+                            WHERE PROCESS_DATE is null
+                         )
+                  ORDER BY RECORD_ID
+                  LIMIT """ + str(CORP_BATCH_SIZE)
+
         sql1a = """SELECT RECORD_ID, SYSTEM_TYPE_CD, PREV_EVENT_ID, LAST_EVENT_ID, CORP_NUM, CORP_JSON, ENTRY_DATE
                  FROM CORP_HISTORY_LOG
                  WHERE PROCESS_DATE is null
