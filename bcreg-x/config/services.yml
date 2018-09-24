@@ -224,7 +224,7 @@ proof_requests:
       - key:
           # did: DtjQTjwNq7ZyStCE7zwL4r
           name: registration.bc_registries
-          version: '1.0.32'
+          version: '1.0.33'
         attributes:
           - registration_id
           - entity_name

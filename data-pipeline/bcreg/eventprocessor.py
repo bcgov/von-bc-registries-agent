@@ -11,15 +11,15 @@ from bcreg.bcregistries import BCRegistries
 
 corp_credential = 'REG'
 corp_schema = 'registration.bc_registries'
-corp_version = '1.0.32'
+corp_version = '1.0.33'
 
 addr_credential = 'ADDR'
 addr_schema = 'address.bc_registries'
-addr_version = '1.0.32'
+addr_version = '1.0.33'
 
 dba_credential = 'REL'
 dba_schema = 'relationship.bc_registries'
-dba_version = '1.0.32'
+dba_version = '1.0.33'
 
 CORP_BATCH_SIZE = 3000
 
