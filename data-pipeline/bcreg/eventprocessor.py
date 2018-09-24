@@ -708,6 +708,8 @@ class EventProcessor:
                         process_success = True
                         process_msg = None
                         if (i % 100 == 0) or (i+1 == len(corps)):
+                            processing_time = time.perf_counter() - start_time
+                            print('Processing: ' + str(processing_time))
                             print('>>> Processing {} of {} corporations.'.format(i+1, len(corps)))
 
                         if load_regs:
