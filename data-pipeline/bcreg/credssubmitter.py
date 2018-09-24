@@ -151,9 +151,10 @@ class CredsSubmitter:
                       SELECT RECORD_ID
                       FROM CREDENTIAL_LOG 
                       WHERE PROCESS_DATE is null
-                  )                  
-                  ORDER BY RECORD_ID
-                  LIMIT """ + str(CREDS_BATCH_SIZE)
+                      ORDER BY RECORD_ID
+                      LIMIT """ + str(CREDS_BATCH_SIZE) + """
+                  )
+                  ORDER BY RECORD_ID;"""
 
         sql1a = """SELECT count(*) cnt
                    FROM CREDENTIAL_LOG 
@@ -177,13 +178,14 @@ class CredsSubmitter:
                              SELECT RECORD_ID
                              FROM CREDENTIAL_LOG 
                              WHERE CORP_STATE = 'ACT' and PROCESS_DATE is null
+                             ORDER BY RECORD_ID
+                             LIMIT """ + str(CREDS_BATCH_SIZE) + """
                          )                  
-                         ORDER BY RECORD_ID
-                         LIMIT """ + str(CREDS_BATCH_SIZE)
+                         ORDER BY RECORD_ID;"""
 
         sql1a_active = """SELECT count(*) cnt
                           FROM CREDENTIAL_LOG 
-                          WHERE corp_state = 'ACT' and PROCESS_DATE is null"""
+                          WHERE corp_state = 'ACT' and PROCESS_DATE is null;"""
 
         """ Connect to the PostgreSQL database server """
         #conn = None
