@@ -1,5 +1,5 @@
 - name: registration.bc_registries
-  version: '1.0.33'
+  version: '1.0.36'
   attributes:
     - registration_id
     - registration_date
@@ -20,7 +20,7 @@
     - effective_date
 
 - name: address.bc_registries
-  version: '1.0.33'
+  version: '1.0.36'
   attributes:
     - registration_id
     - addressee
@@ -34,7 +34,7 @@
     - effective_date
 
 - name: relationship.bc_registries
-  version: '1.0.33'
+  version: '1.0.36'
   attributes:
     - registration_id
     - associated_registration_id
