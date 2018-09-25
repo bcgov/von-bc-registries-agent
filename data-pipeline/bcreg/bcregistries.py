@@ -19,7 +19,6 @@ MAX_WHERE_IN = 1000
 
 # for now, we are in PST time
 timezone = pytz.timezone("America/Los_Angeles")
-epochstart = timezone.localize(datetime.datetime(1970, 1, 1))
 
 
 def adapt_decimal(d):
@@ -34,13 +33,10 @@ class CustomJsonEncoder(json.JSONEncoder):
         if isinstance(o, datetime.datetime):
             try:
                 tz_aware = timezone.localize(o)
+                return tz_aware.astimezone(pytz.utc).isoformat()
             except (Exception) as error:
                 print("date conversion error", o, error)
                 return o.isoformat()
-            if tz_aware >= epochstart:
-                return str(int((tz_aware - epochstart).total_seconds()))
-            else:
-                return tz_aware.astimezone(pytz.utc).isoformat()
         if isinstance(o, (list, dict, str, int, float, bool, type(None))):
             return JSONEncoder.default(self, o)        
         if isinstance(o, decimal.Decimal):

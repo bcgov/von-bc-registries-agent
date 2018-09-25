@@ -25,7 +25,6 @@ CORP_BATCH_SIZE = 3000
 
 # for now, we are in PST time
 timezone = pytz.timezone("America/Los_Angeles")
-epochstart = timezone.localize(datetime.datetime(1970, 1, 1))
 
 
 class DateTimeEncoder(json.JSONEncoder):
@@ -33,13 +32,10 @@ class DateTimeEncoder(json.JSONEncoder):
         if isinstance(o, datetime.datetime):
             try:
                 tz_aware = timezone.localize(o)
+                return tz_aware.astimezone(pytz.utc).isoformat()
             except (Exception) as error:
                 print("date conversion error", o, error)
                 return o.isoformat()
-            if tz_aware >= epochstart:
-                return str(int((tz_aware - epochstart).total_seconds()))
-            else:
-                return tz_aware.astimezone(pytz.utc).isoformat()
         return json.JSONEncoder.default(self, o)
 
 

@@ -28,6 +28,7 @@ def test_scenario_basic_bc_corp():
     assert my_creds[0]['credential']['entity_status'] == 'ACT'
     assert my_creds[0]['credential']['entity_type'] == 'BC Company'
     assert my_creds[0]['credential']['home_jurisdiction'] == 'BC'
+    assert my_creds[0]['credential']['registered_jurisdiction'] == ''
     assert my_creds[0]['credential']['registration_id'] == 'BC9645624'
 
     assert my_creds[1]['cred_type'] == 'ADDR'
@@ -49,6 +50,7 @@ def test_scenario_basic_dba_firm():
     assert my_creds[0]['credential']['entity_status'] == 'ACT'
     assert my_creds[0]['credential']['entity_type'] == 'Sole Proprietorship'
     assert my_creds[0]['credential']['home_jurisdiction'] == 'BC'
+    assert my_creds[0]['credential']['registered_jurisdiction'] == ''
     assert my_creds[0]['credential']['registration_id'] == 'FM7768377'
 
     assert my_creds[1]['cred_type'] == 'ADDR'
@@ -70,7 +72,7 @@ def test_scenario_basic_xcorp():
     assert my_creds[0]['credential']['entity_status'] == 'ACT'
     assert my_creds[0]['credential']['entity_type'] == 'Extraprovincial Company'
     assert my_creds[0]['credential']['home_jurisdiction'] == 'GB'
-    assert my_creds[0]['credential']['registered_jurisdiction'] == 'GB'
+    assert my_creds[0]['credential']['registered_jurisdiction'] == 'BC'
     assert my_creds[0]['credential']['registration_id'] == 'A3781337'
 
     assert my_creds[1]['cred_type'] == 'ADDR'
@@ -93,7 +95,7 @@ def test_scenario_assumed_name():
     assert my_creds[0]['credential']['entity_status'] == 'ACT'
     assert my_creds[0]['credential']['entity_type'] == 'Extraprovincial Company'
     assert my_creds[0]['credential']['home_jurisdiction'] == 'ON'
-    assert my_creds[0]['credential']['registered_jurisdiction'] == 'ON'
+    assert my_creds[0]['credential']['registered_jurisdiction'] == 'BC'
     assert my_creds[0]['credential']['registration_id'] == 'A1196902'
     assert my_creds[0]['credential']['entity_name'] == 'LFQMDNIUJYCIU  DCDRDZFYXP'
     assert my_creds[0]['credential']['entity_name_assumed'] == 'UFTOBFEBMBKB  UVEUKHNGEMZ'
@@ -117,6 +119,7 @@ def test_scenario_trans_name():
     assert my_creds[0]['credential']['entity_status'] == 'ACT'
     assert my_creds[0]['credential']['entity_type'] == 'BC Company'
     assert my_creds[0]['credential']['home_jurisdiction'] == 'BC'
+    assert my_creds[0]['credential']['registered_jurisdiction'] == ''
     assert my_creds[0]['credential']['registration_id'] == 'BC4241301'
     assert my_creds[0]['credential']['entity_name'] == 'XCUBPIM YRSWHAWTLUMFRPRUZ'
     assert my_creds[0]['credential']['entity_name_trans'] == 'MMRTKDCWLGXOFULSZYEIIHKRO'
@@ -166,6 +169,7 @@ def test_scenario_dba_with_address():
     assert my_creds[0]['credential']['entity_status'] == 'ACT'
     assert my_creds[0]['credential']['entity_type'] == 'Continuation In as a BC ULC'
     assert my_creds[0]['credential']['home_jurisdiction'] == 'BC'
+    assert my_creds[0]['credential']['registered_jurisdiction'] == ''
     assert my_creds[0]['credential']['registration_id'] == 'C6020509'
 
     assert my_creds[1]['cred_type'] == 'ADDR'
@@ -184,6 +188,7 @@ def test_scenario_dba_with_address():
     assert dba_creds[0]['credential']['entity_status'] == 'ACT'
     assert dba_creds[0]['credential']['entity_type'] == 'Sole Proprietorship'
     assert dba_creds[0]['credential']['home_jurisdiction'] == 'BC'
+    assert my_creds[0]['credential']['registered_jurisdiction'] == ''
     assert dba_creds[0]['credential']['registration_id'] == 'FM9129945'
 
     assert dba_creds[1]['cred_type'] == 'ADDR'
