@@ -704,7 +704,10 @@ class EventProcessor:
                         except (Exception, psycopg2.DatabaseError) as error:
                             # raises a SQL error if error during caching
                             print(error)
-                            raise
+                            print("Error during caching operation, switching to non-cached mode")
+                            #raise
+                            corps = []
+                            use_cache = False
 
                     for i,corp in enumerate(corps): 
                         process_success = True
