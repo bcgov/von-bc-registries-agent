@@ -106,6 +106,22 @@ issuers:
               value:
                 input: entity_type
                 from: claim
+          - model: category
+            fields:
+              type:
+                input: registered_jurisdiction
+                from: value
+              value:
+                input: registered_jurisdiction
+                from: claim
+          - model: category
+            fields:
+              type:
+                input: home_jurisdiction
+                from: value
+              value:
+                input: home_jurisdiction
+                from: claim
 
       - description: Relationship
         schema: relationship.bc_registries

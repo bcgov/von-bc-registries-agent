@@ -1102,11 +1102,13 @@ class BCRegistries:
                         state.state_typ_cd state_typ_cd, state.dd_corp_num dd_corp_num, 
                         op_state.op_state_typ_cd op_state_typ_cd, op_state.short_desc short_desc, op_state.full_desc full_desc
                         FROM """ + self.get_table_prefix() + """corp_state state, """ + self.get_table_prefix() + """corp_op_state op_state
-                        WHERE corp_num = """ + self.get_db_sql_param() + """ and end_event_id is null and op_state.state_typ_cd = state.state_typ_cd"""
+                        WHERE corp_num = """ + self.get_db_sql_param() + """ and op_state.state_typ_cd = state.state_typ_cd"""
+        sql_state_active = """ and end_event_id is null"""
+        sql_state_inactive = """ order by end_event_id desc LIMIT 1"""
         cursor = None
         try:
             cursor = self.get_db_connection().cursor()
-            cursor.execute(sql_state, (corp_num,))
+            cursor.execute(sql_state + sql_state_active, (corp_num,))
             desc = cursor.description
             column_names = [col[0] for col in desc]
             corp_state = [dict(zip(column_names, row))  
@@ -1115,6 +1117,16 @@ class BCRegistries:
             cursor = None
             if len(corp_state) > 0:
                 return corp_state[0]
+            else:
+                cursor.execute(sql_state + sql_state_inactive, (corp_num,))
+                desc = cursor.description
+                column_names = [col[0] for col in desc]
+                corp_state = [dict(zip(column_names, row))  
+                    for row in cursor]
+                cursor.close()
+                cursor = None
+                if len(corp_state) > 0:
+                    return corp_state[0]
             return {}
         except (Exception, psycopg2.DatabaseError) as error:
             print(error)

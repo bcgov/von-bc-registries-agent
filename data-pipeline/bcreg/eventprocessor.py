@@ -512,6 +512,15 @@ class EventProcessor:
         cred['id'] = cred_id
         return cred
 
+    # credential effective date is the latest of the individual effective dates in the credential
+    def credential_effective_date(self, corp_cred, corp_info):
+        effective_date = corp_cred['entity_status_effective']
+        if 'entity_name_effective' in corp_cred and effective_date < corp_cred['entity_name_effective']:
+            effective_date = corp_cred['entity_name_effective']
+        if 'entity_name_assumed_effective' in corp_cred and effective_date < corp_cred['entity_name_assumed_effective']:
+            effective_date = corp_cred['entity_name_assumed_effective']
+        return effective_date
+
     # generate credentials for the provided corp
     def generate_credentials(self, system_typ_cd, prev_event_id, last_event_id, corp_num, corp_info):
         corp_creds = []
@@ -532,27 +541,29 @@ class EventProcessor:
                 corp_cred['entity_name_assumed_effective'] = corp_info['org_name_assumed'][0]['start_filing_event']['effective_dt']
             else:
                 corp_cred['entity_name_assumed_effective'] = corp_info['org_name_assumed'][0]['start_event']['event_timestmp']
-        if 0 < len(corp_info['org_name_trans']):
-            corp_cred['entity_name_trans'] = corp_info['org_name_trans'][0]['corp_nme'] 
-            if 'effectiv_dt' in corp_info['org_name_trans'][0]['start_filing_event']:
-                corp_cred['entity_name_trans_effective'] = corp_info['org_name_trans'][0]['start_filing_event']['effective_dt']
-            else:
-                corp_cred['entity_name_trans_effective'] = corp_info['org_name_trans'][0]['start_event']['event_timestmp']
+        # leave out trans names
+        #if 0 < len(corp_info['org_name_trans']):
+        #    corp_cred['entity_name_trans'] = corp_info['org_name_trans'][0]['corp_nme'] 
+        #    if 'effectiv_dt' in corp_info['org_name_trans'][0]['start_filing_event']:
+        #        corp_cred['entity_name_trans_effective'] = corp_info['org_name_trans'][0]['start_filing_event']['effective_dt']
+        #    else:
+        #        corp_cred['entity_name_trans_effective'] = corp_info['org_name_trans'][0]['start_event']['event_timestmp']
         corp_cred['entity_status'] = corp_info['corp_state']['op_state_typ_cd']
         corp_cred['entity_status_effective'] = corp_info['corp_state_dt']
-        corp_cred['effective_date'] = corp_info['corp_state_dt']
         corp_cred['entity_type'] = corp_info['corp_type']['full_desc']
 
-        if 'tilma_involved' in corp_info and 'tilma_jurisdiction' in corp_info['tilma_involved']:
-            corp_cred['registration_type'] = corp_info['tilma_involved']['tilma_jurisdiction'] 
-        else:
-            corp_cred['registration_type'] = ''
+        # leave out tilma
+        #if 'tilma_involved' in corp_info and 'tilma_jurisdiction' in corp_info['tilma_involved']:
+        #    corp_cred['registration_type'] = corp_info['tilma_involved']['tilma_jurisdiction'] 
+        #else:
+        corp_cred['registration_type'] = ''
         corp_cred['home_jurisdiction'] = self.get_corp_jurisdiction(corp_info)
         if corp_cred['home_jurisdiction'] != 'BC':
             corp_cred['registered_jurisdiction'] = 'BC' 
         else:
             corp_cred['registered_jurisdiction'] = '' 
 
+        corp_cred['effective_date'] = self.credential_effective_date(corp_cred, corp_info)
 
         corp_creds.append(self.build_credential_dict(corp_credential, corp_schema, corp_version, corp_num, corp_cred))
 
