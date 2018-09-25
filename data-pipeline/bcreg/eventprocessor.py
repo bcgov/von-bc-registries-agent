@@ -547,14 +547,16 @@ class EventProcessor:
         corp_cred['effective_date'] = corp_info['corp_state_dt']
         corp_cred['entity_type'] = corp_info['corp_type']['full_desc']
 
-        # TODO seems like every corporation has a registered jurisdiction of 'BC'
-        corp_cred['registered_jurisdiction'] = 'BC' # self.get_corp_jurisdiction(corp_info)
-
         if 'tilma_involved' in corp_info and 'tilma_jurisdiction' in corp_info['tilma_involved']:
             corp_cred['registration_type'] = corp_info['tilma_involved']['tilma_jurisdiction'] 
         else:
             corp_cred['registration_type'] = ''
         corp_cred['home_jurisdiction'] = self.get_corp_jurisdiction(corp_info)
+        if corp_cred['home_jurisdiction'] != 'BC':
+            corp_cred['registered_jurisdiction'] = 'BC' 
+        else:
+            corp_cred['registered_jurisdiction'] = '' 
+
 
         corp_creds.append(self.build_credential_dict(corp_credential, corp_schema, corp_version, corp_num, corp_cred))
 
