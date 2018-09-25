@@ -607,9 +607,10 @@ class EventProcessor:
                     SELECT RECORD_ID
                     FROM EVENT_BY_CORP_FILING 
                     WHERE PROCESS_DATE is null
+                    ORDER BY RECORD_ID
+                    LIMIT """ + str(CORP_BATCH_SIZE) + """
                   )
-                  ORDER BY RECORD_ID
-                  LIMIT """ + str(CORP_BATCH_SIZE)
+                  ORDER BY RECORD_ID;"""
 
         sql1a = """SELECT RECORD_ID, 
                           SYSTEM_TYPE_CD, 
@@ -624,9 +625,10 @@ class EventProcessor:
                      SELECT RECORD_ID
                      FROM CORP_HISTORY_LOG 
                      WHERE PROCESS_DATE is null
+                     ORDER BY RECORD_ID
+                     LIMIT """ + str(CORP_BATCH_SIZE) + """
                    )
-                   ORDER BY RECORD_ID
-                   LIMIT """ + str(CORP_BATCH_SIZE)
+                   ORDER BY RECORD_ID;"""
 
         sql2 = """INSERT INTO CORP_HISTORY_LOG (SYSTEM_TYPE_CD, PREV_EVENT_ID, LAST_EVENT_ID, CORP_NUM, CORP_STATE, CORP_JSON, ENTRY_DATE)
                   VALUES(%s, %s, %s, %s, %s, %s, %s) RETURNING RECORD_ID;"""
