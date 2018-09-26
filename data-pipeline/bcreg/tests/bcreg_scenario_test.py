@@ -122,7 +122,7 @@ def test_scenario_trans_name():
     assert my_creds[0]['credential']['registered_jurisdiction'] == ''
     assert my_creds[0]['credential']['registration_id'] == 'BC4241301'
     assert my_creds[0]['credential']['entity_name'] == 'XCUBPIM YRSWHAWTLUMFRPRUZ'
-    assert my_creds[0]['credential']['entity_name_trans'] == 'MMRTKDCWLGXOFULSZYEIIHKRO'
+    # assert my_creds[0]['credential']['entity_name_trans'] == 'MMRTKDCWLGXOFULSZYEIIHKRO'
 
     assert my_creds[1]['cred_type'] == 'ADDR'
     assert my_creds[1]['credential']['address_type'] == 'Registered Office'
