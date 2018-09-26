@@ -159,14 +159,6 @@
                     "value": "${TOB_APP_URL}"
                   },
                   {
-                    "name": "TOB_INDY_DID",
-                    "value": "${TOB_INDY_DID}"
-                  },
-                  {
-                    "name": "TOB_INDY_SEED",
-                    "value": "${TOB_INDY_SEED}"
-                  },
-                  {
                     "name": "WALLET_SEED_BCREG",
                     "value": "${WALLET_SEED_BCREG}"
                   }
@@ -357,20 +349,6 @@
       "description": "The URL of the TOB application.",
       "required": true,
       "value": "https://angular-on-nginx-devex-von-bc-tob-dev.pathfinder.gov.bc.ca/"
-    },
-    {
-      "name": "TOB_INDY_DID",
-      "displayName": "TOB Indy DID",
-      "description": "The DID for the TOB application.",
-      "required": false,
-      "value": ""
-    },
-    {
-      "name": "TOB_INDY_SEED",
-      "displayName": "TOB Indy SEED",
-      "description": "The SEED for the TOB application.",
-      "required": true,
-      "value": "bc_tob_dev_000000000000000000000"
     },
     {
       "name": "WALLET_SEED_BCREG",

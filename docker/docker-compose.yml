@@ -39,8 +39,6 @@ services:
       PYTHON_ENV: ${PYTHON_ENV:-development}
       TOB_API_URL: ${TOB_API_URL:-}
       TOB_APP_URL: ${TOB_APP_URL:-}
-      TOB_INDY_DID: ${TOB_INDY_DID:-}
-      TOB_INDY_SEED: ${TOB_INDY_SEED:-}
       WALLET_SEED_BCREG: ${WALLET_SEED_BCREG:-}
     external_links:
        - tob_tob-api_1:tob-api
