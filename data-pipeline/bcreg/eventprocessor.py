@@ -36,6 +36,8 @@ class DateTimeEncoder(json.JSONEncoder):
                 return tz_aware.astimezone(pytz.utc).isoformat()
             except (Exception) as error:
                 print("date conversion error", o, error)
+                if o.year <= datetime.MINYEAR or o.year >= datetime.MAXYEAR:
+                    return ""
                 return o.isoformat()
         return json.JSONEncoder.default(self, o)
 
@@ -476,24 +478,24 @@ class EventProcessor:
                    AND CREDENTIAL_TYPE_CD = %s
                    AND CREDENTIAL_ID = %s
                  ORDER BY RECORD_ID DESC"""
-        cur = None
-        try:
-            # check whatever is the most recent "version" of this credential
-            cur = self.conn.cursor()
-            cur.execute(sql, (system_typ_cd, corp_num, corp_state, cred_type, cred_id,))
-            row = cur.fetchone()
-            existing_cred = ''
-            if row is not None:
-                existing_cred = row[0]
-            cur.close()
-            cur = None
-            return (existing_cred == credential)
-        except (Exception, psycopg2.DatabaseError) as error:
-            print(error)
-            raise
-        finally:
-            if cur is not None:
-                cur.close()
+        #cur = None
+        #try:
+        #    # check whatever is the most recent "version" of this credential
+        #    cur = self.conn.cursor()
+        #    cur.execute(sql, (system_typ_cd, corp_num, corp_state, cred_type, cred_id,))
+        #    row = cur.fetchone()
+        #    existing_cred = ''
+        #    if row is not None:
+        #        existing_cred = row[0]
+        #    cur.close()
+        #    cur = None
+        #    return (existing_cred == credential)
+        #except (Exception, psycopg2.DatabaseError) as error:
+        #    print(error)
+        #    raise
+        #finally:
+        #    if cur is not None:
+        #        cur.close()
         return False
 
     # store credentials for the provided corp

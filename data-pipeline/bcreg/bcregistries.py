@@ -36,6 +36,8 @@ class CustomJsonEncoder(json.JSONEncoder):
                 return tz_aware.astimezone(pytz.utc).isoformat()
             except (Exception) as error:
                 print("date conversion error", o, error)
+                if o.year <= datetime.MINYEAR or o.year >= datetime.MAXYEAR:
+                    return ""
                 return o.isoformat()
         if isinstance(o, (list, dict, str, int, float, bool, type(None))):
             return JSONEncoder.default(self, o)        
@@ -1118,6 +1120,7 @@ class BCRegistries:
             if len(corp_state) > 0:
                 return corp_state[0]
             else:
+                cursor = self.get_db_connection().cursor()
                 cursor.execute(sql_state + sql_state_inactive, (corp_num,))
                 desc = cursor.description
                 column_names = [col[0] for col in desc]
