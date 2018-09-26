@@ -161,7 +161,7 @@
                   {
                     "name": "WALLET_SEED_BCREG",
                     "value": "${WALLET_SEED_BCREG}"
-                  }
+                  },
                   {
                     "name": "WALLET_TYPE",
                     "value": "${WALLET_TYPE}"
