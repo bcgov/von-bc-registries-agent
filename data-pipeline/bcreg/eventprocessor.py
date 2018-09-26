@@ -22,6 +22,7 @@ dba_schema = 'relationship.bc_registries'
 dba_version = '1.0.36'
 
 CORP_BATCH_SIZE = 3000
+FALLBACK_CORP_BATCH_SIZE = 300
 
 # for now, we are in PST time
 timezone = pytz.timezone("America/Los_Angeles")
@@ -617,7 +618,7 @@ class EventProcessor:
                     FROM EVENT_BY_CORP_FILING 
                     WHERE PROCESS_DATE is null
                     ORDER BY RECORD_ID
-                    LIMIT """ + str(CORP_BATCH_SIZE) + """
+                    LIMIT !BS!
                   )
                   ORDER BY RECORD_ID;"""
 
@@ -635,7 +636,7 @@ class EventProcessor:
                      FROM CORP_HISTORY_LOG 
                      WHERE PROCESS_DATE is null
                      ORDER BY RECORD_ID
-                     LIMIT """ + str(CORP_BATCH_SIZE) + """
+                     LIMIT !BS!
                    )
                    ORDER BY RECORD_ID;"""
 
@@ -656,6 +657,8 @@ class EventProcessor:
         processing_time = 0
         max_processing_time = 10 * 60
         continue_loop = True
+        max_batch_size = CORP_BATCH_SIZE
+        use_cache_param = use_cache
         while continue_loop and processing_time < max_processing_time:
             corps = []
             specific_corps = []
@@ -666,7 +669,7 @@ class EventProcessor:
                 try:
                     # we are loading data from BC Registries based on the corp event queue
                     cur = self.conn.cursor()
-                    cur.execute(sql1)
+                    cur.execute(sql1.replace("!BS!", str(max_batch_size)))
                     row = cur.fetchone()
                     while row is not None:
                         corps.append({'RECORD_ID':row[0], 'SYSTEM_TYPE_CD':row[1], 'PREV_EVENT_ID':row[2], 'LAST_EVENT_ID':row[3], 
@@ -685,7 +688,7 @@ class EventProcessor:
                 try:
                     # not loading from BC Reg, just processing data already loaded in corp_history
                     cur = self.conn.cursor()
-                    cur.execute(sql1a)
+                    cur.execute(sql1a.replace("!BS!", str(max_batch_size)))
                     row = cur.fetchone()
                     while row is not None:
                         # print(row)
@@ -713,10 +716,14 @@ class EventProcessor:
                         except (Exception, psycopg2.DatabaseError) as error:
                             # raises a SQL error if error during caching
                             print(error)
-                            print("Error during caching operation, switching to non-cached mode")
-                            #raise
-                            corps = []
-                            use_cache = False
+                            if max_batch_size == CORP_BATCH_SIZE:
+                                print("Error during caching operation, switching to smaller cache size")
+                                corps = []
+                                max_batch_size = FALLBACK_CORP_BATCH_SIZE
+                            else:
+                                print("Error during caching operation, switching to non-cached mode")
+                                corps = []
+                                use_cache = False
 
                     for i,corp in enumerate(corps): 
                         process_success = True
@@ -817,6 +824,11 @@ class EventProcessor:
 
                 processing_time = time.perf_counter() - start_time
                 print('Processing: ' + str(processing_time))
+
+                # if we processed a set of corps in non-cached mode, try to switch back
+                if len(corps) > 0 and not use_cache:
+                    print("Restoring cache mode")
+                    use_cache = use_cache_param
 
 
     # process corps that have been queued - update data from bc_registries
