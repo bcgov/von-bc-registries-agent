@@ -430,7 +430,7 @@ class EventProcessor:
             # re-raise all others
             stre = str(e)
             if "duplicate key value violates unique constraint" in stre and "cl_hash_index" in stre:
-                print("Hash exception, skipping duplicate credential:", e)
+                print("Hash exception, skipping duplicate credential for corp:", corp_num, cred_type, cred_id, e)
                 cur.execute("rollback to savepoint save_" + cred_type)
             else:
                 raise

@@ -106,18 +106,24 @@ issuers:
               value:
                 input: entity_type
                 from: claim
-          - model: category
+          - model: attribute
             fields:
               type:
                 input: registered_jurisdiction
                 from: value
+              format:
+                input: jurisdiction
+                from: value
               value:
                 input: registered_jurisdiction
                 from: claim
-          - model: category
+          - model: attribute
             fields:
               type:
                 input: home_jurisdiction
+                from: value
+              format:
+                input: jurisdiction
                 from: value
               value:
                 input: home_jurisdiction
