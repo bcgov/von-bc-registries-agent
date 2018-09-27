@@ -9,6 +9,20 @@
   },
   "objects": [
     {
+      "kind": "Secret",
+      "apiVersion": "v1",
+      "metadata": {
+        "name": "${WALLET_CREDENTIAL_STORE_NAME}",
+        "labels": {
+          "app": "${NAME}"
+        }
+      },
+      "data": {
+        "key": "${WALLET_ENCRYPTION_KEY}"
+      },
+      "type": "Opaque"
+    },
+    {
       "kind": "Service",
       "apiVersion": "v1",
       "metadata": {
@@ -198,6 +212,15 @@
                       "secretKeyRef": {
                         "name": "${POSTGRESQL_WALLET_HOST}",
                         "key": "admin-password"
+                      }
+                    }
+                  },
+                  {
+                    "name": "WALLET_ENCRYPTION_KEY",
+                    "valueFrom": {
+                      "secretKeyRef": {
+                        "name": "${WALLET_CREDENTIAL_STORE_NAME}",
+                        "key": "key"
                       }
                     }
                   }
@@ -416,6 +439,21 @@
       "required": true,
       "description": "The port number of the deployed database hosting the wallet.  Only used when WALLET_TYPE = postgre.",
       "value": "5432"
+    },
+    {
+      "name": "WALLET_ENCRYPTION_KEY",
+      "displayName": "Wallet Encryption Key",
+      "description": "The encryption key to be used for the wallets.  Needs to be basee64 encoded.",
+      "required": true,
+      "generate": "expression",
+      "from": "[a-zA-Z0-9_~!@#$%^&*()-=<>,.?;:|]{16}"
+    },
+    {
+      "name": "WALLET_CREDENTIAL_STORE_NAME",
+      "displayName": "Wallet Credential Store Name",
+      "description": "The name of the wallet credential store (aka The name of the secret that contains the wallet credentials).",
+      "required": true,
+      "value": "wallet-credentials"
     },
     {
       "name": "MOUNT_PATH",
