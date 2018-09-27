@@ -5,6 +5,7 @@ import datetime
 import pytz
 import json
 import time
+import hashlib
 from bcreg.config import config
 from bcreg.bcregistries import BCRegistries
 
@@ -203,12 +204,18 @@ class EventProcessor:
                 SCHEMA_NAME VARCHAR(255) NOT NULL,
                 SCHEMA_VERSION VARCHAR(255) NOT NULL,
                 CREDENTIAL_JSON JSON NOT NULL,
+                CREDENTIAL_HASH VARCHAR(64) NOT NULL, 
                 ENTRY_DATE TIMESTAMP NOT NULL,
                 END_DATE TIMESTAMP,
                 PROCESS_DATE TIMESTAMP,
                 PROCESS_SUCCESS CHAR,
                 PROCESS_MSG VARCHAR(255)
             )
+            """,
+            """
+            -- Hit duplicate credentials
+            CREATE UNIQUE INDEX IF NOT EXISTS cl_hash_index ON CREDENTIAL_LOG 
+            (CREDENTIAL_HASH);
             """,
             """
             -- Hit for counts and queries
@@ -235,11 +242,11 @@ class EventProcessor:
             CREATE INDEX IF NOT EXISTS cl_ri_pd_null_asc ON CREDENTIAL_LOG 
             (RECORD_ID ASC, PROCESS_DATE) WHERE PROCESS_DATE IS NULL;
             """,
-            """
-            -- Hit when checking generated credentials
-            CREATE INDEX IF NOT EXISTS cl_ri_stc_cn_cs_ctc_ci_desc ON CREDENTIAL_LOG 
-            (RECORD_ID DESC,SYSTEM_TYPE_CD, CORP_NUM, CORP_STATE, CREDENTIAL_TYPE_CD, CREDENTIAL_ID)
-            """,
+            #"""
+            #-- Hit when checking generated credentials
+            #CREATE INDEX IF NOT EXISTS cl_ri_stc_cn_cs_ctc_ci_desc ON CREDENTIAL_LOG 
+            #(RECORD_ID DESC,SYSTEM_TYPE_CD, CORP_NUM, CORP_STATE, CREDENTIAL_TYPE_CD, CREDENTIAL_ID)
+            #""",
             """
             -- Hit for counts
             CREATE INDEX IF NOT EXISTS cl_ps ON CREDENTIAL_LOG
@@ -409,11 +416,24 @@ class EventProcessor:
     # insert a generated JSON credential into our log
     def insert_json_credential(self, cur, system_cd, prev_event_id, last_event_id, corp_num, corp_state, cred_type, cred_id, schema_name, schema_version, credential):
         sql = """INSERT INTO CREDENTIAL_LOG (SYSTEM_TYPE_CD, PREV_EVENT_ID, LAST_EVENT_ID, CORP_NUM, CORP_STATE, CREDENTIAL_TYPE_CD, CREDENTIAL_ID, 
-                SCHEMA_NAME, SCHEMA_VERSION, CREDENTIAL_JSON, ENTRY_DATE)
-                VALUES(%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s) RETURNING RECORD_ID;"""
+                SCHEMA_NAME, SCHEMA_VERSION, CREDENTIAL_JSON, CREDENTIAL_HASH, ENTRY_DATE)
+                VALUES(%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s) RETURNING RECORD_ID;"""
         # create row(s) for corp creds json info
-        cur.execute(sql, (system_cd, prev_event_id, last_event_id, corp_num, corp_state, cred_type, cred_id, 
-                    schema_name, schema_version, json.dumps(credential, cls=DateTimeEncoder), datetime.datetime.now(),))
+        cred_json = json.dumps(credential, cls=DateTimeEncoder, sort_keys=True)
+        cred_hash = hashlib.sha256(cred_json.encode('utf-8')).hexdigest()
+        try:
+            cur.execute("savepoint save_" + cred_type)
+            cur.execute(sql, (system_cd, prev_event_id, last_event_id, corp_num, corp_state, cred_type, cred_id, 
+                        schema_name, schema_version, cred_json, cred_hash, datetime.datetime.now(),))
+        except Exception as e:
+            # ignore duplicate hash ("duplicate key value violates unique constraint "cl_hash_index"")
+            # re-raise all others
+            stre = str(e)
+            if "duplicate key value violates unique constraint" in stre and "cl_hash_index" in stre:
+                print("Hash exception, skipping duplicate credential:", e)
+                cur.execute("rollback to savepoint save_" + cred_type)
+            else:
+                raise
 
     # determine jurisdiction for corp
     def get_corp_jurisdiction(self, corp):
@@ -478,6 +498,7 @@ class EventProcessor:
                    AND CREDENTIAL_TYPE_CD = %s
                    AND CREDENTIAL_ID = %s
                  ORDER BY RECORD_ID DESC"""
+        # N/A this is now handled by the hash column with unique index
         #cur = None
         #try:
         #    # check whatever is the most recent "version" of this credential
