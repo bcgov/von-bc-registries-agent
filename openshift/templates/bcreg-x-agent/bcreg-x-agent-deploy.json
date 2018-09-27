@@ -18,7 +18,10 @@
         }
       },
       "data": {
-        "key": "${WALLET_ENCRYPTION_KEY}"
+        "key": "${WALLET_ENCRYPTION_KEY}",
+        "holder-seed": "${HOLDER_WALLET_SEED}",
+        "verifier-seed": "${VERIFIER_WALLET_SEED}",
+        "issuer-seed": "${ISSUER_WALLET_SEED}"
       },
       "type": "Opaque"
     },
@@ -173,10 +176,6 @@
                     "value": "${TOB_APP_URL}"
                   },
                   {
-                    "name": "WALLET_SEED_BCREG",
-                    "value": "${WALLET_SEED_BCREG}"
-                  },
-                  {
                     "name": "WALLET_TYPE",
                     "value": "${WALLET_TYPE}"
                   },
@@ -221,6 +220,15 @@
                       "secretKeyRef": {
                         "name": "${WALLET_CREDENTIAL_STORE_NAME}",
                         "key": "key"
+                      }
+                    }
+                  },
+                  {
+                    "name": "WALLET_SEED_BCREG",
+                    "valueFrom": {
+                      "secretKeyRef": {
+                        "name": "${WALLET_CREDENTIAL_STORE_NAME}",
+                        "key": "issuer-seed"
                       }
                     }
                   }
@@ -413,13 +421,6 @@
       "value": "https://angular-on-nginx-devex-von-bc-tob-dev.pathfinder.gov.bc.ca/"
     },
     {
-      "name": "WALLET_SEED_BCREG",
-      "displayName": "BC Reg Wallet Seed",
-      "description": "The SEED for the BC Reg Agent.",
-      "required": true,
-      "value": "bc_reg_agent_dev_000000000000000"
-    },
-    {
       "name": "WALLET_TYPE",
       "displayName": "Wallet Storage Type",
       "description": "The wallet storage type.  Your choice of 'postgres' or 'sqlite' at the moment.  If not defined, defaults to 'sqlite' for compatibility",
@@ -444,6 +445,30 @@
       "name": "WALLET_ENCRYPTION_KEY",
       "displayName": "Wallet Encryption Key",
       "description": "The encryption key to be used for the wallets.  Needs to be basee64 encoded.",
+      "required": true,
+      "generate": "expression",
+      "from": "[a-zA-Z0-9_~!@#$%^&*()-=<>,.?;:|]{16}"
+    },
+    {
+      "name": "HOLDER_WALLET_SEED",
+      "displayName": "Holder Wallet Seed",
+      "description": "The Seed used for the holder wallet.  Needs to be basee64 encoded.",
+      "required": true,
+      "generate": "expression",
+      "from": "[a-zA-Z0-9_~!@#$%^&*()-=<>,.?;:|]{16}"
+    },
+    {
+      "name": "VERIFIER_WALLET_SEED",
+      "displayName": "Verifier Wallet Seed",
+      "description": "The Seed used for the verifier wallet.  Needs to be basee64 encoded.",
+      "required": true,
+      "generate": "expression",
+      "from": "[a-zA-Z0-9_~!@#$%^&*()-=<>,.?;:|]{16}"
+    },
+    {
+      "name": "ISSUER_WALLET_SEED",
+      "displayName": "Issuer Wallet Seed",
+      "description": "The Seed used for the issuer wallet.  Needs to be basee64 encoded.",
       "required": true,
       "generate": "expression",
       "from": "[a-zA-Z0-9_~!@#$%^&*()-=<>,.?;:|]{16}"
