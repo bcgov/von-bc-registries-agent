@@ -109,13 +109,21 @@ _holderWalletPrefix="${_walletPrefix}H"
 _verifierWalletPrefix="${_walletPrefix}V"
 _issuerWalletPrefix="${_walletPrefix}I"
 
-# The BC Registries Agent does not use a holder of verifier wallet at the moment so just generate seeds without asking ...
+# The BC Registries Agent does not use a holder or verifier wallet at the moment so just generate seeds without asking ...
 # readParameter "HOLDER_WALLET_SEED - Please provide the holder wallet seed for the environment.  If left blank, a seed will be randomly generated using openssl:" HOLDER_WALLET_SEED $(generateSeed ${_holderWalletPrefix}) "true"
 # readParameter "VERIFIER_WALLET_SEED - Please provide the verifier wallet seed for the environment.  If left blank, a seed will be randomly generated using openssl:" VERIFIER_WALLET_SEED $(generateSeed ${_verifierWalletPrefix}) "true"
 writeParameter "HOLDER_WALLET_SEED" $(generateSeed ${_holderWalletPrefix}) "true"
 writeParameter "VERIFIER_WALLET_SEED" $(generateSeed ${_verifierWalletPrefix}) "true"
 
 readParameter "ISSUER_WALLET_SEED - Please provide the issuer wallet seed for the environment.  If left blank, a seed will be randomly generated using openssl:" ISSUER_WALLET_SEED $(generateSeed ${_issuerWalletPrefix}) "true"
+
+# The BC Registries Agent does not use a holder or verifier wallet at the moment so just write the DIDs without asking ...
+# readParameter "HOLDER_WALLET_DID - Please provide the holder wallet did for the environment.  The default is an empty string:" HOLDER_WALLET_DID "" "true"
+# readParameter "VERIFIER_WALLET_DID - Please provide the verifier did seed for the environment.  The default is an empty string:" VERIFIER_WALLET_DID "" "true"
+writeParameter "HOLDER_WALLET_DID" "" "true"
+writeParameter "VERIFIER_WALLET_DID" "" "true"
+
+readParameter "ISSUER_WALLET_DID - Please provide the issuer wallet did for the environment.  The default is an empty string:" ISSUER_WALLET_DID "" "true"
 
 SPECIALDEPLOYPARMS="--param-file=${_overrideParamFile}"
 echo ${SPECIALDEPLOYPARMS}
