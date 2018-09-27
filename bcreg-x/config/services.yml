@@ -219,37 +219,3 @@ issuers:
               type:
                 input: address_type
                 from: claim
-
-verifiers:
-  bctob:
-    name: BC OrgBook
-    connection:
-      type: TheOrgBook
-      api_url: $TOB_API_URL
-      sign_target: false
-    wallet:
-      seed: "tob-verifier-wallet-000000000001"
-
-proof_requests:
-  registration:
-    version: '1.0.0'
-    schemas:
-      - key:
-          # did: DtjQTjwNq7ZyStCE7zwL4r
-          name: registration.bc_registries
-          version: '1.0.32'
-        attributes:
-          - registration_id
-          - entity_name
-          - entity_name_effective
-          - entity_name_assumed
-          - entity_name_assumed_effective
-          - entity_name_trans
-          - entity_name_trans_effective
-          - entity_status
-          - entity_status_effective
-          - entity_type
-          - registered_jurisdiction
-          - registration_type
-          - home_jurisdiction
-          - effective_date
