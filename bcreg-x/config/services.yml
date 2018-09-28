@@ -12,6 +12,7 @@ issuers:
       sign_target: false
 
     wallet:
+      name: ${POSTGRESQL_WALLET_NAME:-bcreg_issuer}
       seed: $WALLET_SEED_BCREG
       type: $WALLET_TYPE
       params:
