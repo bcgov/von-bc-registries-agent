@@ -6,6 +6,7 @@ import json
 from bcreg.bcregistries import BCRegistries, system_type
 from bcreg.eventprocessor import EventProcessor
 from bcreg.tests.sample_corp_jurisdictions import sample_test_jurisdiction_corps
+from bcreg.tests.sample_corps import sample_test_corps
 
 
 def adapt_decimal(d):
@@ -37,6 +38,25 @@ class DateTimeEncoder(json.JSONEncoder):
 
 
 # scenarios for different jurisdictions
+def test_scenario_jurisdiction_bc():
+    my_corp_num = '3014589'
+    my_corp_dict = sample_test_corps['corp_' + my_corp_num]
+    my_creds = generate_creds_for_corp(my_corp_dict)
+
+    print("# BC Corp")
+    assert len(my_creds) == 2
+
+    assert my_creds[0]['cred_type'] == 'REG'
+    assert my_creds[0]['credential']['entity_status'] == 'ACT'
+    assert my_creds[0]['credential']['entity_type'] == 'BC Unlimited Liability Company'
+    assert my_creds[0]['credential']['home_jurisdiction'] == 'BC'
+    assert my_creds[0]['credential']['registered_jurisdiction'] == ''
+    assert my_creds[0]['credential']['registration_id'] == 'BC3014589'
+
+    assert my_creds[1]['cred_type'] == 'ADDR'
+    assert my_creds[1]['credential']['address_type'] == 'Registered Office'
+    assert my_creds[1]['credential']['registration_id'] == 'BC3014589'
+
 
 def test_scenario_jurisdiction_man():
     my_corp_num = 'A5215485'
