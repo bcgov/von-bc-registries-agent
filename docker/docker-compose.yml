@@ -48,13 +48,14 @@ services:
       WALLET_ENCRYPTION_KEY: ${WALLET_ENCRYPTION_KEY}
       WALLET_SEED_BCREG: ${WALLET_SEED_BCREG:-}
       ISSUER_WALLET_DID: ${ISSUER_WALLET_DID}
+      HTTP_FORCE_CLOSE_CONNECTIONS: "true"
     external_links:
        - tob_tob-api_1:tob-api
     networks:
       - orgbook
       - vonx
     depends_on:
-      - wallet-db
+      - bc-wallet-db
     volumes:
       - bcreg-agent-wallet:/home/indy/.indy_client/wallet
 
@@ -109,7 +110,7 @@ services:
     volumes:
       - mara-data:/var/lib/pgsql/data
 
-  wallet-db:
+  bc-wallet-db:
     image: registry.access.redhat.com/rhscl/postgresql-95-rhel7:9.5
     environment:
       - POSTGRESQL_USER=${POSTGRESQL_USER}
