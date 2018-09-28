@@ -41,6 +41,16 @@ usage () {
         For example;
           $0 -e dev deleteWallets bcreg-x-agent
 
+    scaleUp
+      - Scale up one or more pods.
+        For example;
+          $0 -e dev scaleUp mara
+
+    scaleDown
+      - Scale down one or more pods.
+        For example;
+          $0 -e dev scaleDown mara
+
     recycle
       - Recycle one or more pods.
         For example;
@@ -143,6 +153,16 @@ case "${_cmd}" in
   deletewallets)
     deleteWallets ${@}
     recyclePods ${@}
+    ;;
+  scaleup)
+    switchProject
+    exitOnError
+    scaleUp ${@}
+    ;;
+  scaledown)
+    switchProject
+    exitOnError
+    scaleDown ${@}
     ;;
   recycle)
     recyclePods ${@}
