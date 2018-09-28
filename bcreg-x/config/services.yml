@@ -2,9 +2,8 @@ issuers:
   bcreg:
     name: BC Corporate Registry
     abbreviation: BCReg
-    url: "https://www2.gov.bc.ca/gov/content/governments/organizational-structure/\
-      ministries-organizations/ministries/citizens-services/bc-registries-online-services"
-    email: bcreg.test.issuer@example.ca
+    url: https://www2.gov.bc.ca/gov/content/governments/organizational-structure/ministries-organizations/ministries/citizens-services/bc-registries-online-services
+    email: bcregistries@gov.bc.ca
     logo_path: ../assets/img/bcreg-logo.png
 
     connection:
@@ -118,6 +117,28 @@ issuers:
                 from: value
               value:
                 input: entity_type
+                from: claim
+          - model: attribute
+            fields:
+              type:
+                input: registered_jurisdiction
+                from: value
+              format:
+                input: jurisdiction
+                from: value
+              value:
+                input: registered_jurisdiction
+                from: claim
+          - model: attribute
+            fields:
+              type:
+                input: home_jurisdiction
+                from: value
+              format:
+                input: jurisdiction
+                from: value
+              value:
+                input: home_jurisdiction
                 from: claim
 
       - description: Relationship

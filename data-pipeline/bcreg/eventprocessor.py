@@ -5,27 +5,28 @@ import datetime
 import pytz
 import json
 import time
+import hashlib
 from bcreg.config import config
 from bcreg.bcregistries import BCRegistries
 
 
 corp_credential = 'REG'
 corp_schema = 'registration.bc_registries'
-corp_version = '1.0.32'
+corp_version = '1.0.36'
 
 addr_credential = 'ADDR'
 addr_schema = 'address.bc_registries'
-addr_version = '1.0.32'
+addr_version = '1.0.36'
 
 dba_credential = 'REL'
 dba_schema = 'relationship.bc_registries'
-dba_version = '1.0.32'
+dba_version = '1.0.36'
 
 CORP_BATCH_SIZE = 3000
+FALLBACK_CORP_BATCH_SIZE = 300
 
 # for now, we are in PST time
 timezone = pytz.timezone("America/Los_Angeles")
-epochstart = timezone.localize(datetime.datetime(1970, 1, 1))
 
 
 class DateTimeEncoder(json.JSONEncoder):
@@ -33,13 +34,12 @@ class DateTimeEncoder(json.JSONEncoder):
         if isinstance(o, datetime.datetime):
             try:
                 tz_aware = timezone.localize(o)
+                return tz_aware.astimezone(pytz.utc).isoformat()
             except (Exception) as error:
                 print("date conversion error", o, error)
+                if o.year <= datetime.MINYEAR or o.year >= datetime.MAXYEAR:
+                    return ""
                 return o.isoformat()
-            if tz_aware >= epochstart:
-                return str(int((tz_aware - epochstart).total_seconds()))
-            else:
-                return tz_aware.astimezone(pytz.utc).isoformat()
         return json.JSONEncoder.default(self, o)
 
 
@@ -204,12 +204,18 @@ class EventProcessor:
                 SCHEMA_NAME VARCHAR(255) NOT NULL,
                 SCHEMA_VERSION VARCHAR(255) NOT NULL,
                 CREDENTIAL_JSON JSON NOT NULL,
+                CREDENTIAL_HASH VARCHAR(64) NOT NULL, 
                 ENTRY_DATE TIMESTAMP NOT NULL,
                 END_DATE TIMESTAMP,
                 PROCESS_DATE TIMESTAMP,
                 PROCESS_SUCCESS CHAR,
                 PROCESS_MSG VARCHAR(255)
             )
+            """,
+            """
+            -- Hit duplicate credentials
+            CREATE UNIQUE INDEX IF NOT EXISTS cl_hash_index ON CREDENTIAL_LOG 
+            (CREDENTIAL_HASH);
             """,
             """
             -- Hit for counts and queries
@@ -236,11 +242,11 @@ class EventProcessor:
             CREATE INDEX IF NOT EXISTS cl_ri_pd_null_asc ON CREDENTIAL_LOG 
             (RECORD_ID ASC, PROCESS_DATE) WHERE PROCESS_DATE IS NULL;
             """,
-            """
-            -- Hit when checking generated credentials
-            CREATE INDEX IF NOT EXISTS cl_ri_stc_cn_cs_ctc_ci_desc ON CREDENTIAL_LOG 
-            (RECORD_ID DESC,SYSTEM_TYPE_CD, CORP_NUM, CORP_STATE, CREDENTIAL_TYPE_CD, CREDENTIAL_ID)
-            """,
+            #"""
+            #-- Hit when checking generated credentials
+            #CREATE INDEX IF NOT EXISTS cl_ri_stc_cn_cs_ctc_ci_desc ON CREDENTIAL_LOG 
+            #(RECORD_ID DESC,SYSTEM_TYPE_CD, CORP_NUM, CORP_STATE, CREDENTIAL_TYPE_CD, CREDENTIAL_ID)
+            #""",
             """
             -- Hit for counts
             CREATE INDEX IF NOT EXISTS cl_ps ON CREDENTIAL_LOG
@@ -410,11 +416,24 @@ class EventProcessor:
     # insert a generated JSON credential into our log
     def insert_json_credential(self, cur, system_cd, prev_event_id, last_event_id, corp_num, corp_state, cred_type, cred_id, schema_name, schema_version, credential):
         sql = """INSERT INTO CREDENTIAL_LOG (SYSTEM_TYPE_CD, PREV_EVENT_ID, LAST_EVENT_ID, CORP_NUM, CORP_STATE, CREDENTIAL_TYPE_CD, CREDENTIAL_ID, 
-                SCHEMA_NAME, SCHEMA_VERSION, CREDENTIAL_JSON, ENTRY_DATE)
-                VALUES(%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s) RETURNING RECORD_ID;"""
+                SCHEMA_NAME, SCHEMA_VERSION, CREDENTIAL_JSON, CREDENTIAL_HASH, ENTRY_DATE)
+                VALUES(%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s) RETURNING RECORD_ID;"""
         # create row(s) for corp creds json info
-        cur.execute(sql, (system_cd, prev_event_id, last_event_id, corp_num, corp_state, cred_type, cred_id, 
-                    schema_name, schema_version, json.dumps(credential, cls=DateTimeEncoder), datetime.datetime.now(),))
+        cred_json = json.dumps(credential, cls=DateTimeEncoder, sort_keys=True)
+        cred_hash = hashlib.sha256(cred_json.encode('utf-8')).hexdigest()
+        try:
+            cur.execute("savepoint save_" + cred_type)
+            cur.execute(sql, (system_cd, prev_event_id, last_event_id, corp_num, corp_state, cred_type, cred_id, 
+                        schema_name, schema_version, cred_json, cred_hash, datetime.datetime.now(),))
+        except Exception as e:
+            # ignore duplicate hash ("duplicate key value violates unique constraint "cl_hash_index"")
+            # re-raise all others
+            stre = str(e)
+            if "duplicate key value violates unique constraint" in stre and "cl_hash_index" in stre:
+                print("Hash exception, skipping duplicate credential for corp:", corp_num, cred_type, cred_id, e)
+                cur.execute("rollback to savepoint save_" + cred_type)
+            else:
+                raise
 
     # determine jurisdiction for corp
     def get_corp_jurisdiction(self, corp):
@@ -479,24 +498,25 @@ class EventProcessor:
                    AND CREDENTIAL_TYPE_CD = %s
                    AND CREDENTIAL_ID = %s
                  ORDER BY RECORD_ID DESC"""
-        cur = None
-        try:
-            # check whatever is the most recent "version" of this credential
-            cur = self.conn.cursor()
-            cur.execute(sql, (system_typ_cd, corp_num, corp_state, cred_type, cred_id,))
-            row = cur.fetchone()
-            existing_cred = ''
-            if row is not None:
-                existing_cred = row[0]
-            cur.close()
-            cur = None
-            return (existing_cred == credential)
-        except (Exception, psycopg2.DatabaseError) as error:
-            print(error)
-            raise
-        finally:
-            if cur is not None:
-                cur.close()
+        # N/A this is now handled by the hash column with unique index
+        #cur = None
+        #try:
+        #    # check whatever is the most recent "version" of this credential
+        #    cur = self.conn.cursor()
+        #    cur.execute(sql, (system_typ_cd, corp_num, corp_state, cred_type, cred_id,))
+        #    row = cur.fetchone()
+        #    existing_cred = ''
+        #    if row is not None:
+        #        existing_cred = row[0]
+        #    cur.close()
+        #    cur = None
+        #    return (existing_cred == credential)
+        #except (Exception, psycopg2.DatabaseError) as error:
+        #    print(error)
+        #    raise
+        #finally:
+        #    if cur is not None:
+        #        cur.close()
         return False
 
     # store credentials for the provided corp
@@ -515,6 +535,15 @@ class EventProcessor:
         cred['credential'] = credential
         cred['id'] = cred_id
         return cred
+
+    # credential effective date is the latest of the individual effective dates in the credential
+    def credential_effective_date(self, corp_cred, corp_info):
+        effective_date = corp_cred['entity_status_effective']
+        if 'entity_name_effective' in corp_cred and effective_date < corp_cred['entity_name_effective']:
+            effective_date = corp_cred['entity_name_effective']
+        if 'entity_name_assumed_effective' in corp_cred and effective_date < corp_cred['entity_name_assumed_effective']:
+            effective_date = corp_cred['entity_name_assumed_effective']
+        return effective_date
 
     # generate credentials for the provided corp
     def generate_credentials(self, system_typ_cd, prev_event_id, last_event_id, corp_num, corp_info):
@@ -536,25 +565,29 @@ class EventProcessor:
                 corp_cred['entity_name_assumed_effective'] = corp_info['org_name_assumed'][0]['start_filing_event']['effective_dt']
             else:
                 corp_cred['entity_name_assumed_effective'] = corp_info['org_name_assumed'][0]['start_event']['event_timestmp']
-        if 0 < len(corp_info['org_name_trans']):
-            corp_cred['entity_name_trans'] = corp_info['org_name_trans'][0]['corp_nme'] 
-            if 'effectiv_dt' in corp_info['org_name_trans'][0]['start_filing_event']:
-                corp_cred['entity_name_trans_effective'] = corp_info['org_name_trans'][0]['start_filing_event']['effective_dt']
-            else:
-                corp_cred['entity_name_trans_effective'] = corp_info['org_name_trans'][0]['start_event']['event_timestmp']
+        # leave out trans names
+        #if 0 < len(corp_info['org_name_trans']):
+        #    corp_cred['entity_name_trans'] = corp_info['org_name_trans'][0]['corp_nme'] 
+        #    if 'effectiv_dt' in corp_info['org_name_trans'][0]['start_filing_event']:
+        #        corp_cred['entity_name_trans_effective'] = corp_info['org_name_trans'][0]['start_filing_event']['effective_dt']
+        #    else:
+        #        corp_cred['entity_name_trans_effective'] = corp_info['org_name_trans'][0]['start_event']['event_timestmp']
         corp_cred['entity_status'] = corp_info['corp_state']['op_state_typ_cd']
         corp_cred['entity_status_effective'] = corp_info['corp_state_dt']
-        corp_cred['effective_date'] = corp_info['corp_state_dt']
         corp_cred['entity_type'] = corp_info['corp_type']['full_desc']
 
-        # TODO seems like every corporation has a registered jurisdiction of 'BC'
-        corp_cred['registered_jurisdiction'] = 'BC' # self.get_corp_jurisdiction(corp_info)
-
-        if 'tilma_involved' in corp_info and 'tilma_jurisdiction' in corp_info['tilma_involved']:
-            corp_cred['registration_type'] = corp_info['tilma_involved']['tilma_jurisdiction'] 
-        else:
-            corp_cred['registration_type'] = ''
+        # leave out tilma
+        #if 'tilma_involved' in corp_info and 'tilma_jurisdiction' in corp_info['tilma_involved']:
+        #    corp_cred['registration_type'] = corp_info['tilma_involved']['tilma_jurisdiction'] 
+        #else:
+        corp_cred['registration_type'] = ''
         corp_cred['home_jurisdiction'] = self.get_corp_jurisdiction(corp_info)
+        if corp_cred['home_jurisdiction'] != 'BC':
+            corp_cred['registered_jurisdiction'] = 'BC' 
+        else:
+            corp_cred['registered_jurisdiction'] = '' 
+
+        corp_cred['effective_date'] = self.credential_effective_date(corp_cred, corp_info)
 
         corp_creds.append(self.build_credential_dict(corp_credential, corp_schema, corp_version, corp_num, corp_cred))
 
@@ -608,7 +641,7 @@ class EventProcessor:
                     FROM EVENT_BY_CORP_FILING 
                     WHERE PROCESS_DATE is null
                     ORDER BY RECORD_ID
-                    LIMIT """ + str(CORP_BATCH_SIZE) + """
+                    LIMIT !BS!
                   )
                   ORDER BY RECORD_ID;"""
 
@@ -626,7 +659,7 @@ class EventProcessor:
                      FROM CORP_HISTORY_LOG 
                      WHERE PROCESS_DATE is null
                      ORDER BY RECORD_ID
-                     LIMIT """ + str(CORP_BATCH_SIZE) + """
+                     LIMIT !BS!
                    )
                    ORDER BY RECORD_ID;"""
 
@@ -647,6 +680,8 @@ class EventProcessor:
         processing_time = 0
         max_processing_time = 10 * 60
         continue_loop = True
+        max_batch_size = CORP_BATCH_SIZE
+        use_cache_param = use_cache
         while continue_loop and processing_time < max_processing_time:
             corps = []
             specific_corps = []
@@ -657,7 +692,7 @@ class EventProcessor:
                 try:
                     # we are loading data from BC Registries based on the corp event queue
                     cur = self.conn.cursor()
-                    cur.execute(sql1)
+                    cur.execute(sql1.replace("!BS!", str(max_batch_size)))
                     row = cur.fetchone()
                     while row is not None:
                         corps.append({'RECORD_ID':row[0], 'SYSTEM_TYPE_CD':row[1], 'PREV_EVENT_ID':row[2], 'LAST_EVENT_ID':row[3], 
@@ -676,7 +711,7 @@ class EventProcessor:
                 try:
                     # not loading from BC Reg, just processing data already loaded in corp_history
                     cur = self.conn.cursor()
-                    cur.execute(sql1a)
+                    cur.execute(sql1a.replace("!BS!", str(max_batch_size)))
                     row = cur.fetchone()
                     while row is not None:
                         # print(row)
@@ -704,12 +739,21 @@ class EventProcessor:
                         except (Exception, psycopg2.DatabaseError) as error:
                             # raises a SQL error if error during caching
                             print(error)
-                            raise
+                            if max_batch_size == CORP_BATCH_SIZE:
+                                print("Error during caching operation, switching to smaller cache size")
+                                corps = []
+                                max_batch_size = FALLBACK_CORP_BATCH_SIZE
+                            else:
+                                print("Error during caching operation, switching to non-cached mode")
+                                corps = []
+                                use_cache = False
 
                     for i,corp in enumerate(corps): 
                         process_success = True
                         process_msg = None
                         if (i % 100 == 0) or (i+1 == len(corps)):
+                            processing_time = time.perf_counter() - start_time
+                            print('Processing: ' + str(processing_time))
                             print('>>> Processing {} of {} corporations.'.format(i+1, len(corps)))
 
                         if load_regs:
@@ -803,6 +847,11 @@ class EventProcessor:
 
                 processing_time = time.perf_counter() - start_time
                 print('Processing: ' + str(processing_time))
+
+                # if we processed a set of corps in non-cached mode, try to switch back
+                if len(corps) > 0 and not use_cache:
+                    print("Restoring cache mode")
+                    use_cache = use_cache_param
 
 
     # process corps that have been queued - update data from bc_registries
