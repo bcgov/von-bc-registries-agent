@@ -9,6 +9,26 @@
   },
   "objects": [
     {
+      "kind": "Secret",
+      "apiVersion": "v1",
+      "metadata": {
+        "name": "${WALLET_CREDENTIAL_STORE_NAME}",
+        "labels": {
+          "app": "${NAME}"
+        }
+      },
+      "data": {
+        "key": "${WALLET_ENCRYPTION_KEY}",
+        "holder-seed": "${HOLDER_WALLET_SEED}",
+        "holder-did": "${HOLDER_WALLET_DID}",
+        "verifier-seed": "${VERIFIER_WALLET_SEED}",
+        "verifier-did": "${VERIFIER_WALLET_DID}",
+        "issuer-seed": "${ISSUER_WALLET_SEED}",
+        "issuer-did": "${ISSUER_WALLET_DID}"
+      },
+      "type": "Opaque"
+    },
+    {
       "kind": "Service",
       "apiVersion": "v1",
       "metadata": {
@@ -119,8 +139,20 @@
                     "value": "${ENABLE_GUNICORN}"
                   },
                   {
+                    "name": "GENESIS_URL",
+                    "value": "${GENESIS_URL}"
+                  },
+                  {
                     "name": "INDY_LEDGER_URL",
                     "value": "${INDY_LEDGER_URL}"
+                  },
+                  {
+                    "name": "LEDGER_PROTOCOL_VERSION",
+                    "value": "${LEDGER_PROTOCOL_VERSION}"
+                  },
+                  {
+                    "name": "AUTO_REGISTER_DID",
+                    "value": "${AUTO_REGISTER_DID}"
                   },
                   {
                     "name": "FORMS",
@@ -147,16 +179,70 @@
                     "value": "${TOB_APP_URL}"
                   },
                   {
-                    "name": "TOB_INDY_DID",
-                    "value": "${TOB_INDY_DID}"
+                    "name": "WALLET_TYPE",
+                    "value": "${WALLET_TYPE}"
                   },
                   {
-                    "name": "TOB_INDY_SEED",
-                    "value": "${TOB_INDY_SEED}"
+                    "name": "POSTGRESQL_WALLET_HOST",
+                    "value": "${POSTGRESQL_WALLET_HOST}"
+                  },
+                  {
+                    "name": "POSTGRESQL_WALLET_PORT",
+                    "value": "${POSTGRESQL_WALLET_PORT}"
+                  },
+                  {
+                    "name": "POSTGRESQL_WALLET_USER",
+                    "valueFrom": {
+                      "secretKeyRef": {
+                        "name": "${POSTGRESQL_WALLET_HOST}",
+                        "key": "database-user"
+                      }
+                    }
+                  },
+                  {
+                    "name": "POSTGRESQL_WALLET_PASSWORD",
+                    "valueFrom": {
+                      "secretKeyRef": {
+                        "name": "${POSTGRESQL_WALLET_HOST}",
+                        "key": "database-password"
+                      }
+                    }
+                  },
+                  {
+                    "name": "POSTGRESQL_WALLET_ADMIN_PASSWORD",
+                    "valueFrom": {
+                      "secretKeyRef": {
+                        "name": "${POSTGRESQL_WALLET_HOST}",
+                        "key": "admin-password"
+                      }
+                    }
+                  },
+                  {
+                    "name": "WALLET_ENCRYPTION_KEY",
+                    "valueFrom": {
+                      "secretKeyRef": {
+                        "name": "${WALLET_CREDENTIAL_STORE_NAME}",
+                        "key": "key"
+                      }
+                    }
                   },
                   {
                     "name": "WALLET_SEED_BCREG",
-                    "value": "${WALLET_SEED_BCREG}"
+                    "valueFrom": {
+                      "secretKeyRef": {
+                        "name": "${WALLET_CREDENTIAL_STORE_NAME}",
+                        "key": "issuer-seed"
+                      }
+                    }
+                  },
+                  {
+                    "name": "ISSUER_WALLET_DID",
+                    "valueFrom": {
+                      "secretKeyRef": {
+                        "name": "${WALLET_CREDENTIAL_STORE_NAME}",
+                        "key": "issuer-did"
+                      }
+                    }
                   }
                 ],
                 "readinessProbe": {
@@ -277,11 +363,32 @@
       "value": "0"
     },
     {
+      "name": "GENESIS_URL",
+      "displayName": "Genesis Url",
+      "description": "URL for downloading a copy of the genesis file defining the ledger connection for the environment.  Used when connecting the the Sovrin Ledger.",
+      "required": false,
+      "value": ""
+    },
+    {
       "name": "INDY_LEDGER_URL",
       "displayName": "Indy Ledger URL",
-      "description": "The URL for the Indy ledger.",
-      "required": true,
+      "description": "URL for a running instance of the von-network.  Used when connecting to the BCovrin Ledger.",
+      "required": false,
       "value": "http://159.89.115.24"
+    },
+    {
+      "name": "LEDGER_PROTOCOL_VERSION",
+      "displayName": "Ledger Protocol Version",
+      "description": "Used to specify the protocol version for the ledger.  Defaults if left blank.",
+      "required": false,
+      "value": ""
+    },
+    {
+      "name": "AUTO_REGISTER_DID",
+      "displayName": "Auto Register DID",
+      "description": "Flag to indicate whether or not to auto-register with the ledger.  Only works with the BCovrin, which has an endpoint for self registration.",
+      "required": false,
+      "value": "1"
     },
     {
       "name": "FORMS",
@@ -326,25 +433,88 @@
       "value": "https://angular-on-nginx-devex-von-bc-tob-dev.pathfinder.gov.bc.ca/"
     },
     {
-      "name": "TOB_INDY_DID",
-      "displayName": "TOB Indy DID",
-      "description": "The DID for the TOB application.",
+      "name": "WALLET_TYPE",
+      "displayName": "Wallet Storage Type",
+      "description": "The wallet storage type.  Your choice of 'postgres' or 'sqlite' at the moment.  If not defined, defaults to 'sqlite' for compatibility",
       "required": false,
-      "value": ""
+      "value": "postgres"
     },
     {
-      "name": "TOB_INDY_SEED",
-      "displayName": "TOB Indy SEED",
-      "description": "The SEED for the TOB application.",
+      "name": "POSTGRESQL_WALLET_HOST",
+      "displayName": "PostgreSql Wallet Hostname",
       "required": true,
-      "value": "bc_tob_dev_000000000000000000000"
+      "description": "Hostname of the deployed database hosting the wallet.  Only used when WALLET_TYPE = postgre.",
+      "value": "wallet-db"
     },
     {
-      "name": "WALLET_SEED_BCREG",
-      "displayName": "BC Reg Wallet Seed",
-      "description": "The SEED for the BC Reg Agent.",
+      "name": "POSTGRESQL_WALLET_PORT",
+      "displayName": "PostgreSql Wallet Port",
       "required": true,
-      "value": "bc_reg_agent_dev_000000000000000"
+      "description": "The port number of the deployed database hosting the wallet.  Only used when WALLET_TYPE = postgre.",
+      "value": "5432"
+    },
+    {
+      "name": "WALLET_ENCRYPTION_KEY",
+      "displayName": "Wallet Encryption Key",
+      "description": "The encryption key to be used for the wallets.  Needs to be basee64 encoded.",
+      "required": true,
+      "generate": "expression",
+      "from": "[a-zA-Z0-9_~!@#$%^&*()-=<>,.?;:|]{16}"
+    },
+    {
+      "name": "HOLDER_WALLET_SEED",
+      "displayName": "Holder Wallet Seed",
+      "description": "The Seed used for the holder wallet.  Needs to be basee64 encoded.",
+      "required": true,
+      "generate": "expression",
+      "from": "[a-zA-Z0-9_~!@#$%^&*()-=<>,.?;:|]{16}"
+    },
+    {
+      "name": "VERIFIER_WALLET_SEED",
+      "displayName": "Verifier Wallet Seed",
+      "description": "The Seed used for the verifier wallet.  Needs to be basee64 encoded.",
+      "required": true,
+      "generate": "expression",
+      "from": "[a-zA-Z0-9_~!@#$%^&*()-=<>,.?;:|]{16}"
+    },
+    {
+      "name": "ISSUER_WALLET_SEED",
+      "displayName": "Issuer Wallet Seed",
+      "description": "The Seed used for the issuer wallet.  Needs to be basee64 encoded.",
+      "required": true,
+      "generate": "expression",
+      "from": "[a-zA-Z0-9_~!@#$%^&*()-=<>,.?;:|]{16}"
+    },
+    {
+      "name": "HOLDER_WALLET_DID",
+      "displayName": "Holder Wallet DID",
+      "description": "The DID associated to the holder wallet.  Needs to be basee64 encoded.",
+      "required": false,
+      "generate": "expression",
+      "from": "[a-zA-Z0-9_~!@#$%^&*()-=<>,.?;:|]{16}"
+    },
+    {
+      "name": "VERIFIER_WALLET_DID",
+      "displayName": "Verifier Wallet DID",
+      "description": "The DID associated to the verifier wallet.  Needs to be basee64 encoded.",
+      "required": false,
+      "generate": "expression",
+      "from": "[a-zA-Z0-9_~!@#$%^&*()-=<>,.?;:|]{16}"
+    },
+    {
+      "name": "ISSUER_WALLET_DID",
+      "displayName": "Issuer Wallet DID",
+      "description": "The DID associated to the issuer wallet.  Needs to be basee64 encoded.",
+      "required": false,
+      "generate": "expression",
+      "from": "[a-zA-Z0-9_~!@#$%^&*()-=<>,.?;:|]{16}"
+    },
+    {
+      "name": "WALLET_CREDENTIAL_STORE_NAME",
+      "displayName": "Wallet Credential Store Name",
+      "description": "The name of the wallet credential store (aka The name of the secret that contains the wallet credentials).",
+      "required": true,
+      "value": "wallet-credentials"
     },
     {
       "name": "MOUNT_PATH",
