@@ -18,18 +18,39 @@
 
 import psycopg2
 import asyncio
+import multiprocessing.pool as mpool
 import datetime
 import json
 import os
 import sys
 import aiohttp
 import time
+import traceback
 from bcreg.config import config
 
 AGENT_URL = os.environ.get('VONX_API_URL', 'http://localhost:5000/bcreg')
 
-CREDS_BATCH_SIZE = 100 
+CREDS_BATCH_SIZE = 3000
+CREDS_REQUEST_SIZE = 20
+MAX_CREDS_REQUESTS = 16
 
+
+async def submit_cred_batch(http_client, creds):
+    try:
+        response = await http_client.post(
+            '{}/issue-credential'.format(AGENT_URL),
+            json=creds
+        )
+        if response.status != 200:
+            raise RuntimeError(
+                'Credentials could not be processed: {}'.format(await response.text())
+            )
+        result_json = await response.json()
+        #print('Response from von-x:\n{}\n'.format(result_json))
+        return result_json
+    except Exception as exc:
+        print(exc)
+        raise
 
 async def submit_cred(http_client, attrs, schema, version):
     try:
@@ -61,14 +82,24 @@ async def post_credentials(http_client, conn, credentials):
 
     success = 0
     failed = 0
+    post_creds = []
     for credential in credentials:
-        # post credential
-        #print('Post credential ...')
-        cur2 = None
-        try:
-            result_json = await submit_cred(http_client, credential['CREDENTIAL_JSON'], credential['SCHEMA_NAME'], credential['SCHEMA_VERSION'])
+        post_creds.append({"schema":credential['SCHEMA_NAME'], "version":credential['SCHEMA_VERSION'], "attributes":credential['CREDENTIAL_JSON']})
 
-            result = result_json 
+    # post credential
+    #print('Post credential ...')
+    cur2 = None
+    try:
+        # result_json = await submit_cred(http_client, credential['CREDENTIAL_JSON'], credential['SCHEMA_NAME'], credential['SCHEMA_VERSION'])
+        result_json = await submit_cred_batch(http_client, post_creds)
+        results = result_json 
+
+        #print("Posted = ", len(credentials), ", results = ", len(results))
+
+        for i in range(len(credentials)):
+            credential = credentials[i]
+            result = results[i]
+
             if result['success']:
                 #print("log success to database")
                 cur2 = conn.cursor()
@@ -90,23 +121,27 @@ async def post_credentials(http_client, conn, credentials):
                 cur2 = None
                 failed = failed + 1
 
-        except (Exception) as error:
-            print("log exception to database")
-            if cur2 is not None:
-                cur2.close()
-                cur2 = None
-            cur2 = conn.cursor()
-            res = str(error)
-            if 255 < len(res):
-                res = res[:250] + '...'
-            cur2.execute(sql3, (datetime.datetime.now(), res, credential['RECORD_ID'],))
-            conn.commit()
+    except (Exception) as error:
+        # everything failed :-(
+        print("log exception to database")
+        if cur2 is not None:
             cur2.close()
             cur2 = None
+        cur2 = conn.cursor()
+        res = str(error)
+        if 255 < len(res):
+            res = res[:250] + '...'
+        for i in range(len(credentials)):
+            credential = credentials[i]
+            result = results[i]
+            cur2.execute(sql3, (datetime.datetime.now(), res, credential['RECORD_ID'],))
             failed = failed + 1
-        finally:
-            if cur2 is not None:
-                cur2.close()
+        conn.commit()
+        cur2.close()
+        cur2 = None
+    finally:
+        if cur2 is not None:
+            cur2.close()
     return '{' + str(success) + ',' + str(failed) + '}'
 
 
@@ -192,7 +227,7 @@ class CredsSubmitter:
         cur = None
         try:
             params = config(section='event_processor')
-            #conn = psycopg2.connect(**params)
+            pool = mpool.ThreadPool(MAX_CREDS_REQUESTS)
             loop = asyncio.get_event_loop()
             tasks = []
             http_client = aiohttp.ClientSession()
@@ -211,6 +246,7 @@ class CredsSubmitter:
             cred_count_remaining = cred_count
             start_time = time.perf_counter()
             processing_time = 0
+            processed_count = 0
             max_processing_time = 10 * 60
 
             while 0 < cred_count_remaining and processing_time < max_processing_time:
@@ -232,21 +268,36 @@ class CredsSubmitter:
                 row = cur.fetchone()
                 credentials = []
                 cred_owner_id = ''
-                print('>>> Processing {} of {} credentials.'.format(i+1, cred_count))
                 while row is not None:
-                    #print('>>> Processing {} of {} credentials.'.format(i+1, cred_count))
                     i = i + 1
+                    processed_count = processed_count + 1
+                    if processed_count >= 100:
+                      print('>>> Processing {} of {} credentials.'.format(i, cred_count))
+                      processing_time = time.perf_counter() - start_time
+                      print('Processing: ' + str(processing_time))
+                      processed_count = 0
                     credential = {'RECORD_ID':row[0], 'SYSTEM_TYP_CD':row[1], 'PREV_EVENT_ID':row[2], 'LAST_EVENT_ID':row[3], 'CORP_NUM':row[4], 'CORP_STATE':row[5],
                                   'CREDENTIAL_TYPE_CD':row[6], 'CREDENTIAL_ID':row[7], 'CREDENTIAL_JSON':row[8], 'SCHEMA_NAME':row[9], 'SCHEMA_VERSION':row[10], 
                                   'ENTRY_DATE':row[11]}
 
-                    # gather all credentials for the same client id
-                    if 0 < len(credentials) and credential['CORP_NUM'] != cred_owner_id:
+                    # make sure to include all credentials for the same client id within the same batch
+                    if CREDS_REQUEST_SIZE <= len(credentials) and credential['CORP_NUM'] != cred_owner_id:
                         post_creds = credentials.copy()
                         creds_task = loop.create_task(post_credentials(http_client, self.conn, post_creds))
                         tasks.append(creds_task)
+                        #await asyncio.sleep(1)
                         if single_thread:
+                          # running single threaded - wait for each task to complete
                           await creds_task
+                        else:
+                          # multi-threaded, check if we are within MAX_CREDS_REQUESTS active requests
+                          active_tasks = len([task for task in tasks if not task.done()])
+                          #print("Added task - active = ", active_tasks, ", posted creds = ", len(post_creds))
+                          while active_tasks >= MAX_CREDS_REQUESTS:
+                            #await asyncio.gather(*tasks)
+                            done, pending = await asyncio.wait(tasks, return_when=asyncio.FIRST_COMPLETED)
+                            active_tasks = len(pending)
+                            # print("Waited task - active = ", active_tasks)
                         credentials = []
                         cred_owner_id = ''
 
@@ -269,6 +320,7 @@ class CredsSubmitter:
                     pass # print('response:' + response)
                 tasks = []
 
+                print('>>> Processing {} of {} credentials.'.format(i, cred_count))
                 processing_time = time.perf_counter() - start_time
                 print('Processing: ' + str(processing_time))
 
@@ -282,6 +334,7 @@ class CredsSubmitter:
 
         except (Exception, psycopg2.DatabaseError) as error:
             print(error)
+            print(traceback.print_exc())
         finally:
             await http_client.close()
             if cur is not None:

@@ -6,6 +6,7 @@ import pytz
 import json
 import time
 import hashlib
+import traceback
 from bcreg.config import config
 from bcreg.bcregistries import BCRegistries
 
@@ -51,6 +52,7 @@ class EventProcessor:
             self.conn = psycopg2.connect(**params)
         except (Exception) as error:
             print(error)
+            print(traceback.print_exc())
             self.conn = None
             raise
 
@@ -287,6 +289,7 @@ class EventProcessor:
             cur = None
         except (Exception, psycopg2.DatabaseError) as error:
             print(error)
+            print(traceback.print_exc())
             raise
         finally:
             if cur is not None:
@@ -307,6 +310,7 @@ class EventProcessor:
             cur = None
         except (Exception, psycopg2.DatabaseError) as error:
             print(error)
+            print(traceback.print_exc())
             raise
         finally:
             if cur is not None:
@@ -324,6 +328,7 @@ class EventProcessor:
             return row[0]
         except (Exception, psycopg2.DatabaseError) as error:
             print(error)
+            print(traceback.print_exc())
             raise
         finally:
             if cur is not None:
@@ -344,6 +349,7 @@ class EventProcessor:
             cur = None
         except (Exception, psycopg2.DatabaseError) as error:
             print(error)
+            print(traceback.print_exc())
             raise
         finally:
             if cur is not None:
@@ -363,6 +369,7 @@ class EventProcessor:
             cur = None
         except (Exception, psycopg2.DatabaseError) as error:
             print(error)
+            print(traceback.print_exc())
             raise
         finally:
             if cur is not None:
@@ -388,6 +395,7 @@ class EventProcessor:
             cur = None
         except (Exception, psycopg2.DatabaseError) as error:
             print(error)
+            print(traceback.print_exc())
             raise
         finally:
             if cur is not None:
@@ -408,6 +416,7 @@ class EventProcessor:
             cur = None
         except (Exception, psycopg2.DatabaseError) as error:
             print(error)
+            print(traceback.print_exc())
             raise
         finally:
             if cur is not None:
@@ -418,13 +427,21 @@ class EventProcessor:
         sql = """INSERT INTO CREDENTIAL_LOG (SYSTEM_TYPE_CD, PREV_EVENT_ID, LAST_EVENT_ID, CORP_NUM, CORP_STATE, CREDENTIAL_TYPE_CD, CREDENTIAL_ID, 
                 SCHEMA_NAME, SCHEMA_VERSION, CREDENTIAL_JSON, CREDENTIAL_HASH, ENTRY_DATE)
                 VALUES(%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s) RETURNING RECORD_ID;"""
+        sql_addr = """INSERT INTO CREDENTIAL_LOG (SYSTEM_TYPE_CD, PREV_EVENT_ID, LAST_EVENT_ID, CORP_NUM, CORP_STATE, CREDENTIAL_TYPE_CD, CREDENTIAL_ID, 
+                SCHEMA_NAME, SCHEMA_VERSION, CREDENTIAL_JSON, CREDENTIAL_HASH, ENTRY_DATE, PROCESS_DATE, PROCESS_SUCCESS)
+                VALUES(%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s) RETURNING RECORD_ID;"""
         # create row(s) for corp creds json info
         cred_json = json.dumps(credential, cls=DateTimeEncoder, sort_keys=True)
         cred_hash = hashlib.sha256(cred_json.encode('utf-8')).hexdigest()
         try:
             cur.execute("savepoint save_" + cred_type)
-            cur.execute(sql, (system_cd, prev_event_id, last_event_id, corp_num, corp_state, cred_type, cred_id, 
-                        schema_name, schema_version, cred_json, cred_hash, datetime.datetime.now(),))
+            # store address creds with a special status, because we don't want to post them yet
+            if cred_type == addr_credential:
+                cur.execute(sql_addr, (system_cd, prev_event_id, last_event_id, corp_num, corp_state, cred_type, cred_id, 
+                            schema_name, schema_version, cred_json, cred_hash, datetime.datetime.now(), datetime.datetime.now(), 'A',))
+            else:
+                cur.execute(sql, (system_cd, prev_event_id, last_event_id, corp_num, corp_state, cred_type, cred_id, 
+                            schema_name, schema_version, cred_json, cred_hash, datetime.datetime.now(),))
         except Exception as e:
             # ignore duplicate hash ("duplicate key value violates unique constraint "cl_hash_index"")
             # re-raise all others
@@ -433,6 +450,7 @@ class EventProcessor:
                 print("Hash exception, skipping duplicate credential for corp:", corp_num, cred_type, cred_id, e)
                 cur.execute("rollback to savepoint save_" + cred_type)
             else:
+                print(traceback.print_exc())
                 raise
 
     # determine jurisdiction for corp
@@ -703,6 +721,7 @@ class EventProcessor:
                     cur = None
                 except (Exception, psycopg2.DatabaseError) as error:
                     print(error)
+                    print(traceback.print_exc())
                     raise
                 finally:
                     if cur is not None:
@@ -723,6 +742,7 @@ class EventProcessor:
                     cur = None
                 except (Exception, psycopg2.DatabaseError) as error:
                     print(error)
+                    print(traceback.print_exc())
                     raise
                 finally:
                     if cur is not None:
@@ -739,6 +759,7 @@ class EventProcessor:
                         except (Exception, psycopg2.DatabaseError) as error:
                             # raises a SQL error if error during caching
                             print(error)
+                            print(traceback.print_exc())
                             if max_batch_size == CORP_BATCH_SIZE:
                                 print("Error during caching operation, switching to smaller cache size")
                                 corps = []
@@ -763,6 +784,7 @@ class EventProcessor:
                                 corp_info_json = bc_registries.to_json(corp_info)
                             except (Exception, psycopg2.DatabaseError) as error:
                                 print(error)
+                                print(traceback.print_exc())
                                 process_success = False
                                 process_msg = str(error)
                                 #raise
@@ -784,6 +806,7 @@ class EventProcessor:
                                     cur = None
                                 except (Exception, psycopg2.DatabaseError) as error:
                                     print(error)
+                                    print(traceback.print_exc())
                                     process_success = False
                                     process_msg = str(error)
                                     #raise
@@ -824,6 +847,7 @@ class EventProcessor:
                                     cur = None
                                 except (Exception, psycopg2.DatabaseError) as error:
                                     print(error)
+                                    print(traceback.print_exc())
                                     process_success = False
                                     process_msg = str(error)
                                     raise
@@ -881,6 +905,7 @@ class EventProcessor:
             cur = None
         except (Exception, psycopg2.DatabaseError) as error:
             print(error)
+            print(traceback.print_exc())
             raise
         finally:
             if cur is not None:
@@ -913,6 +938,9 @@ class EventProcessor:
         sql_corp_ct_processed   = 'where process_date is not null'
         sql_corp_ct_outstanding = 'where process_date is null'
 
+        if table == 'credential_log':
+            sql_corp_ct_processed = sql_corp_ct_processed + " and process_success != 'A'"
+
         sql = sql_ct_select + ' ' + table + ' ' + (sql_corp_ct_outstanding if unprocessed else sql_corp_ct_processed)
 
         return self.get_sql_record_count(sql)
@@ -928,6 +956,7 @@ class EventProcessor:
             return ct
         except (Exception, psycopg2.DatabaseError) as error:
             print(error)
+            print(traceback.print_exc())
             raise
         finally:
             if cur is not None:
@@ -957,6 +986,7 @@ class EventProcessor:
             return rows
         except (Exception, psycopg2.DatabaseError) as error:
             print(error)
+            print(traceback.print_exc())
             raise
         finally:
             if cursor is not None:

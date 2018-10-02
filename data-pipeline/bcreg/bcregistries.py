@@ -8,6 +8,7 @@ import string
 import decimal
 import random
 import types
+import traceback
 
 from bcreg.config import config
 
@@ -77,6 +78,7 @@ class BCRegistries:
             self.cache = sqlite3.connect(':memory:', detect_types=sqlite3.PARSE_DECLTYPES|sqlite3.PARSE_COLNAMES)
         except (Exception) as error:
             print(error)
+            print(traceback.print_exc())
             self.conn = None
             self.cache = None
             raise
@@ -183,6 +185,7 @@ class BCRegistries:
             return desc
         except (Exception, psycopg2.DatabaseError) as error:
             print(error)
+            print(traceback.print_exc())
             raise 
         finally:
             if cursor is not None:
@@ -252,6 +255,7 @@ class BCRegistries:
             cache_cursor = None
         except (Exception) as error:
             print(error)
+            print(traceback.print_exc())
             raise 
         finally:
             if cache_cursor is not None:
@@ -395,6 +399,7 @@ class BCRegistries:
                 cache_cursor = None
             except (Exception) as error:
                 print(error)
+                print(traceback.print_exc())
                 raise 
             finally:
                 if cache_cursor is not None:
@@ -415,6 +420,7 @@ class BCRegistries:
             return rows
         except (Exception) as error:
             print(error)
+            print(traceback.print_exc())
             raise 
         finally:
             if cursor is not None:
@@ -440,6 +446,7 @@ class BCRegistries:
             cursor = None
         except (Exception) as error:
             print(error)
+            print(traceback.print_exc())
             raise 
         finally:
             if cursor is not None:
@@ -642,6 +649,7 @@ class BCRegistries:
             return rows
         except (Exception, psycopg2.DatabaseError) as error:
             print(error)
+            print(traceback.print_exc())
             raise 
         finally:
             if cursor is not None:
@@ -686,6 +694,7 @@ class BCRegistries:
             return row[0]
         except (Exception, psycopg2.DatabaseError) as error:
             print(error)
+            print(traceback.print_exc())
             raise
         finally:
             if cur is not None:
@@ -713,6 +722,7 @@ class BCRegistries:
             return corps
         except (Exception, psycopg2.DatabaseError) as error:
             print(error)
+            print(traceback.print_exc())
             raise
         finally:
             if cur is not None:
@@ -751,6 +761,7 @@ class BCRegistries:
                 print("Loaded corps: " + str(len(corps)))
             except (Exception, psycopg2.DatabaseError) as error:
                 print(error)
+                print(traceback.print_exc())
                 raise
             finally:
                 if cur is not None:
@@ -795,6 +806,7 @@ class BCRegistries:
                 print("Loaded corps: " + str(len(corps)))
             except (Exception, psycopg2.DatabaseError) as error:
                 print(error)
+                print(traceback.print_exc())
                 raise
             finally:
                 if cur is not None:
@@ -824,6 +836,7 @@ class BCRegistries:
             return corps
         except (Exception, psycopg2.DatabaseError) as error:
             print(error)
+            print(traceback.print_exc())
             raise
         finally:
             if cur is not None:
@@ -863,6 +876,7 @@ class BCRegistries:
             return {}
         except (Exception, psycopg2.DatabaseError) as error:
             print(error)
+            print(traceback.print_exc())
             raise 
         finally:
             if cursor is not None:
@@ -893,6 +907,7 @@ class BCRegistries:
             return {}
         except (Exception, psycopg2.DatabaseError) as error:
             print(error)
+            print(traceback.print_exc())
             raise 
         finally:
             if cursor is not None:
@@ -926,6 +941,7 @@ class BCRegistries:
             return offices
         except (Exception, psycopg2.DatabaseError) as error:
             print(error)
+            print(traceback.print_exc())
             raise 
         finally:
             if cursor is not None:
@@ -972,6 +988,7 @@ class BCRegistries:
             return {}
         except (Exception, psycopg2.DatabaseError) as error:
             print(error)
+            print(traceback.print_exc())
             raise 
         finally:
             if cursor is not None:
@@ -1013,6 +1030,7 @@ class BCRegistries:
             return names
         except (Exception, psycopg2.DatabaseError) as error:
             print(error)
+            print(traceback.print_exc())
             raise 
         finally:
             if cur is not None:
@@ -1062,6 +1080,7 @@ class BCRegistries:
 
         except (Exception, psycopg2.DatabaseError) as error:
             print(error)
+            print(traceback.print_exc())
             raise 
         finally:
             if cursor is not None:
@@ -1133,6 +1152,7 @@ class BCRegistries:
             return {}
         except (Exception, psycopg2.DatabaseError) as error:
             print(error)
+            print(traceback.print_exc())
             raise 
         finally:
             if cursor is not None:
@@ -1160,6 +1180,7 @@ class BCRegistries:
             return {}
         except (Exception, psycopg2.DatabaseError) as error:
             print(error)
+            print(traceback.print_exc())
             raise 
         finally:
             if cursor is not None:
@@ -1184,6 +1205,7 @@ class BCRegistries:
             return {}
         except (Exception, psycopg2.DatabaseError) as error:
             print(error)
+            print(traceback.print_exc())
             raise 
         finally:
             if cursor is not None:
@@ -1208,6 +1230,7 @@ class BCRegistries:
             return {}
         except (Exception, psycopg2.DatabaseError) as error:
             print(error)
+            print(traceback.print_exc())
             raise 
         finally:
             if cursor is not None:
@@ -1231,6 +1254,7 @@ class BCRegistries:
             return {}
         except (Exception, psycopg2.DatabaseError) as error:
             print(error)
+            print(traceback.print_exc())
             raise 
         finally:
             if cursor is not None:
@@ -1289,6 +1313,7 @@ class BCRegistries:
             return corp
         except (Exception, psycopg2.DatabaseError) as error:
             print(error)
+            print(traceback.print_exc())
             raise 
         finally:
             if cur is not None:
@@ -1363,6 +1388,7 @@ class BCRegistries:
             return corp
         except (Exception, psycopg2.DatabaseError) as error:
             print(error)
+            print(traceback.print_exc())
             raise 
         finally:
             if cur is not None:
