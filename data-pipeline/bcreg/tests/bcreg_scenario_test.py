@@ -224,6 +224,18 @@ def test_scenario_multi_dbas():
             assert dba_creds[1]['cred_type'] == 'ADDR'
         i = i + 1
 
+# basic corp with empty date(s)
+def test_scenario_empty_dates():
+    my_corp_num = '6763577'
+    my_corp_dict = sample_test_corps['corp_' + my_corp_num]
+    my_creds = generate_creds_for_corp(my_corp_dict)
+
+    print("# basic corp with empty dates")
+    assert len(my_creds) == 2
+
+    assert my_creds[0]['cred_type'] == 'REG'
+    assert my_creds[1]['cred_type'] == 'ADDR'
+
 
 # utility method to process the selected corp and generate credentails
 def generate_creds_for_corp(corp_dict):

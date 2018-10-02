@@ -4608,4 +4608,133 @@ sample_test_corps = {
                     (103107494, 'BC', 'CA', '2NP17N', null, null, null, 'VANCOUVER', 'BAS', 'BPLCELTZMQDVDXQWAJCQPCGYMJI KABQRSA MICF', 'SRXULMDKTMUQHGTGFJIG', null, '922', null, '166', null, 'JVLGEKZGZRXXYTH', 'ST', 'N', null, null, null, null, null, null, null)""",
                    ]
              },
+    "corp_6763577": {
+            "corp_num":'6763577', "corp_typ_cd":'BC', "state_typ_cd":'LIQ', "party_ct":0, "party_addr_ct":0, "name_ct":1, "name_assumed_ct":0, "name_trans_ct":0, "tilma_ct":0, "juisdiction_ct":0, 
+             "sqls": [
+                    """create table if not exists corp_party (corp_party_id numeric, mailing_addr_id numeric, delivery_addr_id numeric, corp_num text, party_typ_cd text, start_event_id numeric, end_event_id numeric, prev_party_id numeric, corr_typ_cd text, last_report_dt timestamp, appointment_dt timestamp, cessation_dt timestamp, last_nme text, middle_nme text, first_nme text, business_nme text, bus_company_num text, email_address text, corp_party_seq_num numeric, office_notification_dt timestamp, phone text, reason_typ_cd text)""",
+                    """insert into corp_party (corp_party_id, mailing_addr_id, delivery_addr_id, corp_num, party_typ_cd, start_event_id, end_event_id, prev_party_id, corr_typ_cd, last_report_dt, appointment_dt, cessation_dt, last_nme, middle_nme, first_nme, business_nme, bus_company_num, email_address, corp_party_seq_num, office_notification_dt, phone, reason_typ_cd)
+                    values
+                    (495427, 431310, 431310, '6763577', 'LIQ', 1631095, null, null, null, null, '1991-01-29 00:00:00', null, null, null, null, 'CWYJBHDQHFUSVPTVLOTM', null, null, null, null, null, null)""",
+                    """insert into corp_party (corp_party_id, mailing_addr_id, delivery_addr_id, corp_num, party_typ_cd, start_event_id, end_event_id, prev_party_id, corr_typ_cd, last_report_dt, appointment_dt, cessation_dt, last_nme, middle_nme, first_nme, business_nme, bus_company_num, email_address, corp_party_seq_num, office_notification_dt, phone, reason_typ_cd)
+                    values
+                    (495428, 431311, 431311, '6763577', 'DIR', 1631095, null, null, null, null, null, null, 'VARLEY', null, 'DOUGLAS W.', null, null, null, null, null, null, null)""",
+                    """insert into corp_party (corp_party_id, mailing_addr_id, delivery_addr_id, corp_num, party_typ_cd, start_event_id, end_event_id, prev_party_id, corr_typ_cd, last_report_dt, appointment_dt, cessation_dt, last_nme, middle_nme, first_nme, business_nme, bus_company_num, email_address, corp_party_seq_num, office_notification_dt, phone, reason_typ_cd)
+                    values
+                    (495429, 431311, 431311, '6763577', 'OFF', 1631095, null, null, null, null, null, null, 'VARLEY', null, 'DOUGLAS W.', null, null, null, null, null, null, null)""",
+                    """insert into corp_party (corp_party_id, mailing_addr_id, delivery_addr_id, corp_num, party_typ_cd, start_event_id, end_event_id, prev_party_id, corr_typ_cd, last_report_dt, appointment_dt, cessation_dt, last_nme, middle_nme, first_nme, business_nme, bus_company_num, email_address, corp_party_seq_num, office_notification_dt, phone, reason_typ_cd)
+                    values
+                    (6005579, null, null, '6763577', 'DIR', 1631095, 1631095, null, null, null, null, '1988-01-29 00:00:00', 'VARLEY', null, 'DOUGLAS W.', null, null, null, null, null, null, null)""",
+                    """create table if not exists event (event_id numeric, corp_num text, event_typ_cd text, event_timestmp timestamp, trigger_dts timestamp)""",
+                    """insert into event (event_id, corp_num, event_typ_cd, event_timestmp, trigger_dts)
+                    values
+                    (1631095, '6763577', 'CONVICORP', '2004-03-26 20:36:00', null)""",
+                    """insert into event (event_id, corp_num, event_typ_cd, event_timestmp, trigger_dts)
+                    values
+                    (1631096, '6763577', 'FILE', '1991-03-01 00:00:00', null)""",
+                    """insert into event (event_id, corp_num, event_typ_cd, event_timestmp, trigger_dts)
+                    values
+                    (1631097, '6763577', 'FILE', '1991-01-31 00:00:00', null)""",
+                    """insert into event (event_id, corp_num, event_typ_cd, event_timestmp, trigger_dts)
+                    values
+                    (1631098, '6763577', 'FILE', '1990-12-19 00:00:00', null)""",
+                    """insert into event (event_id, corp_num, event_typ_cd, event_timestmp, trigger_dts)
+                    values
+                    (1631099, '6763577', 'FILE', '1990-12-19 00:00:00', null)""",
+                    """insert into event (event_id, corp_num, event_typ_cd, event_timestmp, trigger_dts)
+                    values
+                    (1631100, '6763577', 'FILE', '1989-07-27 00:00:00', null)""",
+                    """insert into event (event_id, corp_num, event_typ_cd, event_timestmp, trigger_dts)
+                    values
+                    (1631101, '6763577', 'FILE', '1989-04-28 00:00:00', null)""",
+                    """insert into event (event_id, corp_num, event_typ_cd, event_timestmp, trigger_dts)
+                    values
+                    (1631102, '6763577', 'FILE', '1987-10-01 00:00:00', null)""",
+                    """insert into event (event_id, corp_num, event_typ_cd, event_timestmp, trigger_dts)
+                    values
+                    (1631103, '6763577', 'FILE', '1985-01-15 00:00:00', null)""",
+                    """insert into event (event_id, corp_num, event_typ_cd, event_timestmp, trigger_dts)
+                    values
+                    (1631104, '6763577', 'FILE', '1983-10-04 00:00:00', null)""",
+                    """insert into event (event_id, corp_num, event_typ_cd, event_timestmp, trigger_dts)
+                    values
+                    (1631105, '6763577', 'FILE', '1982-08-17 00:00:00', null)""",
+                    """insert into event (event_id, corp_num, event_typ_cd, event_timestmp, trigger_dts)
+                    values
+                    (1631106, '6763577', 'FILE', '1981-09-21 00:00:00', null)""",
+                    """insert into event (event_id, corp_num, event_typ_cd, event_timestmp, trigger_dts)
+                    values
+                    (1631107, '6763577', 'CONVDSF', '2004-03-26 20:36:00', null)""",
+                    """insert into event (event_id, corp_num, event_typ_cd, event_timestmp, trigger_dts)
+                    values
+                    (1631108, '6763577', 'CONVRSTR', '2004-03-26 20:36:00', null)""",
+                    """insert into event (event_id, corp_num, event_typ_cd, event_timestmp, trigger_dts)
+                    values
+                    (1631109, '6763577', 'CONVILIQ', '2004-03-26 20:36:00', null)""",
+                    """create table if not exists filing (event_id numeric, filing_typ_cd text, effective_dt timestamp, change_dt timestamp, registration_dt timestamp, period_end_dt timestamp, accession_num text, arrangement_ind text, auth_sign_dt timestamp, withdrawn_event_id numeric, ods_typ_cd text, dd_event_id numeric, access_cd text, nr_num text, court_appr_ind text, court_order_num text, agm_date timestamp, new_corp_num text)""",
+                    """insert into filing (event_id, filing_typ_cd, effective_dt, change_dt, registration_dt, period_end_dt, accession_num, arrangement_ind, auth_sign_dt, withdrawn_event_id, ods_typ_cd, dd_event_id, access_cd, nr_num, court_appr_ind, court_order_num, agm_date, new_corp_num)
+                    values
+                    (1631096, 'CONVL', '1991-03-01 00:00:00', null, null, null, null, null, null, null, 'P ', null, null, null, null, null, null, null)""",
+                    """insert into filing (event_id, filing_typ_cd, effective_dt, change_dt, registration_dt, period_end_dt, accession_num, arrangement_ind, auth_sign_dt, withdrawn_event_id, ods_typ_cd, dd_event_id, access_cd, nr_num, court_appr_ind, court_order_num, agm_date, new_corp_num)
+                    values
+                    (1631097, 'CONVL', '1991-01-31 00:00:00', null, null, null, null, null, null, null, 'P ', null, null, null, null, null, null, null)""",
+                    """insert into filing (event_id, filing_typ_cd, effective_dt, change_dt, registration_dt, period_end_dt, accession_num, arrangement_ind, auth_sign_dt, withdrawn_event_id, ods_typ_cd, dd_event_id, access_cd, nr_num, court_appr_ind, court_order_num, agm_date, new_corp_num)
+                    values
+                    (1631098, 'CONVL', '1990-12-19 00:00:00', null, null, null, null, null, null, null, 'P ', null, null, null, null, null, null, null)""",
+                    """insert into filing (event_id, filing_typ_cd, effective_dt, change_dt, registration_dt, period_end_dt, accession_num, arrangement_ind, auth_sign_dt, withdrawn_event_id, ods_typ_cd, dd_event_id, access_cd, nr_num, court_appr_ind, court_order_num, agm_date, new_corp_num)
+                    values
+                    (1631099, 'CONVL', '1990-12-19 00:00:00', null, null, null, null, null, null, null, 'P ', null, null, null, null, null, null, null)""",
+                    """insert into filing (event_id, filing_typ_cd, effective_dt, change_dt, registration_dt, period_end_dt, accession_num, arrangement_ind, auth_sign_dt, withdrawn_event_id, ods_typ_cd, dd_event_id, access_cd, nr_num, court_appr_ind, court_order_num, agm_date, new_corp_num)
+                    values
+                    (1631100, 'CONVL', '1989-07-27 00:00:00', null, null, null, null, null, null, null, 'P ', null, null, null, null, null, null, null)""",
+                    """insert into filing (event_id, filing_typ_cd, effective_dt, change_dt, registration_dt, period_end_dt, accession_num, arrangement_ind, auth_sign_dt, withdrawn_event_id, ods_typ_cd, dd_event_id, access_cd, nr_num, court_appr_ind, court_order_num, agm_date, new_corp_num)
+                    values
+                    (1631101, 'CONVL', '1989-04-28 00:00:00', null, null, null, null, null, null, null, 'P ', null, null, null, null, null, null, null)""",
+                    """insert into filing (event_id, filing_typ_cd, effective_dt, change_dt, registration_dt, period_end_dt, accession_num, arrangement_ind, auth_sign_dt, withdrawn_event_id, ods_typ_cd, dd_event_id, access_cd, nr_num, court_appr_ind, court_order_num, agm_date, new_corp_num)
+                    values
+                    (1631102, 'CONVL', '1987-10-01 00:00:00', null, null, null, null, null, null, null, 'P ', null, null, null, null, null, null, null)""",
+                    """insert into filing (event_id, filing_typ_cd, effective_dt, change_dt, registration_dt, period_end_dt, accession_num, arrangement_ind, auth_sign_dt, withdrawn_event_id, ods_typ_cd, dd_event_id, access_cd, nr_num, court_appr_ind, court_order_num, agm_date, new_corp_num)
+                    values
+                    (1631103, 'CONVL', '1985-01-15 00:00:00', null, null, null, null, null, null, null, 'P ', null, null, null, null, null, null, null)""",
+                    """insert into filing (event_id, filing_typ_cd, effective_dt, change_dt, registration_dt, period_end_dt, accession_num, arrangement_ind, auth_sign_dt, withdrawn_event_id, ods_typ_cd, dd_event_id, access_cd, nr_num, court_appr_ind, court_order_num, agm_date, new_corp_num)
+                    values
+                    (1631104, 'CONVL', '1983-10-04 00:00:00', null, null, null, null, null, null, null, 'P ', null, null, null, null, null, null, null)""",
+                    """insert into filing (event_id, filing_typ_cd, effective_dt, change_dt, registration_dt, period_end_dt, accession_num, arrangement_ind, auth_sign_dt, withdrawn_event_id, ods_typ_cd, dd_event_id, access_cd, nr_num, court_appr_ind, court_order_num, agm_date, new_corp_num)
+                    values
+                    (1631105, 'CONVL', '1982-08-17 00:00:00', null, null, null, null, null, null, null, 'P ', null, null, null, null, null, null, null)""",
+                    """insert into filing (event_id, filing_typ_cd, effective_dt, change_dt, registration_dt, period_end_dt, accession_num, arrangement_ind, auth_sign_dt, withdrawn_event_id, ods_typ_cd, dd_event_id, access_cd, nr_num, court_appr_ind, court_order_num, agm_date, new_corp_num)
+                    values
+                    (1631106, 'CONVL', '1981-09-21 00:00:00', null, null, null, null, null, null, null, 'P ', null, null, null, null, null, null, null)""",
+                    """create table if not exists corporation (corp_num text, corp_frozen_typ_cd text, corp_typ_cd text, recognition_dts timestamp, last_ar_filed_dt timestamp, transition_dt timestamp, bn_9 text, bn_15 text, accession_num text, corp_password text, prompt_question text, admin_email text, send_ar_ind text, tilma_involved_ind text, tilma_cessation_dt timestamp, firm_last_image_date timestamp, os_session integer, last_agm_date timestamp, firm_lp_xp_termination_date timestamp, last_ledger_dt timestamp, ar_reminder_option text, ar_reminder_date text, temp_password text, temp_password_expiry_date timestamp)""",
+                    """insert into corporation (corp_num, corp_frozen_typ_cd, corp_typ_cd, recognition_dts, last_ar_filed_dt, transition_dt, bn_9, bn_15, accession_num, corp_password, prompt_question, admin_email, send_ar_ind, tilma_involved_ind, tilma_cessation_dt, firm_last_image_date, os_session, last_agm_date, firm_lp_xp_termination_date, last_ledger_dt, ar_reminder_option, ar_reminder_date, temp_password, temp_password_expiry_date)
+                    values
+                    ('6763577', null, 'BC', '1979-07-31 00:00:00', '1990-07-31 00:00:00', null, '237858994', '439190809948484', null, null, null, null, 'Y', 'N', null, null, null, null, null, null, null, null, null, null)""",
+                    """create table if not exists corp_state (corp_num text, start_event_id numeric, end_event_id numeric, state_typ_cd text, dd_corp_num text)""",
+                    """insert into corp_state (corp_num, start_event_id, end_event_id, state_typ_cd, dd_corp_num)
+                    values
+                    ('6763577', 1631109, null, 'LIQ', null)""",
+                    """insert into corp_state (corp_num, start_event_id, end_event_id, state_typ_cd, dd_corp_num)
+                    values
+                    ('6763577', 1631108, 1631109, 'ACT', null)""",
+                    """insert into corp_state (corp_num, start_event_id, end_event_id, state_typ_cd, dd_corp_num)
+                    values
+                    ('6763577', 1631107, 1631108, 'HDF', null)""",
+                    """create table if not exists tilma_involved (tilma_involved_id text, corp_num text, start_event_id text, end_event_id text, tilma_jurisdiction text, nuans_number text, nuans_expiry_date timestamp, nr_number text, jurisdiction_num text, jurisdiction_reg_date timestamp, can_number text, jurisdiction_assumed_name text, assumed_nuans_number text, assumed_nuans_name text, assumed_nuans_expiration_date timestamp, involved_ind text, cessation_date timestamp)""",
+                    """create table if not exists jurisdiction (corp_num text, start_event_id numeric, end_event_id numeric, dd_corp_num text, can_jur_typ_cd text, xpro_typ_cd text, home_recogn_dt timestamp, othr_juris_desc text, home_juris_num text, bc_xpro_num text, home_company_nme text, other_juris_party_id text)""",
+                    """create table if not exists corp_name (corp_num text, corp_name_typ_cd text, start_event_id numeric, corp_name_seq_num numeric, end_event_id numeric, srch_nme text, corp_nme text, dd_corp_num text)""",
+                    """insert into corp_name (corp_num, corp_name_typ_cd, start_event_id, corp_name_seq_num, end_event_id, srch_nme, corp_nme, dd_corp_num)
+                    values
+                    ('6763577', 'CO', 1631095, 0, null, 'DVIZKGZYJLZVITJJUTGC', 'BPQNZI HDSVPHUHNQBZCSZDCF', null)""",
+                    """create table if not exists office (corp_num text, office_typ_cd text, start_event_id numeric, end_event_id numeric, mailing_addr_id numeric, delivery_addr_id numeric, dd_corp_num text, email_address text)""",
+                    """insert into office (corp_num, office_typ_cd, start_event_id, end_event_id, mailing_addr_id, delivery_addr_id, dd_corp_num, email_address)
+                    values
+                    ('6763577', 'RG', 1631095, null, 431309, 431309, null, null)""",
+                    """insert into office (corp_num, office_typ_cd, start_event_id, end_event_id, mailing_addr_id, delivery_addr_id, dd_corp_num, email_address)
+                    values
+                    ('6763577', 'RC', 1631095, null, 431309, 431309, null, null)""",
+                    """create table if not exists address (addr_id numeric, province text, country_typ_cd text, postal_cd text, addr_line_1 text, addr_line_2 text, addr_line_3 text, city text, address_format_type text, address_desc text, address_desc_short text, delivery_instructions text, unit_no text, unit_type text, civic_no text, civic_no_suffix text, street_name text, street_type text, street_direction text, lock_box_no text, installation_type text, installation_name text, installation_qualifier text, route_service_type text, route_service_no text, province_state_name text)""",
+                    """insert into address (addr_id, province, country_typ_cd, postal_cd, addr_line_1, addr_line_2, addr_line_3, city, address_format_type, address_desc, address_desc_short, delivery_instructions, unit_no, unit_type, civic_no, civic_no_suffix, street_name, street_type, street_direction, lock_box_no, installation_type, installation_name, installation_qualifier, route_service_type, route_service_no, province_state_name)
+                    values
+                    (431309, 'BC', 'CA', 'WDW0V6', 'CFUDWNTZPGVWKXGFRHCCZBZLC', 'BFYT DGNPANQOKUOSYOKBM XP', 'VANCOUVER', null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null)""",
+                   ]
+             },
 }
