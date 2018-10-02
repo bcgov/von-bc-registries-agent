@@ -1,7 +1,7 @@
 #=========================================================
 # OpenShift template parameters for:
 # Component: .
-# JSON Template File: templates/schema-spy-oracle/schema-spy-oracle-deploy.json
+# Template File: templates/schema-spy-oracle/schema-spy-oracle-deploy.json
 #=========================================================
 # NAME=schema-spy-oracle
 # DATABASE_DEPLOYMENT_NAME=postgresql-oracle-fdw
@@ -21,5 +21,7 @@ APPLICATION_DOMAIN=schema-spy-oracle-devex-von-bc-registries-agent-test.pathfind
 # CONFIG_FILE_NAME=Caddyfile
 # CONFIG_MAP_NAME=caddy-conf
 # CONFIG_MOUNT_PATH=/etc/
-# CPU_LIMIT=2
-# MEMORY_LIMIT=2Gi
+# CPU_REQUEST=0m
+# CPU_LIMIT=0m
+# MEMORY_REQUEST=0Mi
+# MEMORY_LIMIT=0Mi

@@ -1,7 +1,7 @@
 #=========================================================
 # OpenShift template parameters for:
 # Component: .
-# JSON Template File: templates/postgresql-oracle-fdw/postgresql-oracle-fdw-build.json
+# Template File: templates/postgresql-oracle-fdw/postgresql-oracle-fdw-build.json
 #=========================================================
 NAME=postgresql-oracle-fdw
 GIT_REPO_URL=https://github.com/bcgov/openshift-postgresql-oracle_fdw.git
