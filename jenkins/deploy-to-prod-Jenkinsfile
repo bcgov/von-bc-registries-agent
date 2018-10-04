@@ -9,7 +9,6 @@ def APP_NAMES = [
   'postgresql-oracle-fdw', 
   'postgresql', 
   'mara', 
-  'bcreg-x-proxy',
   'bcreg-x-agent',
   'schema-spy-with-oracle-jdbc']
 

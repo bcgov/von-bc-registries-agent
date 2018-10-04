@@ -1,6 +1,5 @@
 #!/bin/bash
 export MSYS_NO_PATHCONV=1
-set -e
 SCRIPT_HOME="$( cd "$( dirname "$0" )" && pwd )"
 
 # =================================================================================================================
@@ -41,10 +40,43 @@ usage () {
         For example;
           $0 -e dev deleteWallets bcreg-x-agent
 
+    scaleUp
+      - Scale up one or more pods.
+        For example;
+          $0 -e dev scaleUp mara
+
+    scaleDown
+      - Scale down one or more pods.
+        For example;
+          $0 -e dev scaleDown mara
+
     recycle
       - Recycle one or more pods.
         For example;
           $0 -e dev recycle mara
+
+    createDeployConfig
+      - Create one or more deployment configurations in an OpenShift environment 
+        using pre-generated deployment configuration files.
+        
+        Examples;
+          $0 -e dev createDeployConfig
+          - This will create deployment configurations from all of the existing deployment configuration files.
+
+          $0 -e dev createDeployConfig ./bcreg-x-agent-deploy_DeploymentConfig.json
+          - This will create a deployment configurations from the specified deployment configuration file.
+
+    updateDeployConfig
+      - Update one or more deployment configurations in an OpenShift environment 
+        using pre-generated deployment configuration files.
+        
+        Examples;
+          $0 -e dev updateDeployConfig
+          - This will replace deployment configurations for all of the existing deployment configuration files.
+
+          $0 -e dev updateDeployConfig ./bcreg-x-agent-deploy_DeploymentConfig.json
+          - This will replace the deployment configurations for the specified deployment configuration file.
+
 EOF
 exit 1
 }
@@ -123,6 +155,22 @@ resetDatabase() {
 
   echoWarning "\nThe ${_dbPodName} database has been deleted and recreated."
 }
+
+createDeployconfigs(){
+  deployConfigs ${@}
+}
+
+updateDeployconfigs(){
+  # Don't update the postgresql-oracle-fdw-deploy config
+  _postgresFdwConfig="postgresql-oracle-fdw-deploy_DeploymentConfig.json"
+  if [ -f ${_postgresFdwConfig} ]; then
+    echoWarning "Removing ${_postgresFdwConfig} so it does not get updated ..."
+    rm -f ${_postgresFdwConfig}
+  fi
+
+  export OC_ACTION=replace
+  deployConfigs ${@}
+}
 # =================================================================================================================
 
 pushd ${SCRIPT_HOME} >/dev/null
@@ -144,8 +192,24 @@ case "${_cmd}" in
     deleteWallets ${@}
     recyclePods ${@}
     ;;
+  scaleup)
+    switchProject
+    exitOnError
+    scaleUp ${@}
+    ;;
+  scaledown)
+    switchProject
+    exitOnError
+    scaleDown ${@}
+    ;;
   recycle)
     recyclePods ${@}
+    ;;
+  createdeployconfig)
+    createDeployconfigs ${@}
+    ;;
+  updatedeployconfig)
+    updateDeployconfigs ${@}
     ;;
   *)
     echoWarning "Unrecognized command; ${_cmd}"
