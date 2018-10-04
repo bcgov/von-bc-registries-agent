@@ -35,6 +35,11 @@ issuers:
           effective_date:
             input: effective_date
             from: claim
+          inactive:
+            input: entity_status
+            from: claim
+            processor:
+              - bcgov.entity_status.is_historical
         topic:
           source_id:
             input: registration_id
