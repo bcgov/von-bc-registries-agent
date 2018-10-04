@@ -56,6 +56,11 @@ services:
       - vonx
     depends_on:
       - bc-wallet-db
+    entrypoint: >
+      /bin/bash -c "
+        echo sleeping ...;
+        sleep 5;
+        ../docker-entrypoint.sh;"
     volumes:
       - bcreg-agent-wallet:/home/indy/.indy_client/wallet
 
@@ -120,7 +125,7 @@ services:
     networks:
       - orgbook
     ports:
-      - 5433:5432
+      - 5434:5432
     volumes:
       - wallet-db:/var/lib/pgsql/data
 
