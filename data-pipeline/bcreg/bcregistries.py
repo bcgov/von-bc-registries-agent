@@ -500,7 +500,7 @@ class BCRegistries:
                     'xpro_type']
     corp_tables =  ['corporation', 
                     'corp_state', 
-                    'tilma_involved', 
+                    #'tilma_involved', - not currently used
                     'jurisdiction', 
                     'corp_name']
     other_tables = ['corp_party', 
@@ -578,7 +578,7 @@ class BCRegistries:
                 corp_nums_list = self.id_where_in(corp_nums_list, True)
                 corp_num_where = 'corp_num in (' + corp_nums_list + ')'
                 for corp_table in self.corp_tables:
-                    #print(corp_table)
+                    #print(corp_table, corp_num_where)
                     rows = self.get_bcreg_table(corp_table, corp_num_where, '', True, generate_individual_sql)
                     #print(corp_table, len(rows))
 
@@ -1308,7 +1308,8 @@ class BCRegistries:
                     corp['corp_state']['start_filing_event'] = {}
             corp['corp_state_dt'] = self.get_corp_state_date(corp)
             #print('--> ' + corp['corp_num'] + ' corp_state_dt = ' + str(corp['corp_state_dt']))
-            corp['tilma_involved'] = self.get_tilma_involveds(corp_num)
+            # tilma is not currently used
+            #corp['tilma_involved'] = self.get_tilma_involveds(corp_num)
 
             return corp
         except (Exception, psycopg2.DatabaseError) as error:
