@@ -75,7 +75,7 @@ def _generate_corp_nums():
 	                str(juisdiction_ct[0]['count']) + ', ')
 
 def test_generate_corp_nums():
-    selected_corps = ['0194696',] # 'A0059733','A0040189','A0059933','A0060938','A0060045',]
+    selected_corps = ['0628960','C1136065','C1102200','C1043095','0194696','0200463','0123383','0030194',] # 0194696', 'A0059733','A0040189','A0059933','A0060938','A0060045',]
     """
 						'LP0450925',
 						'FM0525021',
@@ -132,7 +132,7 @@ def test_generate_corp_nums():
             name_ct         = bc_registries.get_bcreg_sql('name', run_corp_sql(corp['corp_num'], select_name_recs))
             name_assumed_ct = bc_registries.get_bcreg_sql('name', run_corp_sql(corp['corp_num'], select_name_assumed_recs))
             name_trans_ct   = bc_registries.get_bcreg_sql('name', run_corp_sql(corp['corp_num'], select_name_trans_recs))
-            tilma_ct        = bc_registries.get_bcreg_sql('tilma_involved', run_corp_sql(corp['corp_num'], select_tilma_recs))
+            tilma_ct        = [{'count':0}] # bc_registries.get_bcreg_sql('tilma_involved', run_corp_sql(corp['corp_num'], select_tilma_recs))
             juisdiction_ct  = bc_registries.get_bcreg_sql('jurisdiction', run_corp_sql(corp['corp_num'], select_jurisdiction_recs))
 
             with BCRegistries(True) as bc_cache_reg:
