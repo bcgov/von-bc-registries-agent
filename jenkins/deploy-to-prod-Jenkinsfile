@@ -10,7 +10,8 @@ def APP_NAMES = [
   'postgresql', 
   'mara', 
   'bcreg-x-agent',
-  'schema-spy-with-oracle-jdbc']
+  'schema-spy-with-oracle-jdbc',
+  'backup']
 
 node {
   properties([[$class: 'BuildDiscarderProperty', strategy: [$class: 'LogRotator', artifactDaysToKeepStr: '', artifactNumToKeepStr: '', daysToKeepStr: '', numToKeepStr: '10']]])
