@@ -4,7 +4,7 @@ issuers:
     abbreviation: BCReg
     url: https://www2.gov.bc.ca/gov/content/governments/organizational-structure/ministries-organizations/ministries/citizens-services/bc-registries-online-services
     email: bcregistries@gov.bc.ca
-    logo_path: ../assets/img/bcreg-logo.png
+    logo_path: ../assets/img/bcreg-logo-square.jpg
 
     connection:
       type: TheOrgBook
@@ -35,6 +35,11 @@ issuers:
           effective_date:
             input: effective_date
             from: claim
+          inactive:
+            input: entity_status
+            from: claim
+            processor:
+              - bcgov.entity_status.is_historical
         topic:
           source_id:
             input: registration_id
