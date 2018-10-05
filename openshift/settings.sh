@@ -5,7 +5,7 @@ export GIT_REF="master"
 # The templates that should not have their GIT referances(uri and ref) over-ridden
 # Templates NOT in this list will have they GIT referances over-ridden
 # with the values of GIT_URI and GIT_REF
-export -a skip_git_overrides="postgresql-oracle-fdw-build.json"
+export -a skip_git_overrides="postgresql-oracle-fdw-build.json backup-build.json"
 
 # The project components
 # - They are all contained under the main OpenShift folder.
