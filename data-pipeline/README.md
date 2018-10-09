@@ -96,6 +96,32 @@ cd mara-example-project/scripts
 BC_REG_DB_USER=<usr> BC_REG_DB_PASSWORD=<pwd> MARA_DB_HOST=localhost MARA_DB_PORT=5444 ./run-step.sh bcreg/bc_reg_pipeline_post_credentials.py
 ```
 
+## Performing an Initial Data Load in OpenShift
+
+*The following configuration was found to provide the highest sustained throughput for posting credentials.*  *The bcreg-x-agent and mara pods have to be manually scaled because they do not have any resource limits set on which a horizontal autoscaler could operate.  The `tob-api` pods are configured with a horizontal autoscaler.*
+
+Scale the bcreg-x-agent deployment to 8 to 10 pods and make sure they have fully started.  When feeding into 5 `tob-api` pods, these 8 to 10 agent pods can provide a throughput of a little over 2,600 credentials per minute at best.  Increasing the number of pods on either side has little to no additional performance benefit.
+
+Scale the mara deployment to 2 pods.
+
+Use `oc rsh` to open a terminal session with each of the mara containers.
+
+In one container run the following scripts to start the credential staging process;
+```
+cd scripts
+./run-step.sh bcreg/bc_reg_migrate.py
+./run-step.sh bcreg/bc_reg_pipeline_initial_load.py
+```
+
+Allow the credential staging process to run for a while to allow it to get a head start on the credential posting process.  Posting is faster than staging, at the moment, so if you don't allow staging to get a head start the posting process will run out of work and end.
+
+In the second mara container start the credential posting process;
+```
+cd scripts
+./run-step.sh bcreg/bc_reg_pipeline_post_credentials.py
+```
+Once the initial load is complete the deployments can be scaled back to single pods.
+
 ## Running Pipelines to Perform On-going Event Monitoring and Credential Updates
 
 The following should be run at regular intervals (e.g. 15 minutes) on a scheduler:
