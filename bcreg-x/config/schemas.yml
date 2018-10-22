@@ -52,6 +52,9 @@
     effective_date:
       description: Date Credential is effective
       required: Y
+    reason_description:
+      description: Reason for credential issue/update
+      required: N
 
 - name: address.bc_registries
   version: '1.0.36'
@@ -86,6 +89,9 @@
     effective_date:
       description: Date Credential is effective
       required: Y
+    reason_description:
+      description: Reason for credential issue/update
+      required: N
 
 - name: relationship.bc_registries
   version: '1.0.36'
@@ -111,3 +117,6 @@
     effective_date:
       description: Date Credential is effective
       required: Y
+    reason_description:
+      description: Reason for credential issue/update
+      required: N

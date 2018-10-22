@@ -483,6 +483,54 @@ class EventProcessor:
             p_corp_num = 'BC' + corp_num
         return p_corp_num
 
+    # determine reason for address credential
+    def build_corp_reason_code(self, corp_info):
+        # corp_state reason code
+        if 'filing_typ_cd' in corp_info['corp_state_event']['start_filing_event']:
+            corp_state_reason = 'State Filing: ' + corp_info['corp_state_event']['start_filing_event']['filing_typ_cd']
+        else:
+            corp_state_reason = 'State Event: ' + corp_info['corp_state_event']['event_typ_cd']
+        corp_reason = corp_state_reason
+
+        # jurisdiciton reason code
+        if 'start_event' in corp_info['jurisdiction']:
+            if 'start_filing_event' in corp_info['jurisdiction']['start_event']:
+                if 'filing_typ_cd' in corp_info['jurisdiction']['start_event']['start_filing_event']:
+                    jurisdiction_reason = 'Jurisdiction Filing: ' + corp_info['jurisdiction']['start_event']['start_filing_event']['filing_typ_cd']
+                else:
+                    jurisdiction_reason = 'Jurisdiction Event: ' + corp_info['jurisdiction']['start_event']['event_typ_cd']
+                corp_reason = corp_reason + ', ' + jurisdiction_reason
+
+        # corp name(s) reason code(s)
+        if 0 < len(corp_info['org_names']):
+            if 'filing_typ_cd' in corp_info['org_names'][0]['start_filing_event']:
+                entity_name_reason = 'Entity Name Filing: ' + corp_info['org_names'][0]['start_filing_event']['filing_typ_cd']
+            else:
+                entity_name_reason = 'Entity Name Event: ' + corp_info['org_names'][0]['start_event']['event_typ_cd']
+            corp_reason = corp_reason + ', ' + entity_name_reason
+        if 0 < len(corp_info['org_name_assumed']):
+            if 'filing_typ_cd' in corp_info['org_name_assumed'][0]['start_filing_event']:
+                assumed_name_reason = 'Assumed Name Filing: ' + corp_info['org_name_assumed'][0]['start_filing_event']['filing_typ_cd']
+            else:
+                assumed_name_reason = 'Assumed Name Event: ' + corp_info['org_name_assumed'][0]['start_event']['event_typ_cd']
+            corp_reason = corp_reason + ', ' + assumed_name_reason
+
+        return corp_reason
+        
+    # determine reason for address credential
+    def build_addr_reason_code(self, office, address):
+        if 'filing_typ_cd' in office['start_filing_event']:
+            return 'Filing: ' + office['start_filing_event']['filing_typ_cd']
+        else:
+            return 'Event: ' + office['start_event']['event_typ_cd']
+        
+    # determine reason for address credential
+    def build_dba_reason_code(self, party):
+        if 'filing_typ_cd' in party['start_filing_event']:
+            return 'Filing: ' + party['start_filing_event']['filing_typ_cd']
+        else:
+            return 'Event: ' + party['start_event']['event_typ_cd']
+        
     # generate address credential
     def generate_address_credential(self, corp_num, corp_info, office, address, dba_corp_num, dba_name):
         addr_cred = {}
@@ -504,6 +552,7 @@ class EventProcessor:
         else:
             addr_cred['address_effective_date'] = office['start_event']['event_timestmp']
         addr_cred['effective_date'] = addr_cred['address_effective_date']
+        addr_cred['reason_description'] = self.build_addr_reason_code(office, address)
 
         return addr_cred
 
@@ -572,7 +621,7 @@ class EventProcessor:
         corp_cred['registration_id'] = self.corp_num_with_prefix(corp_info['corp_typ_cd'], corp_info['corp_num'])
         corp_cred['registration_date'] = corp_info['recognition_dts']
         if 0 < len(corp_info['org_names']):
-            corp_cred['entity_name'] = corp_info['org_names'][0]['corp_nme'] 
+            corp_cred['entity_name'] = corp_info['org_names'][0]['corp_nme']
             if 'effectiv_dt' in corp_info['org_names'][0]['start_filing_event']:
                 corp_cred['entity_name_effective'] = corp_info['org_names'][0]['start_filing_event']['effective_dt']
             else:
@@ -606,6 +655,7 @@ class EventProcessor:
             corp_cred['registered_jurisdiction'] = '' 
 
         corp_cred['effective_date'] = self.credential_effective_date(corp_cred, corp_info)
+        corp_cred['reason_description'] = self.build_corp_reason_code(corp_info)
 
         corp_creds.append(self.build_credential_dict(corp_credential, corp_schema, corp_version, corp_num, corp_cred))
 
@@ -639,8 +689,8 @@ class EventProcessor:
                         else:
                             dba_cred['effective_date'] = party['start_event']['event_timestmp']
                         dba_cred['relationship_status_effective'] = dba_cred['effective_date']
-                        corp_creds.append(self.build_credential_dict(dba_credential, dba_schema, dba_version, 
-                                                                    dba_cred['registration_id'], dba_cred))
+                        dba_cred['reason_description'] = self.build_dba_reason_code(party)
+                        corp_creds.append(self.build_credential_dict(dba_credential, dba_schema, dba_version, dba_cred['registration_id'], dba_cred))
 
         return corp_creds
 

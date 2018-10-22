@@ -1036,7 +1036,8 @@ class BCRegistries:
             if cur is not None:
                 cur.close()
 
-    def get_corp_active_date(self, corp):
+    # get the event that initiated the corporation's "Active" state
+    def get_corp_active_event(self, corp):
         sql_state = """SELECT state.corp_num corp_num, state.start_event_id start_event_id, state.end_event_id end_event_id, 
                         state.state_typ_cd state_typ_cd, state.dd_corp_num dd_corp_num, 
                         op_state.op_state_typ_cd op_state_typ_cd, op_state.short_desc short_desc, op_state.full_desc full_desc
@@ -1053,30 +1054,28 @@ class BCRegistries:
                 for row in cursor]
             cursor.close()
             cursor = None
+
+            # build history of all corp states, and sort by descending effective date
             for corp_state in corp_states:
-                #print('     ' + corp_state['corp_num'] + ' ' + corp_state['state_typ_cd'] + ' ' + corp_state['op_state_typ_cd'] + ' ' + str(corp_state['start_event_id']))
                 corp_state['start_event'] = self.get_event(corp_state['corp_num'], corp_state['start_event_id'])
                 if 'event_typ_cd' in corp_state['start_event']:
-                    corp_state['start_filing_event'] = self.get_filing_event(corp_state['corp_num'], corp_state['start_event_id'], corp_state['start_event']['event_typ_cd'])
+                    corp_state['start_event']['start_filing_event'] = self.get_filing_event(corp_state['corp_num'], corp_state['start_event_id'], corp_state['start_event']['event_typ_cd'])
                 else:
-                    corp_state['start_filing_event'] = {}
-                if 'effective_dt' in corp_state['start_filing_event']:
-                    corp_state['effective_date'] = corp_state['start_filing_event']['effective_dt']
+                    corp_state['start_event']['start_filing_event'] = {}
+                if 'effective_dt' in corp_state['start_event']['start_filing_event']:
+                    corp_state['effective_date'] = corp_state['start_event']['start_filing_event']['effective_dt']
                 else:
                     corp_state['effective_date'] = corp_state['start_event']['event_timestmp']
-                #print('     ' + corp_state['corp_num'] + ' ' + corp_state['state_typ_cd'] + ' ' + corp_state['op_state_typ_cd'] + ' ' + str(corp_state['start_event_id']) + ' ' + str(corp_state['effective_date']))
             sorted_corp_states = sorted(corp_states, key=lambda k: k['effective_date'], reverse=True)
-            active_date = None
+
+            # determine when the state turned "Active"
+            active_event = {}
             for corp_state in sorted_corp_states:
                 if corp_state['op_state_typ_cd'] == 'ACT':
-                    if 'effective_dt' in corp_state['start_filing_event']:
-                        active_date = corp_state['start_filing_event']['effective_dt']
-                    else:
-                        active_date = corp_state['start_event']['event_timestmp']
+                    active_event = corp_state['start_event']
                 else:
-                    return active_date
-                #print('    --> ' + corp['corp_num'] + ' ' + str(active_date))
-            return active_date
+                    return active_event
+            return active_event
 
         except (Exception, psycopg2.DatabaseError) as error:
             print(error)
@@ -1086,38 +1085,33 @@ class BCRegistries:
             if cursor is not None:
                 cursor.close()
 
-    def get_corp_state_date(self, corp):
+    def get_corp_state_event(self, corp):
         corp_state = corp['corp_state']
-        #print('corp_state', corp_state)
         if corp_state is None:
-            return corp['recognition_dts']
+            return {}
         else:
             if corp_state['op_state_typ_cd'] == 'HIS':
                 # for historical corps pull the effective date from the filing or event
-                #print('  ' + corp['corp_num'] + ' Get corp historical date')
-                if 'effective_dt' in corp_state['start_filing_event']:
-                    return corp_state['start_filing_event']['effective_dt']
-                else:
-                    if 'event_timestmp' in corp_state['start_event']:
-                        return corp_state['start_event']['event_timestmp']
-                    else:
-                        return None
+                return corp_state['start_event']
             else:
                 # for active corps find the date of activation
-                #print('  ' + corp['corp_num'] + ' Get corp active date')
                 if corp_state['state_typ_cd'] == 'ACT':
-                    if 'effective_dt' in corp_state['start_filing_event']:
-                        return corp_state['start_filing_event']['effective_dt']
-                    else:
-                        if 'event_timestmp' in corp_state['start_event']:
-                            return corp_state['start_event']['event_timestmp']
-                        else:
-                            return None
+                    return corp_state['start_event']
                 else:
                     # some other "active" status, when was corp previously activated?
-                    return self.get_corp_active_date(corp)
+                    return self.get_corp_active_event(corp)
 
+    # return the filing date or event date of the 
+    def get_corp_state_date(self, corp):
+        if 'effective_dt' in corp['corp_state_event']['start_filing_event']:
+            return corp['corp_state_event']['start_filing_event']['effective_dt']
+        else:
+            if 'event_timestmp' in corp['corp_state_event']:
+                return corp['corp_state_event']['event_timestmp']
+            else:
+                return None
 
+    # get the corporation's current state
     def get_corp_state(self, corp_num):
         sql_state = """SELECT state.corp_num corp_num, state.start_event_id start_event_id, state.end_event_id end_event_id, 
                         state.state_typ_cd state_typ_cd, state.dd_corp_num dd_corp_num, 
@@ -1176,6 +1170,11 @@ class BCRegistries:
             cursor.close()
             cursor = None
             if len(jurisdiction) > 0:
+                jurisdiction[0]['start_event'] = self.get_event(corp_num, jurisdiction[0]['start_event_id'])
+                if 'event_typ_cd' in jurisdiction[0]['start_event']:
+                    jurisdiction[0]['start_filing_event'] = self.get_filing_event(corp_num, jurisdiction[0]['start_event_id'], jurisdiction[0]['start_event']['event_typ_cd'])
+                else:
+                    jurisdiction[0]['start_filing_event'] = {}
                 return jurisdiction[0]
             return {}
         except (Exception, psycopg2.DatabaseError) as error:
@@ -1299,15 +1298,14 @@ class BCRegistries:
 
             # other corp attributes
             corp['corp_state'] = self.get_corp_state(corp_num)
-            #print(corp['corp_num'] + ' corp_state = ' + corp['corp_state']['state_typ_cd'] + ' ' + corp['corp_state']['op_state_typ_cd'])
             if corp['corp_state'] is not None: 
                 corp['corp_state']['start_event'] = self.get_event(corp['corp_num'], corp['corp_state']['start_event_id'])
                 if 'event_typ_cd' in corp['corp_state']['start_event']:
-                    corp['corp_state']['start_filing_event'] = self.get_filing_event(corp['corp_num'], corp['corp_state']['start_event_id'], corp['corp_state']['start_event']['event_typ_cd'])
+                    corp['corp_state']['start_event']['start_filing_event'] = self.get_filing_event(corp['corp_num'], corp['corp_state']['start_event_id'], corp['corp_state']['start_event']['event_typ_cd'])
                 else:
-                    corp['corp_state']['start_filing_event'] = {}
+                    corp['corp_state']['start_event']['start_filing_event'] = {}
+            corp['corp_state_event'] = self.get_corp_state_event(corp)
             corp['corp_state_dt'] = self.get_corp_state_date(corp)
-            #print('--> ' + corp['corp_num'] + ' corp_state_dt = ' + str(corp['corp_state_dt']))
             # tilma is not currently used
             #corp['tilma_involved'] = self.get_tilma_involveds(corp_num)
 

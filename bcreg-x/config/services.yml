@@ -141,6 +141,14 @@ issuers:
               value:
                 input: home_jurisdiction
                 from: claim
+          - model: attribute
+            fields:
+              type:
+                input: reason_description
+                from: value
+              value:
+                input: reason_description
+                from: claim
 
       - description: Relationship
         schema: relationship.bc_registries
@@ -200,6 +208,14 @@ issuers:
               value:
                 input: relationship_status_effective
                 from: claim
+          - model: attribute
+            fields:
+              type:
+                input: reason_description
+                from: value
+              value:
+                input: reason_description
+                from: claim
 
       - description: Corporate Address
         schema: address.bc_registries
@@ -240,4 +256,12 @@ issuers:
                 from: claim
               type:
                 input: address_type
+                from: claim
+          - model: attribute
+            fields:
+              type:
+                input: reason_description
+                from: value
+              value:
+                input: reason_description
                 from: claim
