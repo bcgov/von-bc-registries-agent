@@ -20,7 +20,9 @@ with EventProcessor() as event_processor:
             
             # get unprocessed corps (there are about 2700)
             print("Get unprocessed corps")
-            corps = bc_registries.get_unprocessed_corps_data_load(prev_event_id, max_event_id)
+            last_event_dt = bc_registries.get_event_effective_date(prev_event_id)
+            max_event_dt = bc_registries.get_event_effective_date(max_event_id)
+            corps = bc_registries.get_unprocessed_corps_data_load(prev_event_id, last_event_dt, max_event_id, max_event_dt)
             
             print("Update our queue")
             event_processor.update_corp_event_queue(system_type, corps, max_event_id)

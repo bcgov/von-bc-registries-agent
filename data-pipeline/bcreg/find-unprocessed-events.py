@@ -19,7 +19,9 @@ with BCRegistries() as bc_registries:
         corps = bc_registries.get_unprocessed_corps(prev_event_id, max_event_id)
         
         print("Find unprocessed events for each corp")
-        corps = bc_registries.get_unprocessed_corp_events(prev_event_id, max_event_id, corps)
+        last_event_dt = bc_registries.get_event_effective_date(prev_event_id)
+        max_event_dt = bc_registries.get_event_effective_date(max_event_id)
+        corps = bc_registries.get_unprocessed_corp_events(prev_event_id, last_event_dt, max_event_id, max_event_dt, corps)
         
         print("Update our queue")
         event_processor.update_corp_event_queue(system_type, corps, max_event_id)

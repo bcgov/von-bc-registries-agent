@@ -18,7 +18,8 @@ BC_REGISTRIES_TABLE_PREFIX = 'bc_registries.'
 INMEM_CACHE_TABLE_PREFIX   = ''
 MAX_WHERE_IN = 1000
 
-MAX_END_DATE = '9999-12-31 23:59:59'
+MIN_START_DATE = '0001-01-01 00:00:00'
+MAX_END_DATE   = '9999-12-31 23:59:59'
 
 # for now, we are in PST time
 timezone = pytz.timezone("America/Los_Angeles")
@@ -732,7 +733,7 @@ class BCRegistries:
 
     # return unprocessed corporations, based on active or historical
     # use for initial data load
-    def get_unprocessed_corps_data_load(self, last_event_id, max_event_id):
+    def get_unprocessed_corps_data_load(self, last_event_id, last_event_dt, max_event_id, max_event_dt):
         sqls = []
         sqls.append("""SELECT corp.corp_num from """ + BC_REGISTRIES_TABLE_PREFIX + """corporation corp,
                             """ + BC_REGISTRIES_TABLE_PREFIX + """corp_party party
@@ -755,7 +756,8 @@ class BCRegistries:
                 row = cur.fetchone()
                 while row is not None:
                     # print(row)
-                    corps.append({'CORP_NUM':row[0], 'PREV_EVENT_ID':last_event_id, 'LAST_EVENT_ID':max_event_id, })
+                    corps.append({'CORP_NUM':row[0], 'PREV_EVENT_ID':last_event_id, 'PREV_EVENT_DT':last_event_dt, 
+                                                     'LAST_EVENT_ID':max_event_id, 'LAST_EVENT_DT':max_event_dt, })
                     row = cur.fetchone()
                 cur.close()
                 cur = None
@@ -814,33 +816,34 @@ class BCRegistries:
         return corps
 
     #return the (unprocessed) event range for each provided corporation
-    def get_unprocessed_corp_events(self, last_event_id, max_event_id, corps, max=None):
-        cur = None
-        try:
-            for i,corp in enumerate(corps): 
-                # create a cursor
-                # print(corp['CORP_NUM'])
-                if (i % 100 == 0) or (i+1 == len(corps)):
-                    print('>>> Processing {} of {} corporations.'.format(i+1, len(corps)))
-                cur = self.conn.cursor()
-                cur.execute("""SELECT max(event_id) from """ + BC_REGISTRIES_TABLE_PREFIX + """event
-                                where corp_num = %s and event_id > %s and event_id <= %s""", 
-                                (corp['CORP_NUM'], last_event_id, max_event_id,))
-                row = cur.fetchone()
-                corp['PREV_EVENT_ID'] = last_event_id
-                corp['LAST_EVENT_ID'] = row[0]
-                cur.close()
-                cur = None
-                if max and i >= max:
-                    break
-            return corps
-        except (Exception, psycopg2.DatabaseError) as error:
-            print(error)
-            print(traceback.print_exc())
-            raise
-        finally:
-            if cur is not None:
-                cur.close()
+    def get_unprocessed_corp_events(self, last_event_id, last_event_dt, max_event_id, max_event_dt, corps, max=None):
+        #cur = None
+        #try:
+        for i,corp in enumerate(corps): 
+            # create a cursor
+            if (i % 100 == 0) or (i+1 == len(corps)):
+                print('>>> Processing {} of {} corporations.'.format(i+1, len(corps)))
+            #cur = self.conn.cursor()
+            #cur.execute("""SELECT max(event_id) from """ + BC_REGISTRIES_TABLE_PREFIX + """event
+            #                where corp_num = %s and event_id > %s and event_id <= %s""", 
+            #                (corp['CORP_NUM'], last_event_id, max_event_id,))
+            #row = cur.fetchone()
+            corp['PREV_EVENT_ID'] = last_event_id
+            corp['PREV_EVENT_DT'] = last_event_dt
+            corp['LAST_EVENT_ID'] = max_event_id
+            corp['LAST_EVENT_DT'] = max_event_dt
+            #cur.close()
+            #cur = None
+            if max and i >= max:
+                break
+        return corps
+        #except (Exception, psycopg2.DatabaseError) as error:
+        #    print(error)
+        #    print(traceback.print_exc())
+        #    raise
+        #finally:
+        #    if cur is not None:
+        #        cur.close()
 
 
     ###########################################################################
@@ -848,6 +851,22 @@ class BCRegistries:
     # (can run against the in-memory cache 
     #  or against bc registries database directly)
     ###########################################################################
+
+    # return the "effective date" given an event and filing
+    def get_event_filing_effective_date(self, event, filing):
+        if 'effective_dt' in filing:
+            return filing['effective_dt']
+        else:
+            return event['event_timestmp']
+
+    # return the "effective date" given an event id
+    def get_event_effective_date(self, event_id):
+        # note that corp_num is ignored in the following queries
+        if event_id == 0:
+            return MIN_START_DATE;
+        event = self.get_event('0', event_id)
+        filing = self.get_filing_event('0', event_id, event['event_typ_cd'])
+        return self.get_event_filing_effective_date(event, filing)
 
     # find a specific event, 
     # return None if not found
@@ -937,20 +956,14 @@ class BCRegistries:
                     office['start_filing_event'] = self.get_filing_event(corp_num, office['start_event_id'], office['start_event']['event_typ_cd'])
                 else:
                     office['start_filing_event'] = {}
-                if 'effective_dt' in office['start_filing_event']:
-                    office['effective_start_date'] = office['start_filing_event']['effective_dt']
-                else:
-                    office['effective_start_date'] = office['start_event']['event_timestmp']
+                office['effective_start_date'] = self.get_event_filing_effective_date(office['start_event'], office['start_filing_event'])
                 if office['end_event_id'] is not None:
                     office['end_event'] = self.get_event(corp_num, office['end_event_id'])
                     if 'event_typ_cd' in office['end_event']:
                         office['end_filing_event'] = self.get_filing_event(corp_num, office['end_event_id'], office['end_event']['event_typ_cd'])
                     else:
                         office['end_filing_event'] = {}
-                    if 'effective_dt' in office['end_filing_event']:
-                        office['effective_end_date'] = office['end_filing_event']['effective_dt']
-                    else:
-                        office['effective_end_date'] = office['end_event']['event_timestmp']
+                    office['effective_end_date'] = self.get_event_filing_effective_date(office['end_event'], office['end_filing_event'])
                 else:
                     office['effective_end_date'] = MAX_END_DATE
 
@@ -1033,10 +1046,7 @@ class BCRegistries:
                     corp_name['start_filing_event'] = self.get_filing_event(row[0], row[2], corp_name['start_event']['event_typ_cd'])
                 else:
                     corp_name['start_filing_event'] = {}
-                if 'effective_dt' in corp_name['start_filing_event']:
-                    corp_name['effective_start_date'] = corp_name['start_filing_event']['effective_dt']
-                else:
-                    corp_name['effective_start_date'] = corp_name['start_event']['event_timestmp']
+                corp_name['effective_start_date'] = self.get_event_filing_effective_date(corp_name['start_event'], corp_name['start_filing_event'])
                 corp_name['end_event_id'] = row[3]
                 if corp_name['end_event_id'] is not None:
                     corp_name['end_event'] = self.get_event(corp_num, corp_name['end_event_id'])
@@ -1044,10 +1054,7 @@ class BCRegistries:
                         corp_name['end_filing_event'] = self.get_filing_event(corp_num, corp_name['end_event_id'], corp_name['end_event']['event_typ_cd'])
                     else:
                         corp_name['end_filing_event'] = {}
-                    if 'effective_dt' in corp_name['end_filing_event']:
-                        corp_name['effective_end_date'] = corp_name['end_filing_event']['effective_dt']
-                    else:
-                        corp_name['effective_end_date'] = corp_name['end_event']['event_timestmp']
+                    corp_name['effective_end_date'] = self.get_event_filing_effective_date(corp_name['end_event'], corp_name['end_filing_event'])
                 else:
                     corp_name['effective_end_date'] = MAX_END_DATE
                 corp_name['corp_name_seq_num'] = row[4]
@@ -1206,20 +1213,14 @@ class BCRegistries:
                         jurisdiction['start_filing_event'] = self.get_filing_event(corp_num, jurisdiction['start_event_id'], jurisdiction['start_event']['event_typ_cd'])
                     else:
                         jurisdiction['start_filing_event'] = {}
-                    if 'effective_dt' in jurisdiction['start_filing_event']:
-                        jurisdiction['effective_start_date'] = jurisdiction['start_filing_event']['effective_dt']
-                    else:
-                        jurisdiction['effective_start_date'] = jurisdiction['start_event']['event_timestmp']
+                    jurisdiction['effective_start_date'] = self.get_event_filing_effective_date(jurisdiction['start_event'], jurisdiction['start_filing_event'])
                     if jurisdiction['end_event_id'] is not None:
                         jurisdiction['end_event'] = self.get_event(corp_num, jurisdiction['end_event_id'])
                         if 'event_typ_cd' in jurisdiction['end_event']:
                             jurisdiction['end_filing_event'] = self.get_filing_event(corp_num, jurisdiction['end_event_id'], jurisdiction['end_event']['event_typ_cd'])
                         else:
                             jurisdiction['end_filing_event'] = {}
-                        if 'effective_dt' in jurisdiction['end_filing_event']:
-                            jurisdiction['effective_end_date'] = jurisdiction['end_filing_event']['effective_dt']
-                        else:
-                            jurisdiction['effective_end_date'] = jurisdiction['end_event']['event_timestmp']
+                        jurisdiction['effective_end_date'] = self.get_event_filing_effective_date(jurisdiction['end_event'], jurisdiction['end_filing_event'])
                     else:
                         jurisdiction['effective_end_date'] = MAX_END_DATE
                 return jurisdictions
@@ -1311,7 +1312,7 @@ class BCRegistries:
             return addr_element + delimiter
         return ''
 
-    def get_basic_corp_info(self, corp_num, event_id):
+    def get_basic_corp_info(self, corp_num, event_id, deep_copy=True):
         sql_corp = """SELECT corp_num, corp_typ_cd, recognition_dts, last_ar_filed_dt, bn_9, bn_15, admin_email, last_ledger_dt
                  FROM """ + self.get_table_prefix() + """corporation
                  WHERE corp_num = """ + self.get_db_sql_param()
@@ -1325,7 +1326,8 @@ class BCRegistries:
             cur.execute(sql_corp, (corp_num,))
             row = cur.fetchone()
             corp['corp_num'] = row[0]
-            corp['jurisdiction'] = self.get_jurisdictons(row[0])
+            if deep_copy:
+                corp['jurisdiction'] = self.get_jurisdictons(row[0])
             corp['corp_typ_cd'] = row[1]
             corp['corp_type'] = self.get_corp_type(row[1])
             corp['recognition_dts'] = row[2]
@@ -1337,40 +1339,35 @@ class BCRegistries:
             cur.close()
             cur = None
      
-            # get corp names
-            corp['org_names'] = self.get_names(corp_num, ['CO','NB'], event_id)
-            corp['org_name_assumed'] = self.get_names(corp_num, ['AS'], event_id)
-            corp['org_name_trans'] = self.get_names(corp_num, ['TR', 'NO'], event_id)
-            corp['office'] = self.get_offices(corp_num)
+            if deep_copy:
+                # get corp names
+                corp['org_names'] = self.get_names(corp_num, ['CO','NB'], event_id)
+                corp['org_name_assumed'] = self.get_names(corp_num, ['AS'], event_id)
+                corp['org_name_trans'] = self.get_names(corp_num, ['TR', 'NO'], event_id)
+                corp['office'] = self.get_offices(corp_num)
 
-            # other corp attributes
-            corp['corp_state'] = self.get_corp_states(corp_num)
-            for corp_state in corp['corp_state']:
-                corp_state['start_event'] = self.get_event(corp['corp_num'], corp_state['start_event_id'])
-                if 'event_typ_cd' in corp_state['start_event']:
-                    corp_state['start_event']['start_filing_event'] = self.get_filing_event(corp['corp_num'], corp_state['start_event_id'], corp_state['start_event']['event_typ_cd'])
-                else:
-                    corp_state['start_event']['start_filing_event'] = {}
-                if 'effective_dt' in corp_state['start_event']['start_filing_event']:
-                    corp_state['event_date'] = corp_state['start_event']['start_filing_event']['effective_dt']
-                else:
-                    corp_state['event_date'] = corp_state['start_event']['event_timestmp']
-                corp_state['corp_state_effective_event'] = self.get_corp_state_event(corp, corp_state)
-                corp_state['effective_start_date'] = self.get_corp_state_date(corp_state)
-                if corp_state['end_event_id'] is not None:
-                    corp_state['end_event'] = self.get_event(corp['corp_num'], corp_state['end_event_id'])
-                    if 'event_typ_cd' in corp_state['end_event']:
-                        corp_state['end_filing_event'] = self.get_filing_event(corp['corp_num'], corp_state['end_event_id'], corp_state['end_event']['event_typ_cd'])
+                # other corp attributes
+                corp['corp_state'] = self.get_corp_states(corp_num)
+                for corp_state in corp['corp_state']:
+                    corp_state['start_event'] = self.get_event(corp['corp_num'], corp_state['start_event_id'])
+                    if 'event_typ_cd' in corp_state['start_event']:
+                        corp_state['start_event']['start_filing_event'] = self.get_filing_event(corp['corp_num'], corp_state['start_event_id'], corp_state['start_event']['event_typ_cd'])
                     else:
-                        corp_state['end_filing_event'] = {}
-                    if 'effective_dt' in corp_state['end_filing_event']:
-                        corp_state['effective_end_date'] = corp_state['end_filing_event']['effective_dt']
+                        corp_state['start_event']['start_filing_event'] = {}
+                    corp_state['event_date'] = self.get_event_filing_effective_date(corp_state['start_event'], corp_state['start_event']['start_filing_event'])
+                    corp_state['corp_state_effective_event'] = self.get_corp_state_event(corp, corp_state)
+                    corp_state['effective_start_date'] = self.get_corp_state_date(corp_state)
+                    if corp_state['end_event_id'] is not None:
+                        corp_state['end_event'] = self.get_event(corp['corp_num'], corp_state['end_event_id'])
+                        if 'event_typ_cd' in corp_state['end_event']:
+                            corp_state['end_filing_event'] = self.get_filing_event(corp['corp_num'], corp_state['end_event_id'], corp_state['end_event']['event_typ_cd'])
+                        else:
+                            corp_state['end_filing_event'] = {}
+                        corp_state['effective_end_date'] = self.get_event_filing_effective_date(corp_state['end_event'], corp_state['end_filing_event'])
                     else:
-                        corp_state['effective_end_date'] = corp_state['end_event']['event_timestmp']
-                else:
-                    corp_state['effective_end_date'] = MAX_END_DATE
-            # tilma is not currently used
-            #corp['tilma_involved'] = self.get_tilma_involveds(corp_num)
+                        corp_state['effective_end_date'] = MAX_END_DATE
+                # tilma is not currently used
+                #corp['tilma_involved'] = self.get_tilma_involveds(corp_num)
 
             return corp
         except (Exception, psycopg2.DatabaseError) as error:
@@ -1427,10 +1424,7 @@ class BCRegistries:
                     corp_party['start_filing_event'] = self.get_filing_event(row[0], row[5], corp_party['start_event']['event_typ_cd'])
                 else:
                     corp_party['start_filing_event'] = {}
-                if 'effective_dt' in corp_party['start_filing_event']:
-                    corp_party['effective_start_date'] = corp_party['start_filing_event']['effective_dt']
-                else:
-                    corp_party['effective_start_date'] = corp_party['start_event']['event_timestmp']
+                corp_party['effective_start_date'] = self.get_event_filing_effective_date(corp_party['start_event'], corp_party['start_filing_event'])
                 corp_party['end_event_id'] = row[6]
                 if corp_party['end_event_id'] is not None:
                     corp_party['end_event'] = self.get_event(corp['corp_num'], corp_party['end_event_id'])
@@ -1438,10 +1432,7 @@ class BCRegistries:
                         corp_party['end_filing_event'] = self.get_filing_event(corp['corp_num'], corp_party['end_event_id'], corp_party['end_event']['event_typ_cd'])
                     else:
                         corp_party['end_filing_event'] = {}
-                    if 'effective_dt' in corp_party['end_filing_event']:
-                        corp_party['effective_end_date'] = corp_party['end_filing_event']['effective_dt']
-                    else:
-                        corp_party['effective_end_date'] = corp_party['end_event']['event_timestmp']
+                    corp_party['effective_end_date'] = self.get_event_filing_effective_date(corp_party['end_event'], corp_party['end_filing_event'])
                 else:
                     corp_party['effective_end_date'] = MAX_END_DATE
                 corp_party['cessation_dt'] = row[7]
@@ -1457,7 +1448,7 @@ class BCRegistries:
                 corp_party['reason_typ_cd'] = row[17]
                 # note we need to pull corporate info for DBA companies
                 # actually no since we are only issuing a relationship credential (with the two corp_nums)
-                #corp_party['corp_info'] = self.get_basic_corp_info(corp_party['corp_num'], event_id)
+                corp_party['corp_info'] = self.get_basic_corp_info(corp_party['corp_num'], event_id, False)
 
                 corp['parties'].append(corp_party)
                 row = cur.fetchone()
