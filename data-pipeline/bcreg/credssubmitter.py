@@ -70,6 +70,10 @@ async def submit_cred(http_client, attrs, schema, version):
         print(exc)
         raise
 
+# add reason code to the submitted credential
+def inject_reason(attributes, reason):
+  attributes['reason_description'] = reason
+  return attributes
 
 async def post_credentials(http_client, conn, credentials):
     sql2 = """UPDATE CREDENTIAL_LOG
@@ -84,7 +88,10 @@ async def post_credentials(http_client, conn, credentials):
     failed = 0
     post_creds = []
     for credential in credentials:
-        post_creds.append({"schema":credential['SCHEMA_NAME'], "version":credential['SCHEMA_VERSION'], "attributes":credential['CREDENTIAL_JSON']})
+      # need to inject reason into this process
+      if credential['CREDENTIAL_REASON'] is not None and 0 < len(credential['CREDENTIAL_REASON']):
+        credential['CREDENTIAL_JSON'] = inject_reason(credential['CREDENTIAL_JSON'], credential['CREDENTIAL_REASON'])
+      post_creds.append({"schema":credential['SCHEMA_NAME'], "version":credential['SCHEMA_VERSION'], "attributes":credential['CREDENTIAL_JSON']})
 
     # post credential
     #print('Post credential ...')
@@ -177,6 +184,7 @@ class CredsSubmitter:
                       CREDENTIAL_TYPE_CD, 
                       CREDENTIAL_ID, 
                       CREDENTIAL_JSON, 
+                      CREDENTIAL_REASON, 
                       SCHEMA_NAME, 
                       SCHEMA_VERSION, 
                       ENTRY_DATE
@@ -204,6 +212,7 @@ class CredsSubmitter:
                              CREDENTIAL_TYPE_CD, 
                              CREDENTIAL_ID, 
                              CREDENTIAL_JSON, 
+                             CREDENTIAL_REASON, 
                              SCHEMA_NAME, 
                              SCHEMA_VERSION, 
                              ENTRY_DATE
@@ -277,8 +286,8 @@ class CredsSubmitter:
                       print('Processing: ' + str(processing_time))
                       processed_count = 0
                     credential = {'RECORD_ID':row[0], 'SYSTEM_TYP_CD':row[1], 'PREV_EVENT_ID':row[2], 'LAST_EVENT_ID':row[3], 'CORP_NUM':row[4], 'CORP_STATE':row[5],
-                                  'CREDENTIAL_TYPE_CD':row[6], 'CREDENTIAL_ID':row[7], 'CREDENTIAL_JSON':row[8], 'SCHEMA_NAME':row[9], 'SCHEMA_VERSION':row[10], 
-                                  'ENTRY_DATE':row[11]}
+                                  'CREDENTIAL_TYPE_CD':row[6], 'CREDENTIAL_ID':row[7], 'CREDENTIAL_JSON':row[8], 'CREDENTIAL_REASON':row[9], 
+                                  'SCHEMA_NAME':row[10], 'SCHEMA_VERSION':row[11], 'ENTRY_DATE':row[12]}
 
                     # make sure to include all credentials for the same client id within the same batch
                     if CREDS_REQUEST_SIZE <= len(credentials) and credential['CORP_NUM'] != cred_owner_id:

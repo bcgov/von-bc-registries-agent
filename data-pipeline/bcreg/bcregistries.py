@@ -737,7 +737,7 @@ class BCRegistries:
         sqls = []
         sqls.append("""SELECT corp.corp_num from """ + BC_REGISTRIES_TABLE_PREFIX + """corporation corp,
                             """ + BC_REGISTRIES_TABLE_PREFIX + """corp_party party
-                         where corp.corp_typ_cd in ('SP','MF')
+                         where corp.corp_typ_cd in ('SP','FM')
                           and corp.corp_num = party.corp_num
                           and party.party_typ_cd in ('FBO')
                           and party.bus_company_num is not null
@@ -779,7 +779,7 @@ class BCRegistries:
                         and corp_num in
                         (SELECT corp.corp_num from """ + BC_REGISTRIES_TABLE_PREFIX + """corporation corp,
                             """ + BC_REGISTRIES_TABLE_PREFIX + """corp_party party
-                         where corp.corp_typ_cd in ('SP','MF')
+                         where corp.corp_typ_cd in ('SP','FM')
                           and corp.corp_num = party.corp_num
                           and party.party_typ_cd in ('FBO')
                           and bus_company_num is not null
