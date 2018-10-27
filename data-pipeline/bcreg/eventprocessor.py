@@ -8,7 +8,7 @@ import time
 import hashlib
 import traceback
 from bcreg.config import config
-from bcreg.bcregistries import BCRegistries
+from bcreg.bcregistries import BCRegistries, event_dict
 
 
 corp_credential = 'REG'
@@ -26,8 +26,14 @@ dba_version = '1.0.36'
 CORP_BATCH_SIZE = 3000
 FALLBACK_CORP_BATCH_SIZE = 300
 
+MIN_START_DATE = datetime.datetime(datetime.MINYEAR+1, 1, 1)
+MAX_END_DATE   = datetime.datetime(datetime.MAXYEAR-1, 12, 31)
+
 # for now, we are in PST time
 timezone = pytz.timezone("America/Los_Angeles")
+
+MIN_START_DATE_TZ = timezone.localize(MIN_START_DATE)
+MAX_END_DATE_TZ   = timezone.localize(MAX_END_DATE)
 
 
 class DateTimeEncoder(json.JSONEncoder):
@@ -37,11 +43,20 @@ class DateTimeEncoder(json.JSONEncoder):
                 tz_aware = timezone.localize(o)
                 return tz_aware.astimezone(pytz.utc).isoformat()
             except (Exception) as error:
-                print("date conversion error", o, error)
-                if o.year <= datetime.MINYEAR or o.year >= datetime.MAXYEAR:
-                    return ""
+                #print("Event Processor Date conversion error", o, error)
+                if o.year <= datetime.MINYEAR+1:
+                    return MIN_START_DATE_TZ.astimezone(pytz.utc).isoformat()
+                elif o.year >= datetime.MAXYEAR-1:
+                    return MAX_END_DATE_TZ.astimezone(pytz.utc).isoformat()
                 return o.isoformat()
         return json.JSONEncoder.default(self, o)
+
+
+def event_json(event):
+    return json.dumps(event, cls=DateTimeEncoder, sort_keys=True)
+
+def event_dict_from_json(event_json):
+    return json.loads(event_json)
 
 
 # interface to Event Processor database
@@ -98,9 +113,9 @@ class EventProcessor:
                 SYSTEM_TYPE_CD VARCHAR(255) NOT NULL, 
                 CORP_NUM VARCHAR(255) NOT NULL,
                 PREV_EVENT_ID INTEGER NOT NULL, 
-                PREV_EVENT_DATE TIMESTAMP NOT NULL,
+                PREV_EVENT_DATE TIMESTAMP NOT NULL, 
                 LAST_EVENT_ID INTEGER NOT NULL, 
-                LAST_EVENT_DATE TIMESTAMP NOT NULL,
+                LAST_EVENT_DATE TIMESTAMP NOT NULL, 
                 ENTRY_DATE TIMESTAMP NOT NULL,
                 PROCESS_DATE TIMESTAMP,
                 PROCESS_SUCCESS CHAR,
@@ -142,10 +157,8 @@ class EventProcessor:
                 SYSTEM_TYPE_CD VARCHAR(255) NOT NULL, 
                 CORP_NUM VARCHAR(255) NOT NULL,
                 CORP_STATE VARCHAR(255) NOT NULL,
-                PREV_EVENT_ID INTEGER NOT NULL, 
-                PREV_EVENT_DATE TIMESTAMP NOT NULL,
-                LAST_EVENT_ID INTEGER NOT NULL, 
-                LAST_EVENT_DATE TIMESTAMP NOT NULL,
+                PREV_EVENT JSON NOT NULL, 
+                LAST_EVENT JSON NOT NULL, 
                 CORP_JSON JSON NOT NULL,
                 ENTRY_DATE TIMESTAMP NOT NULL,
                 PROCESS_DATE TIMESTAMP,
@@ -203,8 +216,8 @@ class EventProcessor:
                 SYSTEM_TYPE_CD VARCHAR(255) NOT NULL, 
                 CORP_NUM VARCHAR(255) NOT NULL,
                 CORP_STATE VARCHAR(255) NOT NULL,
-                PREV_EVENT_ID INTEGER NOT NULL, 
-                LAST_EVENT_ID INTEGER NOT NULL, 
+                PREV_EVENT JSON NOT NULL, 
+                LAST_EVENT JSON NOT NULL, 
                 CREDENTIAL_TYPE_CD VARCHAR(255) NOT NULL,
                 CREDENTIAL_ID VARCHAR(255) NOT NULL,
                 SCHEMA_NAME VARCHAR(255) NOT NULL,
@@ -330,7 +343,10 @@ class EventProcessor:
             row = cur.fetchone()
             cur.close()
             cur = None
-            return row[0]
+            prev_event = row[0]
+            if prev_event is None:
+                prev_event = 0
+            return prev_event
         except (Exception, psycopg2.DatabaseError) as error:
             print(error)
             print(traceback.print_exc())
@@ -347,7 +363,8 @@ class EventProcessor:
         cur = None
         try:
             cur = self.conn.cursor()
-            cur.execute(sql, (system_type, prev_event_id, prev_event_dt, last_event_id, last_event_dt, corp_num, datetime.datetime.now(),))
+            cur.execute(sql, (system_type, prev_event_id, prev_event_dt, last_event_id, last_event_dt, 
+                                corp_num, datetime.datetime.now(),))
             record_id = cur.fetchone()[0]
             self.conn.commit()
             cur.close()
@@ -364,7 +381,7 @@ class EventProcessor:
     def insert_corporation_list(self, corporation_list):
         """ insert multiple corps into the corps table  """
         sql = """INSERT INTO EVENT_BY_CORP_FILING (SYSTEM_TYPE_CD, PREV_EVENT_ID, PREV_EVENT_DATE, LAST_EVENT_ID, LAST_EVENT_DATE, CORP_NUM, ENTRY_DATE) 
-                 VALUES(%s, %s, %s, %s, %s, %s, %s)"""
+                 VALUES(%s, %s, %s, %s, %s)"""
         cur = None
         try:
             cur = self.conn.cursor()
@@ -390,7 +407,7 @@ class EventProcessor:
         try:
             for i,corp in enumerate(corps): 
                 cur = self.conn.cursor()
-                cur.execute(sql, (system_type, corp['PREV_EVENT_ID'], corp['PREV_EVENT_DT'], corp['LAST_EVENT_ID'], corp['LAST_EVENT_DT'], corp['CORP_NUM'], datetime.datetime.now(),))
+                cur.execute(sql, (system_type, corp['PREV_EVENT']['event_id'], corp['PREV_EVENT']['event_date'], corp['LAST_EVENT']['event_id'], corp['LAST_EVENT']['event_date'], corp['CORP_NUM'], datetime.datetime.now(),))
                 record_id = cur.fetchone()[0]
                 cur.close()
                 cur = None
@@ -407,14 +424,14 @@ class EventProcessor:
                 cur.close()
 
     # insert data for one corp into the history table
-    def insert_corp_history(self, system_type, prev_event_id, prev_event_dt, last_event_id, last_event_dt, corp_num, corp_state, corp_json):
+    def insert_corp_history(self, system_type, prev_event_json, last_event_json, corp_num, corp_state, corp_json):
         """ insert a new corps into the corps table """
-        sql = """INSERT INTO CORP_HISTORY_LOG (SYSTEM_TYPE_CD, PREV_EVENT_ID, PREV_EVENT_DATE, LAST_EVENT_ID, LAST_EVENT_DATE, CORP_NUM, CORP_STATE, CORP_JSON, ENTRY_DATE)
-                 VALUES(%s, %s, %s, %s, %s, %s, %s, %s, %s) RETURNING RECORD_ID;"""
+        sql = """INSERT INTO CORP_HISTORY_LOG (SYSTEM_TYPE_CD, PREV_EVENT, LAST_EVENT, CORP_NUM, CORP_STATE, CORP_JSON, ENTRY_DATE)
+                 VALUES(%s, %s, %s, %s, %s, %s, %s) RETURNING RECORD_ID;"""
         cur = None
         try:
             cur = self.conn.cursor()
-            cur.execute(sql, (system_type, prev_event_id, last_event_id, corp_num, corp_state, corp_json, datetime.datetime.now(),))
+            cur.execute(sql, (system_type, prev_event_json, last_event_json, corp_num, corp_state, corp_json, datetime.datetime.now(),))
             record_id = cur.fetchone()[0]
             self.conn.commit()
             cur.close()
@@ -428,11 +445,11 @@ class EventProcessor:
                 cur.close()
 
     # insert a generated JSON credential into our log
-    def insert_json_credential(self, cur, system_cd, prev_event_id, last_event_id, corp_num, corp_state, cred_type, cred_id, schema_name, schema_version, credential, credential_reason):
-        sql = """INSERT INTO CREDENTIAL_LOG (SYSTEM_TYPE_CD, PREV_EVENT_ID, LAST_EVENT_ID, CORP_NUM, CORP_STATE, CREDENTIAL_TYPE_CD, CREDENTIAL_ID, 
+    def insert_json_credential(self, cur, system_cd, prev_event, last_event, corp_num, corp_state, cred_type, cred_id, schema_name, schema_version, credential, credential_reason):
+        sql = """INSERT INTO CREDENTIAL_LOG (SYSTEM_TYPE_CD, PREV_EVENT, LAST_EVENT, CORP_NUM, CORP_STATE, CREDENTIAL_TYPE_CD, CREDENTIAL_ID, 
                 SCHEMA_NAME, SCHEMA_VERSION, CREDENTIAL_JSON, CREDENTIAL_HASH, CREDENTIAL_REASON, ENTRY_DATE)
                 VALUES(%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s) RETURNING RECORD_ID;"""
-        sql_addr = """INSERT INTO CREDENTIAL_LOG (SYSTEM_TYPE_CD, PREV_EVENT_ID, LAST_EVENT_ID, CORP_NUM, CORP_STATE, CREDENTIAL_TYPE_CD, CREDENTIAL_ID, 
+        sql_addr = """INSERT INTO CREDENTIAL_LOG (SYSTEM_TYPE_CD, PREV_EVENT, LAST_EVENT, CORP_NUM, CORP_STATE, CREDENTIAL_TYPE_CD, CREDENTIAL_ID, 
                 SCHEMA_NAME, SCHEMA_VERSION, CREDENTIAL_JSON, CREDENTIAL_HASH, CREDENTIAL_REASON, ENTRY_DATE, PROCESS_DATE, PROCESS_SUCCESS)
                 VALUES(%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s) RETURNING RECORD_ID;"""
         # create row(s) for corp creds json info
@@ -442,10 +459,10 @@ class EventProcessor:
             cur.execute("savepoint save_" + cred_type)
             # store address creds with a special status, because we don't want to post them yet
             if cred_type == addr_credential:
-                cur.execute(sql_addr, (system_cd, prev_event_id, last_event_id, corp_num, corp_state, cred_type, cred_id, 
+                cur.execute(sql_addr, (system_cd, event_json(prev_event), event_json(last_event), corp_num, corp_state, cred_type, cred_id, 
                             schema_name, schema_version, cred_json, cred_hash, credential_reason, datetime.datetime.now(), datetime.datetime.now(), 'A',))
             else:
-                cur.execute(sql, (system_cd, prev_event_id, last_event_id, corp_num, corp_state, cred_type, cred_id, 
+                cur.execute(sql, (system_cd, event_json(prev_event), event_json(last_event), corp_num, corp_state, cred_type, cred_id, 
                             schema_name, schema_version, cred_json, cred_hash, credential_reason, datetime.datetime.now(),))
         except Exception as e:
             # ignore duplicate hash ("duplicate key value violates unique constraint "cl_hash_index"")
@@ -454,6 +471,7 @@ class EventProcessor:
             if "duplicate key value violates unique constraint" in stre and "cl_hash_index" in stre:
                 print("Hash exception, skipping duplicate credential for corp:", corp_num, cred_type, cred_id, e)
                 cur.execute("rollback to savepoint save_" + cred_type)
+                print(cred_json)
             else:
                 print(traceback.print_exc())
                 raise
@@ -525,7 +543,7 @@ class EventProcessor:
                 assumed_name_reason = 'Assumed Name Event: ' + corp_name_assumed['start_event']['event_typ_cd']
             corp_reason = corp_reason + ', ' + assumed_name_reason
 
-        if len(corp_reason) > 0 and corp_reason.startswith(", "):
+        if (len(corp_reason) > 0 and corp_reason.startswith(", ")):
             corp_reason = corp_reason[2:]
 
         return corp_reason
@@ -566,9 +584,9 @@ class EventProcessor:
         return addr_cred
 
     # store credentials for the provided corp
-    def store_credentials(self, cur, system_typ_cd, prev_event_id, prev_event_dt, last_event_id, last_event_dt, corp_num, corp_state, corp_info, corp_creds):
+    def store_credentials(self, cur, system_typ_cd, prev_event, last_event, corp_num, corp_state, corp_info, corp_creds):
         for corp_cred in corp_creds:
-            self.insert_json_credential(cur, system_typ_cd, prev_event_id, last_event_id, corp_num, corp_state, 
+            self.insert_json_credential(cur, system_typ_cd, prev_event, last_event, corp_num, corp_state, 
                                     corp_cred['cred_type'], corp_cred['id'], corp_cred['schema'], corp_cred['version'], 
                                     corp_cred['credential'], corp_cred['credential_reason'])
 
@@ -626,7 +644,7 @@ class EventProcessor:
         return ret_corp_state
 
     # generate credentials for the provided corp
-    def generate_credentials(self, system_typ_cd, prev_event_id, prev_event_dt, last_event_id, last_event_dt, corp_num, corp_info):
+    def generate_credentials(self, system_typ_cd, prev_event, last_event, corp_num, corp_info):
         corp_creds = []
 
         # generate a list of (sorted) effective dates for our corp registration credentials
@@ -680,7 +698,7 @@ class EventProcessor:
 
             # these will be sorted by date, but we need to make sure we are not submitting duplicates
             # checking against the previously generated credential is sufficient
-            if len(corp_creds) > 0 and corp_cred['credential'] != corp_creds[len(corp_creds)-1]['credential']:
+            if (len(corp_creds) == 0) or (len(corp_creds) > 0 and corp_cred['credential'] != corp_creds[len(corp_creds)-1]['credential']):
                 corp_creds.append(corp_cred)
 
         # generate addr credential(s)
@@ -742,10 +760,8 @@ class EventProcessor:
 
         sql1a = """SELECT RECORD_ID, 
                           SYSTEM_TYPE_CD, 
-                          PREV_EVENT_ID, 
-                          PREV_EVENT_DATE, 
-                          LAST_EVENT_ID, 
-                          LAST_EVENT_DATE, 
+                          PREV_EVENT, 
+                          LAST_EVENT, 
                           CORP_NUM, 
                           CORP_JSON, 
                           ENTRY_DATE
@@ -760,10 +776,10 @@ class EventProcessor:
                    )
                    ORDER BY RECORD_ID;"""
 
-        sql2 = """INSERT INTO CORP_HISTORY_LOG (SYSTEM_TYPE_CD, PREV_EVENT_ID, PREV_EVENT_DATE, LAST_EVENT_ID, LAST_EVENT_DATE, CORP_NUM, CORP_STATE, CORP_JSON, ENTRY_DATE)
-                  VALUES(%s, %s, %s, %s, %s, %s, %s, %s, %s) RETURNING RECORD_ID;"""
-        sql2a = """INSERT INTO CORP_HISTORY_LOG (SYSTEM_TYPE_CD, PREV_EVENT_ID, PREV_EVENT_DATE, LAST_EVENT_ID, LAST_EVENT_DATE, CORP_NUM, CORP_STATE, CORP_JSON, ENTRY_DATE, PROCESS_DATE, PROCESS_SUCCESS, PROCESS_MSG)
-                  VALUES(%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s) RETURNING RECORD_ID;"""
+        sql2 = """INSERT INTO CORP_HISTORY_LOG (SYSTEM_TYPE_CD, PREV_EVENT, LAST_EVENT, CORP_NUM, CORP_STATE, CORP_JSON, ENTRY_DATE)
+                  VALUES(%s, %s, %s, %s, %s, %s, %s) RETURNING RECORD_ID;"""
+        sql2a = """INSERT INTO CORP_HISTORY_LOG (SYSTEM_TYPE_CD, PREV_EVENT, LAST_EVENT, CORP_NUM, CORP_STATE, CORP_JSON, ENTRY_DATE, PROCESS_DATE, PROCESS_SUCCESS, PROCESS_MSG)
+                  VALUES(%s, %s, %s, %s, %s, %s, %s, %s, %s, %s) RETURNING RECORD_ID;"""
 
         sql3 = """UPDATE EVENT_BY_CORP_FILING
                   SET PROCESS_DATE = %s, PROCESS_SUCCESS = %s, PROCESS_MSG = %s
@@ -792,8 +808,8 @@ class EventProcessor:
                     cur.execute(sql1.replace("!BS!", str(max_batch_size)))
                     row = cur.fetchone()
                     while row is not None:
-                        # TODO we need the date(s) for the start and end events
-                        corps.append({'RECORD_ID':row[0], 'SYSTEM_TYPE_CD':row[1], 'PREV_EVENT_ID':row[2], 'PREV_EVENT_DATE':row[3], 'LAST_EVENT_ID':row[4], 'LAST_EVENT_DATE':row[5], 
+                        # include the date(s) for the start and end events
+                        corps.append({'RECORD_ID':row[0], 'SYSTEM_TYPE_CD':row[1], 'PREV_EVENT': event_dict(row[2], row[3]), 'LAST_EVENT': event_dict(row[4], row[5]), 
                                         'CORP_NUM':row[6], 'ENTRY_DATE':row[7]})
                         specific_corps.append(row[6])
                         row = cur.fetchone()
@@ -814,9 +830,9 @@ class EventProcessor:
                     row = cur.fetchone()
                     while row is not None:
                         # TODO we need the date(s) for the start and end events
-                        corps.append({'RECORD_ID':row[0], 'SYSTEM_TYPE_CD':row[1], 'PREV_EVENT_ID':row[2], 'PREV_EVENT_DATE':row[3], 'LAST_EVENT_ID':row[4], 'LAST_EVENT_DATE':row[5], 
-                                    'CORP_NUM':row[6], 'CORP_JSON':row[7], 'ENTRY_DATE':row[8]})
-                        specific_corps.append(row[6])
+                        corps.append({'RECORD_ID':row[0], 'SYSTEM_TYPE_CD':row[1], 'PREV_EVENT':row[2], 'LAST_EVENT':row[3], 
+                                    'CORP_NUM':row[4], 'CORP_JSON':row[5], 'ENTRY_DATE':row[6]})
+                        specific_corps.append(row[4])
                         row = cur.fetchone()
                     cur.close()
                     cur = None
@@ -860,8 +876,10 @@ class EventProcessor:
                         if load_regs:
                             try:
                                 # fetch corp info from bc_registries
-                                corp_info = bc_registries.get_bc_reg_corp_info(corp['CORP_NUM'], corp['LAST_EVENT_ID'])
+                                corp_info = bc_registries.get_bc_reg_corp_info(corp['CORP_NUM'])
                                 corp_info_json = bc_registries.to_json(corp_info)
+                                prev_event_json = event_json(corp['PREV_EVENT'])
+                                last_event_json = event_json(corp['LAST_EVENT'])
                             except (Exception, psycopg2.DatabaseError) as error:
                                 print(error)
                                 print(traceback.print_exc())
@@ -872,6 +890,8 @@ class EventProcessor:
                             # json blob is cached in event processor database
                             corp_info = corp['CORP_JSON']
                             corp_info_json = corp_info
+                            prev_event_json = corp['PREV_EVENT']
+                            last_event_json = corp['LAST_EVENT']
 
                         corp_active_state = self.get_corp_active_state(corp_info)
 
@@ -880,9 +900,9 @@ class EventProcessor:
                                 try:
                                     # generate and store credentials
                                     cur = self.conn.cursor()
-                                    corp_creds = self.generate_credentials(corp['SYSTEM_TYPE_CD'], corp['PREV_EVENT_ID'], corp['PREV_EVENT_DATE'], corp['LAST_EVENT_ID'], corp['LAST_EVENT_DATE'], 
+                                    corp_creds = self.generate_credentials(corp['SYSTEM_TYPE_CD'], corp['PREV_EVENT'], corp['LAST_EVENT'], 
                                                             corp['CORP_NUM'], corp_info)
-                                    self.store_credentials(cur, corp['SYSTEM_TYPE_CD'], corp['PREV_EVENT_ID'], corp['PREV_EVENT_DATE'], corp['LAST_EVENT_ID'], corp['LAST_EVENT_DATE'], 
+                                    self.store_credentials(cur, corp['SYSTEM_TYPE_CD'], corp['PREV_EVENT'], corp['LAST_EVENT'], 
                                                             corp['CORP_NUM'], corp_active_state['op_state_typ_cd'], corp_info, corp_creds)
                                     cur.close()
                                     cur = None
@@ -908,7 +928,7 @@ class EventProcessor:
                                         res = process_msg
                                 if load_regs:
                                     cur = self.conn.cursor()
-                                    cur.execute(sql2a, (corp['SYSTEM_TYPE_CD'], corp['PREV_EVENT_ID'], corp['PREV_EVENT_DATE'], corp['LAST_EVENT_ID'], corp['LAST_EVENT_DATE'], corp['CORP_NUM'], 
+                                    cur.execute(sql2a, (corp['SYSTEM_TYPE_CD'], prev_event_json, last_event_json, corp['CORP_NUM'], 
                                                         corp_active_state['op_state_typ_cd'], corp_info_json, datetime.datetime.now(), datetime.datetime.now(), flag, res,))
                                     cur.close()
                                     cur = None
@@ -923,7 +943,7 @@ class EventProcessor:
                                 try:
                                     # store corporate info for future generation of credentials
                                     cur = self.conn.cursor()
-                                    cur.execute(sql2, (corp['SYSTEM_TYPE_CD'], corp['PREV_EVENT_ID'], corp['PREV_EVENT_DATE'], corp['LAST_EVENT_ID'], corp['LAST_EVENT_DATE'], corp['CORP_NUM'], 
+                                    cur.execute(sql2, (corp['SYSTEM_TYPE_CD'], prev_event_json, last_event_json, corp['CORP_NUM'], 
                                                         corp_active_state['op_state_typ_cd'], corp_info_json, datetime.datetime.now(),))
                                     cur.close()
                                     cur = None

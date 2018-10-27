@@ -97,6 +97,9 @@ async def post_credentials(http_client, conn, credentials):
     #print('Post credential ...')
     cur2 = None
     try:
+        print('=============')
+        print(post_creds)
+        print('=============')
         # result_json = await submit_cred(http_client, credential['CREDENTIAL_JSON'], credential['SCHEMA_NAME'], credential['SCHEMA_VERSION'])
         result_json = await submit_cred_batch(http_client, post_creds)
         results = result_json 
@@ -117,6 +120,8 @@ async def post_credentials(http_client, conn, credentials):
                 success = success + 1
             else:
                 print("log error to database")
+                print(result['result'])
+                print(credential)
                 cur2 = conn.cursor()
                 if 255 < len(result['result']):
                     res = result['result'][:250] + '...'
@@ -177,8 +182,8 @@ class CredsSubmitter:
     async def process_credential_queue(self, single_thread=False):
         sql1 = """SELECT RECORD_ID, 
                       SYSTEM_TYPE_CD, 
-                      PREV_EVENT_ID, 
-                      LAST_EVENT_ID, 
+                      PREV_EVENT, 
+                      LAST_EVENT, 
                       CORP_NUM, 
                       CORP_STATE, 
                       CREDENTIAL_TYPE_CD, 
@@ -205,8 +210,8 @@ class CredsSubmitter:
 
         sql1_active = """SELECT RECORD_ID, 
                              SYSTEM_TYPE_CD, 
-                             PREV_EVENT_ID, 
-                             LAST_EVENT_ID, 
+                             PREV_EVENT, 
+                             LAST_EVENT, 
                              CORP_NUM, 
                              CORP_STATE, 
                              CREDENTIAL_TYPE_CD, 
@@ -285,7 +290,7 @@ class CredsSubmitter:
                       processing_time = time.perf_counter() - start_time
                       print('Processing: ' + str(processing_time))
                       processed_count = 0
-                    credential = {'RECORD_ID':row[0], 'SYSTEM_TYP_CD':row[1], 'PREV_EVENT_ID':row[2], 'LAST_EVENT_ID':row[3], 'CORP_NUM':row[4], 'CORP_STATE':row[5],
+                    credential = {'RECORD_ID':row[0], 'SYSTEM_TYP_CD':row[1], 'PREV_EVENT':row[2], 'LAST_EVENT':row[3], 'CORP_NUM':row[4], 'CORP_STATE':row[5],
                                   'CREDENTIAL_TYPE_CD':row[6], 'CREDENTIAL_ID':row[7], 'CREDENTIAL_JSON':row[8], 'CREDENTIAL_REASON':row[9], 
                                   'SCHEMA_NAME':row[10], 'SCHEMA_VERSION':row[11], 'ENTRY_DATE':row[12]}
 

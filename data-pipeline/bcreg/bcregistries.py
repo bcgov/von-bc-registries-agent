@@ -18,11 +18,14 @@ BC_REGISTRIES_TABLE_PREFIX = 'bc_registries.'
 INMEM_CACHE_TABLE_PREFIX   = ''
 MAX_WHERE_IN = 1000
 
-MIN_START_DATE = '0001-01-01 00:00:00'
-MAX_END_DATE   = '9999-12-31 23:59:59'
+MIN_START_DATE = datetime.datetime(datetime.MINYEAR+1, 1, 1)
+MAX_END_DATE   = datetime.datetime(datetime.MAXYEAR-1, 12, 31)
 
 # for now, we are in PST time
 timezone = pytz.timezone("America/Los_Angeles")
+
+MIN_START_DATE_TZ = timezone.localize(MIN_START_DATE)
+MAX_END_DATE_TZ   = timezone.localize(MAX_END_DATE)
 
 
 def adapt_decimal(d):
@@ -30,6 +33,11 @@ def adapt_decimal(d):
 
 def convert_decimal(s):
     return decimal.Decimal(s)
+
+def event_dict(event_id, event_date):
+    event = {'event_id': event_id, 'event_date': event_date}
+    return event
+
 
 # custom encoder to convert wierd data types to strings
 class CustomJsonEncoder(json.JSONEncoder):
@@ -39,9 +47,11 @@ class CustomJsonEncoder(json.JSONEncoder):
                 tz_aware = timezone.localize(o)
                 return tz_aware.astimezone(pytz.utc).isoformat()
             except (Exception) as error:
-                print("date conversion error", o, error)
-                if o.year <= datetime.MINYEAR or o.year >= datetime.MAXYEAR:
-                    return ""
+                #print("BC Reg Date conversion error", o, error)
+                if o.year <= datetime.MINYEAR+1:
+                    return MIN_START_DATE_TZ.astimezone(pytz.utc).isoformat()
+                elif o.year >= datetime.MAXYEAR-1:
+                    return MAX_END_DATE_TZ.astimezone(pytz.utc).isoformat()
                 return o.isoformat()
         if isinstance(o, (list, dict, str, int, float, bool, type(None))):
             return JSONEncoder.default(self, o)        
@@ -735,7 +745,7 @@ class BCRegistries:
     # use for initial data load
     def get_unprocessed_corps_data_load(self, last_event_id, last_event_dt, max_event_id, max_event_dt):
         sqls = []
-        sqls.append("""SELECT corp.corp_num from """ + BC_REGISTRIES_TABLE_PREFIX + """corporation corp,
+        sqls.append("""SELECT distinct(corp.corp_num) from """ + BC_REGISTRIES_TABLE_PREFIX + """corporation corp,
                             """ + BC_REGISTRIES_TABLE_PREFIX + """corp_party party
                          where corp.corp_typ_cd in ('SP','FM')
                           and corp.corp_num = party.corp_num
@@ -744,7 +754,7 @@ class BCRegistries:
                           and party.bus_company_num in 
                           (SELECT corp_num from """ + BC_REGISTRIES_TABLE_PREFIX + """corporation corp
                           where corp.corp_typ_cd in ('A','LLC','BC','C','CUL','ULC'))""")
-        sqls.append("""SELECT corp.corp_num from """ + BC_REGISTRIES_TABLE_PREFIX + """corporation corp
+        sqls.append("""SELECT distinct(corp.corp_num) from """ + BC_REGISTRIES_TABLE_PREFIX + """corporation corp
                          where corp.corp_typ_cd in ('A','LLC','BC','C','CUL','ULC')""")
         corps = []
         for sql in sqls:
@@ -756,8 +766,8 @@ class BCRegistries:
                 row = cur.fetchone()
                 while row is not None:
                     # print(row)
-                    corps.append({'CORP_NUM':row[0], 'PREV_EVENT_ID':last_event_id, 'PREV_EVENT_DT':last_event_dt, 
-                                                     'LAST_EVENT_ID':max_event_id, 'LAST_EVENT_DT':max_event_dt, })
+                    corps.append({'CORP_NUM':row[0], 'PREV_EVENT': event_dict(last_event_id, last_event_dt), 
+                                                     'LAST_EVENT': event_dict(max_event_id, max_event_dt), })
                     row = cur.fetchone()
                 cur.close()
                 cur = None
@@ -817,33 +827,14 @@ class BCRegistries:
 
     #return the (unprocessed) event range for each provided corporation
     def get_unprocessed_corp_events(self, last_event_id, last_event_dt, max_event_id, max_event_dt, corps, max=None):
-        #cur = None
-        #try:
         for i,corp in enumerate(corps): 
-            # create a cursor
             if (i % 100 == 0) or (i+1 == len(corps)):
                 print('>>> Processing {} of {} corporations.'.format(i+1, len(corps)))
-            #cur = self.conn.cursor()
-            #cur.execute("""SELECT max(event_id) from """ + BC_REGISTRIES_TABLE_PREFIX + """event
-            #                where corp_num = %s and event_id > %s and event_id <= %s""", 
-            #                (corp['CORP_NUM'], last_event_id, max_event_id,))
-            #row = cur.fetchone()
-            corp['PREV_EVENT_ID'] = last_event_id
-            corp['PREV_EVENT_DT'] = last_event_dt
-            corp['LAST_EVENT_ID'] = max_event_id
-            corp['LAST_EVENT_DT'] = max_event_dt
-            #cur.close()
-            #cur = None
+            corp['PREV_EVENT'] = event_dict(last_event_id, last_event_dt)
+            corp['LAST_EVENT'] = event_dict(max_event_id, max_event_dt)
             if max and i >= max:
                 break
         return corps
-        #except (Exception, psycopg2.DatabaseError) as error:
-        #    print(error)
-        #    print(traceback.print_exc())
-        #    raise
-        #finally:
-        #    if cur is not None:
-        #        cur.close()
 
 
     ###########################################################################
@@ -1023,7 +1014,7 @@ class BCRegistries:
             if cursor is not None:
                 cursor.close()
 
-    def get_names(self, corp_num, name_typ_cds, event_id):
+    def get_names(self, corp_num, name_typ_cds):
         sql_name = """SELECT corp_num, corp_name_typ_cd, start_event_id, end_event_id, corp_name_seq_num, srch_nme, corp_nme, dd_corp_num
                   FROM """ + self.get_table_prefix() + """corp_name
                   WHERE corp_num = """ + self.get_db_sql_param() + """ AND corp_name_typ_cd in ({}) """
@@ -1312,7 +1303,7 @@ class BCRegistries:
             return addr_element + delimiter
         return ''
 
-    def get_basic_corp_info(self, corp_num, event_id, deep_copy=True):
+    def get_basic_corp_info(self, corp_num, deep_copy=True):
         sql_corp = """SELECT corp_num, corp_typ_cd, recognition_dts, last_ar_filed_dt, bn_9, bn_15, admin_email, last_ledger_dt
                  FROM """ + self.get_table_prefix() + """corporation
                  WHERE corp_num = """ + self.get_db_sql_param()
@@ -1341,9 +1332,9 @@ class BCRegistries:
      
             if deep_copy:
                 # get corp names
-                corp['org_names'] = self.get_names(corp_num, ['CO','NB'], event_id)
-                corp['org_name_assumed'] = self.get_names(corp_num, ['AS'], event_id)
-                corp['org_name_trans'] = self.get_names(corp_num, ['TR', 'NO'], event_id)
+                corp['org_names'] = self.get_names(corp_num, ['CO','NB'])
+                corp['org_name_assumed'] = self.get_names(corp_num, ['AS'])
+                corp['org_name_trans'] = self.get_names(corp_num, ['TR', 'NO'])
                 corp['office'] = self.get_offices(corp_num)
 
                 # other corp attributes
@@ -1383,7 +1374,7 @@ class BCRegistries:
     # primary method to load all bc registries data for the specified corporation
     ###########################################################################
 
-    def get_bc_reg_corp_info(self, corp_num, event_id):
+    def get_bc_reg_corp_info(self, corp_num):
         sql_party_template = """SELECT corp_num, corp_party_id, mailing_addr_id, delivery_addr_id, party_typ_cd, start_event_id, end_event_id, cessation_dt,
                          last_nme, middle_nme, first_nme, business_nme, bus_company_num, email_address, corp_party_seq_num, office_notification_dt,
                          phone, reason_typ_cd
@@ -1393,7 +1384,7 @@ class BCRegistries:
 
         cur = None
         try:
-            corp = self.get_basic_corp_info(corp_num, event_id)
+            corp = self.get_basic_corp_info(corp_num)
             corp_type = corp['corp_typ_cd']
             if corp_type == 'SP' or corp_type == 'MF':
                 is_parent = False
@@ -1448,7 +1439,7 @@ class BCRegistries:
                 corp_party['reason_typ_cd'] = row[17]
                 # note we need to pull corporate info for DBA companies
                 # actually no since we are only issuing a relationship credential (with the two corp_nums)
-                corp_party['corp_info'] = self.get_basic_corp_info(corp_party['corp_num'], event_id, False)
+                corp_party['corp_info'] = self.get_basic_corp_info(corp_party['corp_num'], False)
 
                 corp['parties'].append(corp_party)
                 row = cur.fetchone()
