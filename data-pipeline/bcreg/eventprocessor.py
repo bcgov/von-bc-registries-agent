@@ -12,16 +12,16 @@ from bcreg.bcregistries import BCRegistries, event_dict
 
 
 corp_credential = 'REG'
-corp_schema = 'registration.bc_registries'
-corp_version = '1.0.36'
+corp_schema = 'registration.registries'
+corp_version = '1.0.37'
 
 addr_credential = 'ADDR'
-addr_schema = 'address.bc_registries'
-addr_version = '1.0.36'
+addr_schema = 'address.registries'
+addr_version = '1.0.37'
 
 dba_credential = 'REL'
-dba_schema = 'relationship.bc_registries'
-dba_version = '1.0.36'
+dba_schema = 'relationship.registries'
+dba_version = '1.0.37'
 
 CORP_BATCH_SIZE = 3000
 FALLBACK_CORP_BATCH_SIZE = 300
@@ -76,11 +76,9 @@ class EventProcessor:
             self.conn.close()
 
     def __enter__(self):
-        # todo
         return self
 
     def __exit__(self, exc_type, exc_value, traceback):
-        # todo
         pass
  
     # create our base processing tables
@@ -92,6 +90,7 @@ class EventProcessor:
                 RECORD_ID SERIAL PRIMARY KEY,
                 SYSTEM_TYPE_CD VARCHAR(255) NOT NULL, 
                 EVENT_ID INTEGER NOT NULL,
+                EVENT_DATE TIMESTAMP NOT NULL,
                 ENTRY_DATE TIMESTAMP NOT NULL
             )
             """,
@@ -314,14 +313,14 @@ class EventProcessor:
                 cur.close()
 
     # record the last event processed
-    def insert_last_event(self, system_type, event_id):
+    def insert_last_event(self, system_type, event_id, event_date):
         """ insert a new event into the event table """
-        sql = """INSERT INTO LAST_EVENT (SYSTEM_TYPE_CD, EVENT_ID, ENTRY_DATE)
-                 VALUES(%s, %s, %s) RETURNING RECORD_ID;"""
+        sql = """INSERT INTO LAST_EVENT (SYSTEM_TYPE_CD, EVENT_ID, EVENT_DATE, ENTRY_DATE)
+                 VALUES(%s, %s, %s, %s) RETURNING RECORD_ID;"""
         cur = None
         try:
             cur = self.conn.cursor()
-            cur.execute(sql, (system_type, event_id, datetime.datetime.now(),))
+            cur.execute(sql, (system_type, event_id, event_date, datetime.datetime.now(),))
             record_id = cur.fetchone()[0]
             self.conn.commit()
             cur.close()
@@ -334,18 +333,37 @@ class EventProcessor:
             if cur is not None:
                 cur.close()
 
-    # get the last event processed
-    def get_last_processed_event(self, system_type):
+    # get the id of the last event processed (at a specific date)
+    def get_last_processed_event(self, event_date, system_type):
         cur = None
         try:
             cur = self.conn.cursor()
-            cur.execute("""SELECT max(event_id) FROM LAST_EVENT where SYSTEM_TYPE_CD = %s""", (system_type,))
+            cur.execute("""SELECT max(event_id) FROM LAST_EVENT where EVENT_DATE = %s and SYSTEM_TYPE_CD = %s""", (event_date, system_type,))
             row = cur.fetchone()
             cur.close()
             cur = None
             prev_event = row[0]
             if prev_event is None:
                 prev_event = 0
+            return prev_event
+        except (Exception, psycopg2.DatabaseError) as error:
+            print(error)
+            print(traceback.print_exc())
+            raise
+        finally:
+            if cur is not None:
+                cur.close()
+
+    # get the last event processed timestamp
+    def get_last_processed_event_date(self, system_type):
+        cur = None
+        try:
+            cur = self.conn.cursor()
+            cur.execute("""SELECT max(event_date) FROM LAST_EVENT where SYSTEM_TYPE_CD = %s""", (system_type,))
+            row = cur.fetchone()
+            cur.close()
+            cur = None
+            prev_event = row[0]
             return prev_event
         except (Exception, psycopg2.DatabaseError) as error:
             print(error)
@@ -398,11 +416,11 @@ class EventProcessor:
                 cur.close()
 
     # update a group of corps into the "unprocessed corp" queue
-    def update_corp_event_queue(self, system_type, corps, max_event_id):
+    def update_corp_event_queue(self, system_type, corps, max_event_id, max_event_date):
         sql = """INSERT INTO EVENT_BY_CORP_FILING (SYSTEM_TYPE_CD, PREV_EVENT_ID, PREV_EVENT_DATE, LAST_EVENT_ID, LAST_EVENT_DATE, CORP_NUM, ENTRY_DATE)
                  VALUES(%s, %s, %s, %s, %s, %s, %s) RETURNING RECORD_ID;"""
-        sql2 = """INSERT INTO LAST_EVENT (SYSTEM_TYPE_CD, EVENT_ID, ENTRY_DATE)
-                 VALUES(%s, %s, %s) RETURNING RECORD_ID;"""
+        sql2 = """INSERT INTO LAST_EVENT (SYSTEM_TYPE_CD, EVENT_ID, EVENT_DATE, ENTRY_DATE)
+                 VALUES(%s, %s, %s, %s) RETURNING RECORD_ID;"""
         cur = None
         try:
             for i,corp in enumerate(corps): 
@@ -412,7 +430,7 @@ class EventProcessor:
                 cur.close()
                 cur = None
             cur = self.conn.cursor()
-            cur.execute(sql2, (system_type, max_event_id, datetime.datetime.now(),))
+            cur.execute(sql2, (system_type, max_event_id, max_event_date, datetime.datetime.now(),))
             self.conn.commit()
             cur = None
         except (Exception, psycopg2.DatabaseError) as error:
@@ -634,7 +652,11 @@ class EventProcessor:
     # currently active state record
     def get_corp_active_state(self, corp_info):
         ret_corp_state = None
+        #print('=====')
+        #print(corp_info['corp_state'])
         for corp_state in corp_info['corp_state']:
+            #print('-------')
+            #print(corp_state)
             if corp_state['end_event_id'] is None:
                 return corp_state
             elif ret_corp_state is None:
@@ -829,7 +851,7 @@ class EventProcessor:
                     cur.execute(sql1a.replace("!BS!", str(max_batch_size)))
                     row = cur.fetchone()
                     while row is not None:
-                        # TODO we need the date(s) for the start and end events
+                        # includes the date(s) for the start and end events
                         corps.append({'RECORD_ID':row[0], 'SYSTEM_TYPE_CD':row[1], 'PREV_EVENT':row[2], 'LAST_EVENT':row[3], 
                                     'CORP_NUM':row[4], 'CORP_JSON':row[5], 'ENTRY_DATE':row[6]})
                         specific_corps.append(row[4])

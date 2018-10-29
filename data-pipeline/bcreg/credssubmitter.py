@@ -97,9 +97,10 @@ async def post_credentials(http_client, conn, credentials):
     #print('Post credential ...')
     cur2 = None
     try:
-        print('=============')
-        print(post_creds)
-        print('=============')
+        #print('=============')
+        #print(post_creds)
+        #print('=============')
+        # old code for submitting one credential at a time
         # result_json = await submit_cred(http_client, credential['CREDENTIAL_JSON'], credential['SCHEMA_NAME'], credential['SCHEMA_VERSION'])
         result_json = await submit_cred_batch(http_client, post_creds)
         results = result_json 
@@ -120,8 +121,8 @@ async def post_credentials(http_client, conn, credentials):
                 success = success + 1
             else:
                 print("log error to database")
-                print(result['result'])
-                print(credential)
+                #print(result['result'])
+                #print(credential)
                 cur2 = conn.cursor()
                 if 255 < len(result['result']):
                     res = result['result'][:250] + '...'
@@ -172,11 +173,9 @@ class CredsSubmitter:
             self.conn.close()
 
     def __enter__(self):
-        # todo
         return self
 
     def __exit__(self, exc_type, exc_value, traceback):
-        # todo
         pass
  
     async def process_credential_queue(self, single_thread=False):
@@ -353,8 +352,5 @@ class CredsSubmitter:
             await http_client.close()
             if cur is not None:
                 cur.close()
-            #if conn is not None:
-            #    conn.commit()
-            #    conn.close()
 
 
