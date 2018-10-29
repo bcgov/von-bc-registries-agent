@@ -530,8 +530,8 @@ class EventProcessor:
 
         # corp_state reason code
         if corp_state is not None and corp_state['effective_start_date'] == loop_start_date:
-            if 'filing_typ_cd' in corp_state['start_event']['start_filing_event']:
-                corp_state_reason = 'State Filing: ' + corp_state['start_event']['start_filing_event']['filing_typ_cd']
+            if 'filing_typ_cd' in corp_state['start_event']['filing']:
+                corp_state_reason = 'State Filing: ' + corp_state['start_event']['filing']['filing_typ_cd']
             else:
                 corp_state_reason = 'State Event: ' + corp_state['start_event']['event_typ_cd']
             corp_reason = corp_reason + ', ' + corp_state_reason
@@ -539,24 +539,24 @@ class EventProcessor:
         # jurisdiciton reason code
         if jurisdiction is not None and jurisdiction['effective_start_date'] == loop_start_date:
             if 'start_event' in jurisdiction:
-                if 'start_filing_event' in jurisdiction['start_event']:
-                    if 'filing_typ_cd' in jurisdiction['start_event']['start_filing_event']:
-                        jurisdiction_reason = 'Jurisdiction Filing: ' + jurisdiction['start_event']['start_filing_event']['filing_typ_cd']
+                if 'filing' in jurisdiction['start_event']:
+                    if 'filing_typ_cd' in jurisdiction['start_event']['filing']:
+                        jurisdiction_reason = 'Jurisdiction Filing: ' + jurisdiction['start_event']['filing']['filing_typ_cd']
                     else:
                         jurisdiction_reason = 'Jurisdiction Event: ' + jurisdiction['start_event']['event_typ_cd']
                     corp_reason = corp_reason + ', ' + jurisdiction_reason
 
         # corp name(s) reason code(s)
         if corp_name is not None and corp_name['effective_start_date'] == loop_start_date:
-            if 'filing_typ_cd' in corp_name['start_filing_event']:
-                entity_name_reason = 'Entity Name Filing: ' + corp_name['start_filing_event']['filing_typ_cd']
+            if 'filing_typ_cd' in corp_name['start_event']['filing']:
+                entity_name_reason = 'Entity Name Filing: ' + corp_name['start_event']['filing']['filing_typ_cd']
             else:
                 entity_name_reason = 'Entity Name Event: ' + corp_name['start_event']['event_typ_cd']
             corp_reason = corp_reason + ', ' + entity_name_reason
 
         if corp_name_assumed is not None and corp_name_assumed['effective_start_date'] == loop_start_date:
-            if 'filing_typ_cd' in corp_name_assumed['start_filing_event']:
-                assumed_name_reason = 'Assumed Name Filing: ' + corp_name_assumed['start_filing_event']['filing_typ_cd']
+            if 'filing_typ_cd' in corp_name_assumed['start_event']['filing']:
+                assumed_name_reason = 'Assumed Name Filing: ' + corp_name_assumed['start_event']['filing']['filing_typ_cd']
             else:
                 assumed_name_reason = 'Assumed Name Event: ' + corp_name_assumed['start_event']['event_typ_cd']
             corp_reason = corp_reason + ', ' + assumed_name_reason
@@ -568,15 +568,15 @@ class EventProcessor:
         
     # determine reason for address credential
     def build_addr_reason_code(self, office, address):
-        if 'filing_typ_cd' in office['start_filing_event']:
-            return 'Filing: ' + office['start_filing_event']['filing_typ_cd']
+        if 'filing_typ_cd' in office['start_event']['filing']:
+            return 'Filing: ' + office['start_event']['filing']['filing_typ_cd']
         else:
             return 'Event: ' + office['start_event']['event_typ_cd']
         
     # determine reason for address credential
     def build_dba_reason_code(self, party):
-        if 'filing_typ_cd' in party['start_filing_event']:
-            return 'Filing: ' + party['start_filing_event']['filing_typ_cd']
+        if 'filing_typ_cd' in party['start_event']['filing']:
+            return 'Filing: ' + party['start_event']['filing']['filing_typ_cd']
         else:
             return 'Event: ' + party['start_event']['event_typ_cd']
         
