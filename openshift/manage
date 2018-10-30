@@ -35,6 +35,10 @@ usage () {
     resetMaraDatabase
       - Drop and recreate the mara database.
 
+    hardReset
+      - Delete the persistent indy wallet information.
+      - Drop and recreate the event database.
+
     deleteWallets
       - Delete the local wallets from one or more pods.
         For example;
@@ -156,6 +160,44 @@ resetDatabase() {
   echoWarning "\nThe ${_dbPodName} database has been deleted and recreated."
 }
 
+hardReset() {
+  _agentPodName=${1}
+  _dbPodName=${2}
+  _walletDbPodName=${3}
+  if [ -z "${_agentPodName}" ] || [ -z "${_dbPodName}" ] || [ -z "${_walletDbPodName}" ]; then
+    echo -e \\n"resetDatabase; Missing parameter!"\\n
+    exit 1
+  fi
+
+  switchProject
+  exitOnError
+
+  # Delete any sqlite wallets from the agent Pod ...
+  deleteWallets ${_agentPodName}
+
+  # Scale down the agent pod ...
+  scaleDown ${_agentPodName}
+  exitOnError
+  printAndWait "Wait for the ${_agentPodName} pod to completely shut down before continuing."
+
+  # Drop and recreate the application database ...
+  dropAndRecreatePostgreSqlDatabase ${_dbPodName}
+  exitOnError
+
+  # Drop the wallet databases ...
+  if podExists ${_walletDbPodName}; then
+    deleteAndRecreateDatabase ${_walletDbPodName}
+    exitOnError
+  fi
+
+  # Bring the agent pod back up ...
+  scaleUp ${_agentPodName}
+  exitOnError
+  printAndWait "Wait for the ${_agentPodName} pod to completely start up before continuing."
+
+  echoWarning "\nThe project's database and indy wallets have been reset."  
+}
+
 createDeployconfigs(){
   deployConfigs ${@}
 }
@@ -187,6 +229,13 @@ case "${_cmd}" in
     # Allow all of the other parameters to be overridden ...
     dbPodName=${1:-mara-db}
     resetDatabase "${dbPodName}"
+    ;;
+  hardreset)
+    # Allow all of the other parameters to be overridden ...
+    agentPodName=${1:-bcreg-x-agent}
+    dbPodName=${2:-event-db}
+    walletDbPodName=${3:-wallet-db}
+    hardReset "${agentPodName}" "${dbPodName}" "${walletDbPodName}"
     ;;
   deletewallets)
     deleteWallets ${@}
