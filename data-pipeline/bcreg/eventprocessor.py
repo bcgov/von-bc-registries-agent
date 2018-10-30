@@ -532,6 +532,8 @@ class EventProcessor:
         if corp_state is not None and corp_state['effective_start_date'] == loop_start_date:
             if 'filing_typ_cd' in corp_state['start_event']['filing']:
                 corp_state_reason = 'State Filing: ' + corp_state['start_event']['filing']['filing_typ_cd']
+            elif 'remarks' in corp_state['start_event']['conv_event'] and corp_state['start_event']['conv_event']['remarks'] is not None and 0 < len(corp_state['start_event']['conv_event']['remarks']):
+                return 'State Conversion: ' + corp_state['start_event']['event_typ_cd'] + ": " + corp_state['start_event']['conv_event']['remarks']
             else:
                 corp_state_reason = 'State Event: ' + corp_state['start_event']['event_typ_cd']
             corp_reason = corp_reason + ', ' + corp_state_reason
@@ -539,17 +541,20 @@ class EventProcessor:
         # jurisdiciton reason code
         if jurisdiction is not None and jurisdiction['effective_start_date'] == loop_start_date:
             if 'start_event' in jurisdiction:
-                if 'filing' in jurisdiction['start_event']:
-                    if 'filing_typ_cd' in jurisdiction['start_event']['filing']:
-                        jurisdiction_reason = 'Jurisdiction Filing: ' + jurisdiction['start_event']['filing']['filing_typ_cd']
-                    else:
-                        jurisdiction_reason = 'Jurisdiction Event: ' + jurisdiction['start_event']['event_typ_cd']
-                    corp_reason = corp_reason + ', ' + jurisdiction_reason
+                if 'filing_typ_cd' in jurisdiction['start_event']['filing']:
+                    jurisdiction_reason = 'Jurisdiction Filing: ' + jurisdiction['start_event']['filing']['filing_typ_cd']
+                elif 'remarks' in jurisdiction['start_event']['conv_event'] and jurisdiction['start_event']['conv_event']['remarks'] is not None and 0 < len(jurisdiction['start_event']['conv_event']['remarks']):
+                    return 'Jurisdiction Conversion: ' + jurisdiction['start_event']['event_typ_cd'] + ": " + jurisdiction['start_event']['conv_event']['remarks']
+                else:
+                    jurisdiction_reason = 'Jurisdiction Event: ' + jurisdiction['start_event']['event_typ_cd']
+                corp_reason = corp_reason + ', ' + jurisdiction_reason
 
         # corp name(s) reason code(s)
         if corp_name is not None and corp_name['effective_start_date'] == loop_start_date:
             if 'filing_typ_cd' in corp_name['start_event']['filing']:
                 entity_name_reason = 'Entity Name Filing: ' + corp_name['start_event']['filing']['filing_typ_cd']
+            elif 'remarks' in corp_name['start_event']['conv_event'] and corp_name['start_event']['conv_event']['remarks'] is not None and 0 < len(corp_name['start_event']['conv_event']['remarks']):
+                return 'Entity Name Conversion: ' + corp_name['start_event']['event_typ_cd'] + ": " + corp_name['start_event']['conv_event']['remarks']
             else:
                 entity_name_reason = 'Entity Name Event: ' + corp_name['start_event']['event_typ_cd']
             corp_reason = corp_reason + ', ' + entity_name_reason
@@ -557,12 +562,16 @@ class EventProcessor:
         if corp_name_assumed is not None and corp_name_assumed['effective_start_date'] == loop_start_date:
             if 'filing_typ_cd' in corp_name_assumed['start_event']['filing']:
                 assumed_name_reason = 'Assumed Name Filing: ' + corp_name_assumed['start_event']['filing']['filing_typ_cd']
+            elif 'remarks' in corp_name_assumed['start_event']['conv_event'] and corp_name_assumed['start_event']['conv_event']['remarks'] is not None and 0 < len(corp_name_assumed['start_event']['conv_event']['remarks']):
+                return 'Assumed Name Conversion: ' + corp_name_assumed['start_event']['event_typ_cd'] + ": " + corp_name_assumed['start_event']['conv_event']['remarks']
             else:
                 assumed_name_reason = 'Assumed Name Event: ' + corp_name_assumed['start_event']['event_typ_cd']
             corp_reason = corp_reason + ', ' + assumed_name_reason
 
         if (len(corp_reason) > 0 and corp_reason.startswith(", ")):
             corp_reason = corp_reason[2:]
+        if (255 < len(corp_reason)):
+            corp_reason = corp_reason[:252] + '...'
 
         return corp_reason
         
@@ -570,6 +579,8 @@ class EventProcessor:
     def build_addr_reason_code(self, office, address):
         if 'filing_typ_cd' in office['start_event']['filing']:
             return 'Filing: ' + office['start_event']['filing']['filing_typ_cd']
+        elif 'remarks' in office['start_event']['conv_event'] and office['start_event']['conv_event']['remarks'] is not None and 0 < len(office['start_event']['conv_event']['remarks']):
+            return 'Conversion: ' + office['start_event']['event_typ_cd'] + ": " + office['start_event']['conv_event']['remarks']
         else:
             return 'Event: ' + office['start_event']['event_typ_cd']
         
@@ -577,6 +588,8 @@ class EventProcessor:
     def build_dba_reason_code(self, party):
         if 'filing_typ_cd' in party['start_event']['filing']:
             return 'Filing: ' + party['start_event']['filing']['filing_typ_cd']
+        elif 'remarks' in party['start_event']['conv_event'] and party['start_event']['conv_event']['remarks'] is not None and 0 < len(party['start_event']['conv_event']['remarks']):
+            return 'Conversion: ' + party['start_event']['event_typ_cd'] + ": " + party['start_event']['conv_event']['remarks']
         else:
             return 'Event: ' + party['start_event']['event_typ_cd']
         
@@ -622,9 +635,9 @@ class EventProcessor:
     # credential effective date is the latest of the individual effective dates in the credential
     def credential_effective_date(self, corp_cred):
         effective_date = corp_cred['entity_status_effective']
-        if 'entity_name_effective' in corp_cred and effective_date < corp_cred['entity_name_effective']:
+        if effective_date is None or ('entity_name_effective' in corp_cred and effective_date < corp_cred['entity_name_effective']):
             effective_date = corp_cred['entity_name_effective']
-        if 'entity_name_assumed_effective' in corp_cred and effective_date < corp_cred['entity_name_assumed_effective']:
+        if effective_date is None or ('entity_name_assumed_effective' in corp_cred and effective_date < corp_cred['entity_name_assumed_effective']):
             effective_date = corp_cred['entity_name_assumed_effective']
         return effective_date
 
@@ -699,8 +712,16 @@ class EventProcessor:
 
             # corp_state active at effective date
             corp_state = self.corp_rec_at_effective_date(corp_info['corp_state'], loop_start_date, loop_end_date)
+            if corp_state is None:
+                # no corp state found - take either the first or last in the list
+                if len(corp_info['corp_state']) > 0:
+                    if loop_start_date <= corp_info['corp_state'][0]['effective_start_date']:
+                        corp_state = corp_info['corp_state'][0]
+                    else:
+                        corp_state = corp_info['corp_state'][len(corp_info['corp_state'])-1]
             if corp_state is not None:
                 corp_cred['entity_status'] = corp_state['op_state_typ_cd']
+                #print('Effective start date', corp_state['effective_start_date'])
                 corp_cred['entity_status_effective'] = corp_state['effective_start_date']
                 corp_cred['entity_type'] = corp_info['corp_type']['full_desc']
 
@@ -714,6 +735,9 @@ class EventProcessor:
             corp_cred['registration_type'] = ''
 
             corp_cred['effective_date'] = self.credential_effective_date(corp_cred)
+            if corp_cred['effective_date'] is None:
+                corp_cred['effective_date'] = corp_cred['registration_date']
+
             reason_description = self.build_corp_reason_code(corp_cred, corp_info, org_name, org_name_assumed, corp_state, jurisdiction, loop_start_date)
 
             corp_cred = self.build_credential_dict(corp_credential, corp_schema, corp_version, corp_num, corp_cred, reason_description, corp_cred['effective_date'])
@@ -915,7 +939,8 @@ class EventProcessor:
                             prev_event_json = corp['PREV_EVENT']
                             last_event_json = corp['LAST_EVENT']
 
-                        corp_active_state = self.get_corp_active_state(corp_info)
+                        if process_success:
+                            corp_active_state = self.get_corp_active_state(corp_info)
 
                         if process_success:
                             if generate_creds:

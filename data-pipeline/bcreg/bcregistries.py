@@ -866,19 +866,27 @@ class BCRegistries:
 
     # return the "effective date" given an event and filing
     def get_event_filing_effective_date(self, event):
+        ret_date = None
+
         # use the filing effective date if it is present
         if 'filing' in event and 'effective_dt' in event['filing']:
-            return event['filing']['effective_dt']
+            ret_date = event['filing']['effective_dt']
 
         # else use the conversion event if present
-        if 'conv_event' in event and 'effective_dt' in event['conv_event']:
+        if ret_date is None and 'conv_event' in event and 'effective_dt' in event['conv_event']:
             if event['conv_event']['effective_dt'] is None:
-                return event['conv_event']['activity_dt']
+                ret_date = event['conv_event']['activity_dt']
             else:
-                return event['conv_event']['effective_dt']
+                ret_date = event['conv_event']['effective_dt']
         
         # finally use the event timestamp if we have no other option
-        return event['event_timestmp']
+        if ret_date is None:
+            ret_date = event['event_timestmp']
+
+        if ret_date is None:
+            print('Error ret_date is None', event)
+
+        return ret_date
 
     # return the "effective date" given an event id
     def get_event_effective_date(self, event_id):
@@ -1124,65 +1132,65 @@ class BCRegistries:
                 cur.close()
 
     # get the event that initiated the corporation's "Active" state
-    def get_corp_active_event(self, corp, provided_corp_state):
-        sql_state = """SELECT state.corp_num corp_num, state.start_event_id start_event_id, state.end_event_id end_event_id, 
-                        state.state_typ_cd state_typ_cd, state.dd_corp_num dd_corp_num, 
-                        op_state.op_state_typ_cd op_state_typ_cd, op_state.short_desc short_desc, op_state.full_desc full_desc
-                        FROM """ + self.get_table_prefix() + """corp_state state, """ + self.get_table_prefix() + """corp_op_state op_state
-                        WHERE corp_num = """ + self.get_db_sql_param() + """ and op_state.state_typ_cd = state.state_typ_cd"""
-        cursor = None
-        try:
-            #print('Read event and filing history to determine date')
-            cursor = self.get_db_connection().cursor()
-            cursor.execute(sql_state, (corp['corp_num'],))
-            desc = cursor.description
-            column_names = [col[0] for col in desc]
-            corp_states = [dict(zip(column_names, row))  
-                for row in cursor]
-            cursor.close()
-            cursor = None
+    #def get_corp_active_event(self, corp, provided_corp_state):
+    #    sql_state = """SELECT state.corp_num corp_num, state.start_event_id start_event_id, state.end_event_id end_event_id, 
+    #                    state.state_typ_cd state_typ_cd, state.dd_corp_num dd_corp_num, 
+    #                    op_state.op_state_typ_cd op_state_typ_cd, op_state.short_desc short_desc, op_state.full_desc full_desc
+    #                    FROM """ + self.get_table_prefix() + """corp_state state, """ + self.get_table_prefix() + """corp_op_state op_state
+    #                    WHERE corp_num = """ + self.get_db_sql_param() + """ and op_state.state_typ_cd = state.state_typ_cd"""
+    #    cursor = None
+    #    try:
+    #        #print('Read event and filing history to determine date')
+    #        cursor = self.get_db_connection().cursor()
+    #        cursor.execute(sql_state, (corp['corp_num'],))
+    #        desc = cursor.description
+    #        column_names = [col[0] for col in desc]
+    #        corp_states = [dict(zip(column_names, row))  
+    #            for row in cursor]
+    #        cursor.close()
+    #        cursor = None
 
-            # build history of all corp states, and sort by descending effective date
-            for corp_state in corp_states:
-                corp_state['start_event'] = self.get_event(corp_state['corp_num'], corp_state['start_event_id'])
-                corp_name['effective_date'] = self.get_event_filing_effective_date(corp_name['end_event'])
-            sorted_corp_states = sorted(corp_states, key=lambda k: k['effective_date'], reverse=True)
+    #        # build history of all corp states, and sort by descending effective date
+    #        for corp_state in corp_states:
+    #            corp_state['start_event'] = self.get_event(corp_state['corp_num'], corp_state['start_event_id'])
+    #            corp_state['effective_date'] = self.get_event_filing_effective_date(corp_state['start_event'])
+    #        sorted_corp_states = sorted(corp_states, key=lambda k: k['effective_date'], reverse=True)
 
-            # determine when the state turned "Active"
-            provided_corp_state_date = provided_corp_state['event_date']
-            # TODO make sure we are working backwords from the provided state
-            active_event = {}
-            for sorted_corp_state in sorted_corp_states:
-                if sorted_corp_state['effective_date'] <= provided_corp_state_date:
-                    if sorted_corp_state['op_state_typ_cd'] == 'ACT':
-                        active_event = sorted_corp_state['start_event']
-                    else:
-                        return active_event
-            return active_event
+    #        # determine when the state turned "Active"
+    #        provided_corp_state_date = provided_corp_state['event_date']
+    #        # TODO make sure we are working backwords from the provided state
+    #        active_event = {}
+    #        for sorted_corp_state in sorted_corp_states:
+    #            if sorted_corp_state['effective_date'] <= provided_corp_state_date:
+    #                if sorted_corp_state['op_state_typ_cd'] == 'ACT':
+    #                    active_event = sorted_corp_state['start_event']
+    #                else:
+    #                    return active_event
+    #        return active_event
 
-        except (Exception, psycopg2.DatabaseError) as error:
-            print(error)
-            print(traceback.print_exc())
-            raise 
-        finally:
-            if cursor is not None:
-                cursor.close()
+    #    except (Exception, psycopg2.DatabaseError) as error:
+    #        print(error)
+    #        print(traceback.print_exc())
+    #        raise 
+    #    finally:
+    #        if cursor is not None:
+    #            cursor.close()
 
-    def get_corp_state_event(self, corp, corp_state):
-        if corp_state['op_state_typ_cd'] == 'HIS':
-            # for historical corps pull the effective date from the filing or event
-            return corp_state['start_event']
-        else:
-            # for active corps find the date of activation
-            if corp_state['state_typ_cd'] == 'ACT':
-                return corp_state['start_event']
-            else:
-                # some other "active" status, when was corp previously activated?
-                return self.get_corp_active_event(corp, corp_state)
+    #def get_corp_state_event(self, corp, corp_state):
+    #    if corp_state['op_state_typ_cd'] == 'HIS':
+    #        # for historical corps pull the effective date from the filing or event
+    #        return corp_state['start_event']
+    #    else:
+    #        # for active corps find the date of activation
+    #        if corp_state['state_typ_cd'] == 'ACT':
+    #            return corp_state['start_event']
+    #        else:
+    #            # some other "active" status, when was corp previously activated?
+    #            return self.get_corp_active_event(corp, corp_state)
 
     # return the filing date or event date of the 
-    def get_corp_state_date(self, corp_state):
-        return self.get_event_filing_effective_date(corp_state['corp_state_effective_event'])
+    #def get_corp_state_date(self, corp_state):
+    #    return self.get_event_filing_effective_date(corp_state['corp_state_effective_event'])
 
     # get the corporation's current state
     def get_corp_states(self, corp_num):
@@ -1199,11 +1207,11 @@ class BCRegistries:
             cursor.execute(sql_state, (corp_num,))
             desc = cursor.description
             column_names = [col[0] for col in desc]
-            corp_state = [dict(zip(column_names, row))  
+            corp_states = [dict(zip(column_names, row))  
                 for row in cursor]
             cursor.close()
             cursor = None
-            return corp_state
+            return corp_states
         except (Exception, psycopg2.DatabaseError) as error:
             print(error)
             print(traceback.print_exc())
@@ -1336,18 +1344,29 @@ class BCRegistries:
                 corp['org_name_trans'] = self.get_names(corp_num, ['TR', 'NO'])
                 corp['office'] = self.get_offices(corp_num)
 
-                # other corp attributes
-                corp['corp_state'] = self.get_corp_states(corp_num)
-                for corp_state in corp['corp_state']:
+                # get corp state (active, historical), and get the start/end date of each state change
+                corp_states = self.get_corp_states(corp_num)
+                for corp_state in corp_states:
                     corp_state['start_event'] = self.get_event(corp['corp_num'], corp_state['start_event_id'])
                     corp_state['event_date'] = self.get_event_filing_effective_date(corp_state['start_event'])
-                    corp_state['corp_state_effective_event'] = self.get_corp_state_event(corp, corp_state)
-                    corp_state['effective_start_date'] = self.get_corp_state_date(corp_state)
                     if corp_state['end_event_id'] is not None:
                         corp_state['end_event'] = self.get_event(corp['corp_num'], corp_state['end_event_id'])
                         corp_state['effective_end_date'] = self.get_event_filing_effective_date(corp_state['end_event'])
                     else:
                         corp_state['effective_end_date'] = MAX_END_DATE
+
+                # sort to get in date order, and determine ACT/HIS transition dates
+                corp['corp_state'] = sorted(corp_states, key=lambda k: k['event_date'])
+                prev_state = None
+                prev_state_effective_event = None
+                for corp_state in corp['corp_state']:
+                    # check if state has changed
+                    if prev_state is None or prev_state != corp_state['op_state_typ_cd']:
+                        # state has changed
+                        prev_state = corp_state['op_state_typ_cd']
+                        prev_state_effective_event = corp_state['start_event']
+                    corp_state['corp_state_effective_event'] = prev_state_effective_event
+                    corp_state['effective_start_date'] = self.get_event_filing_effective_date(prev_state_effective_event)
 
             return corp
         except (Exception, psycopg2.DatabaseError) as error:
