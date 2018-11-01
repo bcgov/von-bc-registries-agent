@@ -70,6 +70,7 @@ sample_history_corps = {
                     """insert into corporation (corp_num, corp_frozen_typ_cd, corp_typ_cd, recognition_dts, last_ar_filed_dt, transition_dt, bn_9, bn_15, accession_num, corp_password, prompt_question, admin_email, send_ar_ind, tilma_involved_ind, tilma_cessation_dt, firm_last_image_date, os_session, last_agm_date, firm_lp_xp_termination_date, last_ledger_dt, ar_reminder_option, ar_reminder_date, temp_password, temp_password_expiry_date)
                     values
                     ('9726376', null, 'BC', '2009-12-21 11:56:50', '2010-12-21 00:00:00', null, null, null, null, 'YTAMWYUI', 'CPSVHFVK', null, 'N', 'Y', null, null, null, null, null, null, null, null, null, null)""",
+                    """create table if not exists conv_event (event_id numeric, effective_dt timestamp, report_corp_ind text, prev_bc_ind text, activity_user_id text, activity_dt timestamp, activity_tm timestamp, annual_file_dt timestamp, corp_cre_typ_cd text, accession_num text, dd_event_id numeric, remarks text)""",
                     """create table if not exists corp_state (corp_num text, start_event_id numeric, end_event_id numeric, state_typ_cd text, dd_corp_num text)""",
                     """insert into corp_state (corp_num, start_event_id, end_event_id, state_typ_cd, dd_corp_num)
                     values
@@ -309,6 +310,7 @@ sample_history_corps = {
                     """insert into corporation (corp_num, corp_frozen_typ_cd, corp_typ_cd, recognition_dts, last_ar_filed_dt, transition_dt, bn_9, bn_15, accession_num, corp_password, prompt_question, admin_email, send_ar_ind, tilma_involved_ind, tilma_cessation_dt, firm_last_image_date, os_session, last_agm_date, firm_lp_xp_termination_date, last_ledger_dt, ar_reminder_option, ar_reminder_date, temp_password, temp_password_expiry_date)
                     values
                     ('XS3169236', null, 'XS', '2011-09-19 16:03:19', null, null, '024685962', '907409560907781', null, null, null, null, 'N', 'N', null, null, null, null, null, null, 'ANN', '09-19', 'A3C3A801CE869812C2BF982E7374811C', '2017-02-28 23:59:59')""",
+                    """create table if not exists conv_event (event_id numeric, effective_dt timestamp, report_corp_ind text, prev_bc_ind text, activity_user_id text, activity_dt timestamp, activity_tm timestamp, annual_file_dt timestamp, corp_cre_typ_cd text, accession_num text, dd_event_id numeric, remarks text)""",
                     """create table if not exists corp_state (corp_num text, start_event_id numeric, end_event_id numeric, state_typ_cd text, dd_corp_num text)""",
                     """insert into corp_state (corp_num, start_event_id, end_event_id, state_typ_cd, dd_corp_num)
                     values
@@ -1238,6 +1240,7 @@ sample_history_corps = {
                     """insert into corporation (corp_num, corp_frozen_typ_cd, corp_typ_cd, recognition_dts, last_ar_filed_dt, transition_dt, bn_9, bn_15, accession_num, corp_password, prompt_question, admin_email, send_ar_ind, tilma_involved_ind, tilma_cessation_dt, firm_last_image_date, os_session, last_agm_date, firm_lp_xp_termination_date, last_ledger_dt, ar_reminder_option, ar_reminder_date, temp_password, temp_password_expiry_date)
                     values
                     ('XP0920055', null, 'XP', '2001-02-07 00:00:00', null, null, null, null, null, null, null, null, null, 'N', null, null, null, null, '2005-03-29 00:00:00', null, null, null, null, null)""",
+                    """create table if not exists conv_event (event_id numeric, effective_dt timestamp, report_corp_ind text, prev_bc_ind text, activity_user_id text, activity_dt timestamp, activity_tm timestamp, annual_file_dt timestamp, corp_cre_typ_cd text, accession_num text, dd_event_id numeric, remarks text)""",
                     """create table if not exists corp_state (corp_num text, start_event_id numeric, end_event_id numeric, state_typ_cd text, dd_corp_num text)""",
                     """insert into corp_state (corp_num, start_event_id, end_event_id, state_typ_cd, dd_corp_num)
                     values
@@ -1813,6 +1816,7 @@ sample_history_corps = {
                     """insert into corporation (corp_num, corp_frozen_typ_cd, corp_typ_cd, recognition_dts, last_ar_filed_dt, transition_dt, bn_9, bn_15, accession_num, corp_password, prompt_question, admin_email, send_ar_ind, tilma_involved_ind, tilma_cessation_dt, firm_last_image_date, os_session, last_agm_date, firm_lp_xp_termination_date, last_ledger_dt, ar_reminder_option, ar_reminder_date, temp_password, temp_password_expiry_date)
                     values
                     ('4888387', null, 'BC', '1968-02-16 00:00:00', '2009-02-16 00:00:00', '2009-12-29 11:56:06', null, null, null, 'OXGSZXVD', 'MVYLOAMD', null, 'Y', 'N', null, null, null, null, null, null, null, null, null, null)""",
+                    """create table if not exists conv_event (event_id numeric, effective_dt timestamp, report_corp_ind text, prev_bc_ind text, activity_user_id text, activity_dt timestamp, activity_tm timestamp, annual_file_dt timestamp, corp_cre_typ_cd text, accession_num text, dd_event_id numeric, remarks text)""",
                     """create table if not exists corp_state (corp_num text, start_event_id numeric, end_event_id numeric, state_typ_cd text, dd_corp_num text)""",
                     """insert into corp_state (corp_num, start_event_id, end_event_id, state_typ_cd, dd_corp_num)
                     values
@@ -1965,6 +1969,7 @@ sample_history_corps = {
                     """insert into corporation (corp_num, corp_frozen_typ_cd, corp_typ_cd, recognition_dts, last_ar_filed_dt, transition_dt, bn_9, bn_15, accession_num, corp_password, prompt_question, admin_email, send_ar_ind, tilma_involved_ind, tilma_cessation_dt, firm_last_image_date, os_session, last_agm_date, firm_lp_xp_termination_date, last_ledger_dt, ar_reminder_option, ar_reminder_date, temp_password, temp_password_expiry_date)
                     values
                     ('2176257', null, 'BC', '2009-09-01 17:48:09', null, null, null, null, null, 'KNUMCZLP', 'OBSFVBRK', null, 'N', 'Y', null, null, null, null, null, null, null, null, null, null)""",
+                    """create table if not exists conv_event (event_id numeric, effective_dt timestamp, report_corp_ind text, prev_bc_ind text, activity_user_id text, activity_dt timestamp, activity_tm timestamp, annual_file_dt timestamp, corp_cre_typ_cd text, accession_num text, dd_event_id numeric, remarks text)""",
                     """create table if not exists corp_state (corp_num text, start_event_id numeric, end_event_id numeric, state_typ_cd text, dd_corp_num text)""",
                     """insert into corp_state (corp_num, start_event_id, end_event_id, state_typ_cd, dd_corp_num)
                     values
@@ -2126,6 +2131,7 @@ sample_history_corps = {
                     """insert into corporation (corp_num, corp_frozen_typ_cd, corp_typ_cd, recognition_dts, last_ar_filed_dt, transition_dt, bn_9, bn_15, accession_num, corp_password, prompt_question, admin_email, send_ar_ind, tilma_involved_ind, tilma_cessation_dt, firm_last_image_date, os_session, last_agm_date, firm_lp_xp_termination_date, last_ledger_dt, ar_reminder_option, ar_reminder_date, temp_password, temp_password_expiry_date)
                     values
                     ('5993202', null, 'BC', '2002-02-04 00:00:00', '2010-02-04 00:00:00', '2006-02-10 13:27:16', null, null, null, 'VCUNCZSU', 'WQQYBZSA', null, 'Y', 'Y', null, null, null, null, null, null, null, null, null, null)""",
+                    """create table if not exists conv_event (event_id numeric, effective_dt timestamp, report_corp_ind text, prev_bc_ind text, activity_user_id text, activity_dt timestamp, activity_tm timestamp, annual_file_dt timestamp, corp_cre_typ_cd text, accession_num text, dd_event_id numeric, remarks text)""",
                     """create table if not exists corp_state (corp_num text, start_event_id numeric, end_event_id numeric, state_typ_cd text, dd_corp_num text)""",
                     """insert into corp_state (corp_num, start_event_id, end_event_id, state_typ_cd, dd_corp_num)
                     values
@@ -3163,6 +3169,7 @@ sample_history_corps = {
                     """insert into corporation (corp_num, corp_frozen_typ_cd, corp_typ_cd, recognition_dts, last_ar_filed_dt, transition_dt, bn_9, bn_15, accession_num, corp_password, prompt_question, admin_email, send_ar_ind, tilma_involved_ind, tilma_cessation_dt, firm_last_image_date, os_session, last_agm_date, firm_lp_xp_termination_date, last_ledger_dt, ar_reminder_option, ar_reminder_date, temp_password, temp_password_expiry_date)
                     values
                     ('XP6038062', null, 'XP', '2011-03-13 17:44:09', null, null, null, null, null, null, null, null, 'N', 'Y', null, null, null, null, null, null, null, null, null, null)""",
+                    """create table if not exists conv_event (event_id numeric, effective_dt timestamp, report_corp_ind text, prev_bc_ind text, activity_user_id text, activity_dt timestamp, activity_tm timestamp, annual_file_dt timestamp, corp_cre_typ_cd text, accession_num text, dd_event_id numeric, remarks text)""",
                     """create table if not exists corp_state (corp_num text, start_event_id numeric, end_event_id numeric, state_typ_cd text, dd_corp_num text)""",
                     """insert into corp_state (corp_num, start_event_id, end_event_id, state_typ_cd, dd_corp_num)
                     values
@@ -3975,6 +3982,7 @@ sample_history_corps = {
                     """insert into corporation (corp_num, corp_frozen_typ_cd, corp_typ_cd, recognition_dts, last_ar_filed_dt, transition_dt, bn_9, bn_15, accession_num, corp_password, prompt_question, admin_email, send_ar_ind, tilma_involved_ind, tilma_cessation_dt, firm_last_image_date, os_session, last_agm_date, firm_lp_xp_termination_date, last_ledger_dt, ar_reminder_option, ar_reminder_date, temp_password, temp_password_expiry_date)
                     values
                     ('LP8743499', null, 'LP', '2011-03-19 12:11:12', null, null, '777401469', '974862379488291', null, null, null, null, 'N', 'Y', null, null, null, null, '2030-03-31 00:00:00', null, null, null, null, null)""",
+                    """create table if not exists conv_event (event_id numeric, effective_dt timestamp, report_corp_ind text, prev_bc_ind text, activity_user_id text, activity_dt timestamp, activity_tm timestamp, annual_file_dt timestamp, corp_cre_typ_cd text, accession_num text, dd_event_id numeric, remarks text)""",
                     """create table if not exists corp_state (corp_num text, start_event_id numeric, end_event_id numeric, state_typ_cd text, dd_corp_num text)""",
                     """insert into corp_state (corp_num, start_event_id, end_event_id, state_typ_cd, dd_corp_num)
                     values
@@ -4310,6 +4318,7 @@ sample_history_corps = {
                     """insert into corporation (corp_num, corp_frozen_typ_cd, corp_typ_cd, recognition_dts, last_ar_filed_dt, transition_dt, bn_9, bn_15, accession_num, corp_password, prompt_question, admin_email, send_ar_ind, tilma_involved_ind, tilma_cessation_dt, firm_last_image_date, os_session, last_agm_date, firm_lp_xp_termination_date, last_ledger_dt, ar_reminder_option, ar_reminder_date, temp_password, temp_password_expiry_date)
                     values
                     ('C4560096', null, 'C', '1984-10-10 00:00:00', '2008-10-10 00:00:00', '2006-01-27 12:59:20', null, null, null, 'SRDJVZKH', 'CHUELNJH', null, 'Y', 'Y', null, null, null, null, null, null, null, null, null, null)""",
+                    """create table if not exists conv_event (event_id numeric, effective_dt timestamp, report_corp_ind text, prev_bc_ind text, activity_user_id text, activity_dt timestamp, activity_tm timestamp, annual_file_dt timestamp, corp_cre_typ_cd text, accession_num text, dd_event_id numeric, remarks text)""",
                     """create table if not exists corp_state (corp_num text, start_event_id numeric, end_event_id numeric, state_typ_cd text, dd_corp_num text)""",
                     """insert into corp_state (corp_num, start_event_id, end_event_id, state_typ_cd, dd_corp_num)
                     values
@@ -4507,6 +4516,7 @@ sample_history_corps = {
                     """insert into corporation (corp_num, corp_frozen_typ_cd, corp_typ_cd, recognition_dts, last_ar_filed_dt, transition_dt, bn_9, bn_15, accession_num, corp_password, prompt_question, admin_email, send_ar_ind, tilma_involved_ind, tilma_cessation_dt, firm_last_image_date, os_session, last_agm_date, firm_lp_xp_termination_date, last_ledger_dt, ar_reminder_option, ar_reminder_date, temp_password, temp_password_expiry_date)
                     values
                     ('A2437876', null, 'A', '2003-07-31 00:00:00', '2007-07-31 00:00:00', null, null, null, null, 'TMPWIRVO', 'HDSTIAPU', null, 'Y', 'N', null, null, null, null, null, null, null, null, null, null)""",
+                    """create table if not exists conv_event (event_id numeric, effective_dt timestamp, report_corp_ind text, prev_bc_ind text, activity_user_id text, activity_dt timestamp, activity_tm timestamp, annual_file_dt timestamp, corp_cre_typ_cd text, accession_num text, dd_event_id numeric, remarks text)""",
                     """create table if not exists corp_state (corp_num text, start_event_id numeric, end_event_id numeric, state_typ_cd text, dd_corp_num text)""",
                     """insert into corp_state (corp_num, start_event_id, end_event_id, state_typ_cd, dd_corp_num)
                     values
@@ -5115,6 +5125,7 @@ sample_history_corps = {
                     """insert into corporation (corp_num, corp_frozen_typ_cd, corp_typ_cd, recognition_dts, last_ar_filed_dt, transition_dt, bn_9, bn_15, accession_num, corp_password, prompt_question, admin_email, send_ar_ind, tilma_involved_ind, tilma_cessation_dt, firm_last_image_date, os_session, last_agm_date, firm_lp_xp_termination_date, last_ledger_dt, ar_reminder_option, ar_reminder_date, temp_password, temp_password_expiry_date)
                     values
                     ('FM5911702', null, 'SP', '2011-02-09 00:00:00', null, null, null, null, null, null, null, null, null, 'N', null, null, 1277359, null, null, null, null, null, null, null)""",
+                    """create table if not exists conv_event (event_id numeric, effective_dt timestamp, report_corp_ind text, prev_bc_ind text, activity_user_id text, activity_dt timestamp, activity_tm timestamp, annual_file_dt timestamp, corp_cre_typ_cd text, accession_num text, dd_event_id numeric, remarks text)""",
                     """create table if not exists corp_state (corp_num text, start_event_id numeric, end_event_id numeric, state_typ_cd text, dd_corp_num text)""",
                     """insert into corp_state (corp_num, start_event_id, end_event_id, state_typ_cd, dd_corp_num)
                     values
@@ -5525,6 +5536,7 @@ sample_history_corps = {
                     """insert into corporation (corp_num, corp_frozen_typ_cd, corp_typ_cd, recognition_dts, last_ar_filed_dt, transition_dt, bn_9, bn_15, accession_num, corp_password, prompt_question, admin_email, send_ar_ind, tilma_involved_ind, tilma_cessation_dt, firm_last_image_date, os_session, last_agm_date, firm_lp_xp_termination_date, last_ledger_dt, ar_reminder_option, ar_reminder_date, temp_password, temp_password_expiry_date)
                     values
                     ('5933742', null, 'BC', '2001-11-28 00:00:00', '2009-11-28 00:00:00', '2007-11-19 13:57:33', null, null, null, 'GDVESZEN', 'BYCWBSRX', null, 'Y', 'N', null, null, null, null, null, null, null, null, null, null)""",
+                    """create table if not exists conv_event (event_id numeric, effective_dt timestamp, report_corp_ind text, prev_bc_ind text, activity_user_id text, activity_dt timestamp, activity_tm timestamp, annual_file_dt timestamp, corp_cre_typ_cd text, accession_num text, dd_event_id numeric, remarks text)""",
                     """create table if not exists corp_state (corp_num text, start_event_id numeric, end_event_id numeric, state_typ_cd text, dd_corp_num text)""",
                     """insert into corp_state (corp_num, start_event_id, end_event_id, state_typ_cd, dd_corp_num)
                     values
@@ -6046,6 +6058,7 @@ sample_history_corps = {
                     """insert into corporation (corp_num, corp_frozen_typ_cd, corp_typ_cd, recognition_dts, last_ar_filed_dt, transition_dt, bn_9, bn_15, accession_num, corp_password, prompt_question, admin_email, send_ar_ind, tilma_involved_ind, tilma_cessation_dt, firm_last_image_date, os_session, last_agm_date, firm_lp_xp_termination_date, last_ledger_dt, ar_reminder_option, ar_reminder_date, temp_password, temp_password_expiry_date)
                     values
                     ('FM0520672', null, 'SP', '1992-02-24 00:00:00', null, null, null, null, null, null, null, null, null, 'N', null, null, null, null, null, null, null, null, null, null)""",
+                    """create table if not exists conv_event (event_id numeric, effective_dt timestamp, report_corp_ind text, prev_bc_ind text, activity_user_id text, activity_dt timestamp, activity_tm timestamp, annual_file_dt timestamp, corp_cre_typ_cd text, accession_num text, dd_event_id numeric, remarks text)""",
                     """create table if not exists corp_state (corp_num text, start_event_id numeric, end_event_id numeric, state_typ_cd text, dd_corp_num text)""",
                     """insert into corp_state (corp_num, start_event_id, end_event_id, state_typ_cd, dd_corp_num)
                     values
@@ -6429,6 +6442,7 @@ sample_history_corps = {
                     """insert into corporation (corp_num, corp_frozen_typ_cd, corp_typ_cd, recognition_dts, last_ar_filed_dt, transition_dt, bn_9, bn_15, accession_num, corp_password, prompt_question, admin_email, send_ar_ind, tilma_involved_ind, tilma_cessation_dt, firm_last_image_date, os_session, last_agm_date, firm_lp_xp_termination_date, last_ledger_dt, ar_reminder_option, ar_reminder_date, temp_password, temp_password_expiry_date)
                     values
                     ('S2349228', null, 'S', '2011-05-30 15:26:42', null, null, null, null, null, null, null, null, 'N', 'N', null, null, null, null, null, null, 'ANN', '05-30', '20BDE09CDFC683CDEF3449C6482D1838', '2017-02-28 23:59:59')""",
+                    """create table if not exists conv_event (event_id numeric, effective_dt timestamp, report_corp_ind text, prev_bc_ind text, activity_user_id text, activity_dt timestamp, activity_tm timestamp, annual_file_dt timestamp, corp_cre_typ_cd text, accession_num text, dd_event_id numeric, remarks text)""",
                     """create table if not exists corp_state (corp_num text, start_event_id numeric, end_event_id numeric, state_typ_cd text, dd_corp_num text)""",
                     """insert into corp_state (corp_num, start_event_id, end_event_id, state_typ_cd, dd_corp_num)
                     values
@@ -6872,6 +6886,7 @@ sample_history_corps = {
                     """insert into corporation (corp_num, corp_frozen_typ_cd, corp_typ_cd, recognition_dts, last_ar_filed_dt, transition_dt, bn_9, bn_15, accession_num, corp_password, prompt_question, admin_email, send_ar_ind, tilma_involved_ind, tilma_cessation_dt, firm_last_image_date, os_session, last_agm_date, firm_lp_xp_termination_date, last_ledger_dt, ar_reminder_option, ar_reminder_date, temp_password, temp_password_expiry_date)
                     values
                     ('XP5929434', null, 'XP', '1997-08-19 00:00:00', null, null, null, null, null, null, null, null, null, 'N', null, null, null, null, null, null, null, null, null, null)""",
+                    """create table if not exists conv_event (event_id numeric, effective_dt timestamp, report_corp_ind text, prev_bc_ind text, activity_user_id text, activity_dt timestamp, activity_tm timestamp, annual_file_dt timestamp, corp_cre_typ_cd text, accession_num text, dd_event_id numeric, remarks text)""",
                     """create table if not exists corp_state (corp_num text, start_event_id numeric, end_event_id numeric, state_typ_cd text, dd_corp_num text)""",
                     """insert into corp_state (corp_num, start_event_id, end_event_id, state_typ_cd, dd_corp_num)
                     values
@@ -7084,6 +7099,7 @@ sample_history_corps = {
                     """insert into corporation (corp_num, corp_frozen_typ_cd, corp_typ_cd, recognition_dts, last_ar_filed_dt, transition_dt, bn_9, bn_15, accession_num, corp_password, prompt_question, admin_email, send_ar_ind, tilma_involved_ind, tilma_cessation_dt, firm_last_image_date, os_session, last_agm_date, firm_lp_xp_termination_date, last_ledger_dt, ar_reminder_option, ar_reminder_date, temp_password, temp_password_expiry_date)
                     values
                     ('6090746', null, 'BC', '2003-07-17 00:00:00', '2009-07-17 00:00:00', '2004-07-31 18:35:22', null, null, null, 'GKPGFQSE', 'MVCGFLTC', null, 'Y', 'N', null, null, null, null, null, null, null, null, null, null)""",
+                    """create table if not exists conv_event (event_id numeric, effective_dt timestamp, report_corp_ind text, prev_bc_ind text, activity_user_id text, activity_dt timestamp, activity_tm timestamp, annual_file_dt timestamp, corp_cre_typ_cd text, accession_num text, dd_event_id numeric, remarks text)""",
                     """create table if not exists corp_state (corp_num text, start_event_id numeric, end_event_id numeric, state_typ_cd text, dd_corp_num text)""",
                     """insert into corp_state (corp_num, start_event_id, end_event_id, state_typ_cd, dd_corp_num)
                     values
@@ -7221,6 +7237,7 @@ sample_history_corps = {
                     """insert into corporation (corp_num, corp_frozen_typ_cd, corp_typ_cd, recognition_dts, last_ar_filed_dt, transition_dt, bn_9, bn_15, accession_num, corp_password, prompt_question, admin_email, send_ar_ind, tilma_involved_ind, tilma_cessation_dt, firm_last_image_date, os_session, last_agm_date, firm_lp_xp_termination_date, last_ledger_dt, ar_reminder_option, ar_reminder_date, temp_password, temp_password_expiry_date)
                     values
                     ('5816769', null, 'BC', '2009-09-07 11:41:51', null, null, null, null, null, 'WSEPTHEN', 'CKHHFEMY', null, 'Y', 'N', null, null, null, null, null, null, null, null, null, null)""",
+                    """create table if not exists conv_event (event_id numeric, effective_dt timestamp, report_corp_ind text, prev_bc_ind text, activity_user_id text, activity_dt timestamp, activity_tm timestamp, annual_file_dt timestamp, corp_cre_typ_cd text, accession_num text, dd_event_id numeric, remarks text)""",
                     """create table if not exists corp_state (corp_num text, start_event_id numeric, end_event_id numeric, state_typ_cd text, dd_corp_num text)""",
                     """insert into corp_state (corp_num, start_event_id, end_event_id, state_typ_cd, dd_corp_num)
                     values
@@ -8117,6 +8134,7 @@ sample_history_corps = {
                     """insert into corporation (corp_num, corp_frozen_typ_cd, corp_typ_cd, recognition_dts, last_ar_filed_dt, transition_dt, bn_9, bn_15, accession_num, corp_password, prompt_question, admin_email, send_ar_ind, tilma_involved_ind, tilma_cessation_dt, firm_last_image_date, os_session, last_agm_date, firm_lp_xp_termination_date, last_ledger_dt, ar_reminder_option, ar_reminder_date, temp_password, temp_password_expiry_date)
                     values
                     ('LP4107630', null, 'LP', '1999-04-23 00:00:00', null, null, null, null, null, null, null, null, null, 'N', null, null, null, null, '2050-12-31 00:00:00', null, null, null, null, null)""",
+                    """create table if not exists conv_event (event_id numeric, effective_dt timestamp, report_corp_ind text, prev_bc_ind text, activity_user_id text, activity_dt timestamp, activity_tm timestamp, annual_file_dt timestamp, corp_cre_typ_cd text, accession_num text, dd_event_id numeric, remarks text)""",
                     """create table if not exists corp_state (corp_num text, start_event_id numeric, end_event_id numeric, state_typ_cd text, dd_corp_num text)""",
                     """insert into corp_state (corp_num, start_event_id, end_event_id, state_typ_cd, dd_corp_num)
                     values
@@ -8524,6 +8542,7 @@ sample_history_corps = {
                     """insert into corporation (corp_num, corp_frozen_typ_cd, corp_typ_cd, recognition_dts, last_ar_filed_dt, transition_dt, bn_9, bn_15, accession_num, corp_password, prompt_question, admin_email, send_ar_ind, tilma_involved_ind, tilma_cessation_dt, firm_last_image_date, os_session, last_agm_date, firm_lp_xp_termination_date, last_ledger_dt, ar_reminder_option, ar_reminder_date, temp_password, temp_password_expiry_date)
                     values
                     ('0958079', null, 'BC', '2006-07-12 21:36:27', null, null, null, null, null, 'YUFZZBVI', 'ZFXIXQPG', null, 'Y', 'N', null, null, null, null, null, null, null, null, null, null)""",
+                    """create table if not exists conv_event (event_id numeric, effective_dt timestamp, report_corp_ind text, prev_bc_ind text, activity_user_id text, activity_dt timestamp, activity_tm timestamp, annual_file_dt timestamp, corp_cre_typ_cd text, accession_num text, dd_event_id numeric, remarks text)""",
                     """create table if not exists corp_state (corp_num text, start_event_id numeric, end_event_id numeric, state_typ_cd text, dd_corp_num text)""",
                     """insert into corp_state (corp_num, start_event_id, end_event_id, state_typ_cd, dd_corp_num)
                     values
@@ -8901,6 +8920,7 @@ sample_history_corps = {
                     """insert into corporation (corp_num, corp_frozen_typ_cd, corp_typ_cd, recognition_dts, last_ar_filed_dt, transition_dt, bn_9, bn_15, accession_num, corp_password, prompt_question, admin_email, send_ar_ind, tilma_involved_ind, tilma_cessation_dt, firm_last_image_date, os_session, last_agm_date, firm_lp_xp_termination_date, last_ledger_dt, ar_reminder_option, ar_reminder_date, temp_password, temp_password_expiry_date)
                     values
                     ('A9713554', null, 'A', '1994-10-28 00:00:00', '2009-10-28 00:00:00', null, null, null, null, 'XXTJPAVP', 'MCJFAJTU', null, 'Y', 'N', null, null, null, null, null, null, null, null, null, null)""",
+                    """create table if not exists conv_event (event_id numeric, effective_dt timestamp, report_corp_ind text, prev_bc_ind text, activity_user_id text, activity_dt timestamp, activity_tm timestamp, annual_file_dt timestamp, corp_cre_typ_cd text, accession_num text, dd_event_id numeric, remarks text)""",
                     """create table if not exists corp_state (corp_num text, start_event_id numeric, end_event_id numeric, state_typ_cd text, dd_corp_num text)""",
                     """insert into corp_state (corp_num, start_event_id, end_event_id, state_typ_cd, dd_corp_num)
                     values

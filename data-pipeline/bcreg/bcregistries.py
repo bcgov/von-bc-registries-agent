@@ -310,6 +310,12 @@ class BCRegistries:
                             gen_row['business_nme'] = row['bus_company_num'] + self.random_alpha_string(20, True)
                         else:
                             gen_row['business_nme'] = self.random_alpha_string(20, True)
+                    if 'last_nme' in row and row['last_nme'] is not None:
+                        gen_row['last_nme'] = self.random_alpha_string(20, True)
+                    if 'middle_nme' in row and row['middle_nme'] is not None:
+                        gen_row['middle_nme'] = self.random_alpha_string(10, True)
+                    if 'first_nme' in row and row['first_nme'] is not None:
+                        gen_row['first_nme'] = self.random_alpha_string(15, True)
                 else:
                     # for any table, replace corp_num with the corresponding random value
                     if 'corp_num' in row:
@@ -734,6 +740,25 @@ class BCRegistries:
             if cur is not None:
                 cur.close()
 
+    # get max event number from bc registries event log
+    def get_event_id_date(self, event_id):
+        cur = None
+        try:
+            # create a cursor
+            cur = self.conn.cursor()
+            cur.execute("""SELECT event_timestmp FROM """ + BC_REGISTRIES_TABLE_PREFIX + """event where event_id = %s""", (event_id,))
+            row = cur.fetchone()
+            cur.close()
+            cur = None
+            return row[0]
+        except (Exception, psycopg2.DatabaseError) as error:
+            print(error)
+            print(traceback.print_exc())
+            raise
+        finally:
+            if cur is not None:
+                cur.close()
+
     # return a specific set of corporations, based on an event range
     def get_specific_corps(self, corp_filter):
         sql = """SELECT distinct(corp_num) from """ + BC_REGISTRIES_TABLE_PREFIX + """event
@@ -932,6 +957,7 @@ class BCRegistries:
                 ret_event['filing'] = self.get_filing_event(corp_num, event_id, ret_event['event_typ_cd'], force_query_remote)
             if 'conv_event' not in ret_event:
                 ret_event['conv_event'] = self.get_conv_event(corp_num, event_id, ret_event['event_typ_cd'], force_query_remote)
+            ret_event['effective_date'] = self.get_event_filing_effective_date(ret_event)
             return ret_event
         except (Exception, psycopg2.DatabaseError) as error:
             print(error)

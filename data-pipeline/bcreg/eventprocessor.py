@@ -525,48 +525,16 @@ class EventProcessor:
         return p_corp_num
 
     # determine reason for address credential
-    def build_corp_reason_code(self, corp_cred, corp_info, corp_name, corp_name_assumed, corp_state, jurisdiction, loop_start_date):
+    def build_corp_reason_code(self, loop_start_event):
         corp_reason = ""
 
         # corp_state reason code
-        if corp_state is not None and corp_state['effective_start_date'] == loop_start_date:
-            if 'filing_typ_cd' in corp_state['start_event']['filing']:
-                corp_state_reason = 'State Filing: ' + corp_state['start_event']['filing']['filing_typ_cd']
-            elif 'remarks' in corp_state['start_event']['conv_event'] and corp_state['start_event']['conv_event']['remarks'] is not None and 0 < len(corp_state['start_event']['conv_event']['remarks']):
-                return 'State Conversion: ' + corp_state['start_event']['event_typ_cd'] + ": " + corp_state['start_event']['conv_event']['remarks']
-            else:
-                corp_state_reason = 'State Event: ' + corp_state['start_event']['event_typ_cd']
-            corp_reason = corp_reason + ', ' + corp_state_reason
-
-        # jurisdiciton reason code
-        if jurisdiction is not None and jurisdiction['effective_start_date'] == loop_start_date:
-            if 'start_event' in jurisdiction:
-                if 'filing_typ_cd' in jurisdiction['start_event']['filing']:
-                    jurisdiction_reason = 'Jurisdiction Filing: ' + jurisdiction['start_event']['filing']['filing_typ_cd']
-                elif 'remarks' in jurisdiction['start_event']['conv_event'] and jurisdiction['start_event']['conv_event']['remarks'] is not None and 0 < len(jurisdiction['start_event']['conv_event']['remarks']):
-                    return 'Jurisdiction Conversion: ' + jurisdiction['start_event']['event_typ_cd'] + ": " + jurisdiction['start_event']['conv_event']['remarks']
-                else:
-                    jurisdiction_reason = 'Jurisdiction Event: ' + jurisdiction['start_event']['event_typ_cd']
-                corp_reason = corp_reason + ', ' + jurisdiction_reason
-
-        # corp name(s) reason code(s)
-        if corp_name is not None and corp_name['effective_start_date'] == loop_start_date:
-            if 'filing_typ_cd' in corp_name['start_event']['filing']:
-                entity_name_reason = 'Entity Name Filing: ' + corp_name['start_event']['filing']['filing_typ_cd']
-            elif 'remarks' in corp_name['start_event']['conv_event'] and corp_name['start_event']['conv_event']['remarks'] is not None and 0 < len(corp_name['start_event']['conv_event']['remarks']):
-                return 'Entity Name Conversion: ' + corp_name['start_event']['event_typ_cd'] + ": " + corp_name['start_event']['conv_event']['remarks']
-            else:
-                entity_name_reason = 'Entity Name Event: ' + corp_name['start_event']['event_typ_cd']
-            corp_reason = corp_reason + ', ' + entity_name_reason
-
-        if corp_name_assumed is not None and corp_name_assumed['effective_start_date'] == loop_start_date:
-            if 'filing_typ_cd' in corp_name_assumed['start_event']['filing']:
-                assumed_name_reason = 'Assumed Name Filing: ' + corp_name_assumed['start_event']['filing']['filing_typ_cd']
-            elif 'remarks' in corp_name_assumed['start_event']['conv_event'] and corp_name_assumed['start_event']['conv_event']['remarks'] is not None and 0 < len(corp_name_assumed['start_event']['conv_event']['remarks']):
-                return 'Assumed Name Conversion: ' + corp_name_assumed['start_event']['event_typ_cd'] + ": " + corp_name_assumed['start_event']['conv_event']['remarks']
-            else:
-                assumed_name_reason = 'Assumed Name Event: ' + corp_name_assumed['start_event']['event_typ_cd']
-            corp_reason = corp_reason + ', ' + assumed_name_reason
+        if 'filing_typ_cd' in loop_start_event['filing']:
+            corp_reason = 'Filing: ' + loop_start_event['filing']['filing_typ_cd']
+        elif 'remarks' in loop_start_event['conv_event'] and loop_start_event['conv_event']['remarks'] is not None and 0 < len(loop_start_event['conv_event']['remarks']):
+            corp_reason = 'Conversion: ' + loop_start_event['event_typ_cd'] + ": " + loop_start_event['conv_event']['remarks']
+        else:
+            corp_reason = 'Event: ' + loop_start_event['event_typ_cd']
 
         if (len(corp_reason) > 0 and corp_reason.startswith(", ")):
             corp_reason = corp_reason[2:]
@@ -598,7 +566,9 @@ class EventProcessor:
         addr_cred = {}
         addr_cred['registration_id'] = self.corp_num_with_prefix(corp_info['corp_typ_cd'], corp_num)
         if 0 < len(corp_info['org_names']):
-            addr_cred['addressee'] = corp_info['org_names'][0]['corp_nme']
+            org_name = self.corp_rec_at_effective_date(corp_info['org_names'], office['start_event'])
+            if org_name is not None:
+                addr_cred['addressee'] = org_name['corp_nme']
         addr_cred['address_type'] = office['office_type']['full_desc']
         addr_cred['civic_address'] = address['local_addr']
         if 'city' in address:
@@ -642,24 +612,34 @@ class EventProcessor:
         return effective_date
 
     # build a list of unique effective/expiry dates
-    def unique_effective_dates(self, corp_records, effective_dates):
+    def unique_effective_events(self, corp_records, effective_events):
         for corp_record in corp_records:
-            effective_dates.append(corp_record['effective_start_date'])
-            effective_dates.append(corp_record['effective_end_date'])
-        effective_dates = list(set(effective_dates))
-        effective_dates.sort()
-        return effective_dates
+            effective_events.append(corp_record['start_event'])
+        # sort to get in date order, and determine ACT/HIS transition dates
+        effective_events = sorted(effective_events, key=lambda k: k['effective_date'])
+        ret_effective_events = []
+        prev_effective_event = None
+        for effective_event in effective_events:
+            if prev_effective_event is None or effective_event['effective_date'] > prev_effective_event['effective_date']:
+                ret_effective_events.append(effective_event)
+            prev_effective_event = effective_event
+        return ret_effective_events
 
     # org_names etc. active at effective date
-    def corp_rec_at_effective_date(self, corp_recs, loop_start_date, loop_end_date):
+    def corp_rec_at_effective_date(self, corp_recs, loop_start_event):
         # pick the lowest effective date where the passed in start date is in range
+        loop_start_date = loop_start_event['effective_date']
         ret_corp_rec = None
         for corp_rec in corp_recs:
-            if (corp_rec['effective_start_date'] <= loop_start_date and loop_start_date < corp_rec['effective_end_date']) or (corp_rec['effective_start_date'] <= loop_end_date and loop_end_date < corp_rec['effective_end_date']) or (loop_start_date <= corp_rec['effective_start_date'] and corp_rec['effective_end_date'] < loop_end_date):
+            if corp_rec['effective_start_date'] <= loop_start_date and loop_start_date < corp_rec['effective_end_date']:
                 if ret_corp_rec is None:
                     ret_corp_rec = corp_rec
                 elif corp_rec['effective_start_date'] < ret_corp_rec['effective_start_date']:
                     ret_corp_rec = corp_rec
+            #else:
+                # (corp_rec['effective_start_date'] <= loop_end_date and loop_end_date < corp_rec['effective_end_date']) 
+                # or (loop_start_date <= corp_rec['effective_start_date'] and corp_rec['effective_end_date'] < loop_end_date)
+
         return ret_corp_rec
 
     # currently active state record
@@ -682,81 +662,90 @@ class EventProcessor:
     def generate_credentials(self, system_typ_cd, prev_event, last_event, corp_num, corp_info):
         corp_creds = []
 
+        #print(corp_num)
+
         # generate a list of (sorted) effective dates for our corp registration credentials
-        effective_dates = self.unique_effective_dates(corp_info['corp_state'], [])
-        effective_dates = self.unique_effective_dates(corp_info['jurisdiction'], effective_dates)
-        effective_dates = self.unique_effective_dates(corp_info['org_names'], effective_dates)
-        effective_dates = self.unique_effective_dates(corp_info['org_name_assumed'], effective_dates)
+        effective_events = self.unique_effective_events(corp_info['corp_state'], [])
+        effective_events = self.unique_effective_events(corp_info['jurisdiction'], effective_events)
+        effective_events = self.unique_effective_events(corp_info['org_names'], effective_events)
+        effective_events = self.unique_effective_events(corp_info['org_name_assumed'], effective_events)
+        #print(corp_num, effective_events)
 
         # loop based on start/end events
-        for i in range(len(effective_dates)-1):
-            loop_start_date = effective_dates[i]
-            loop_end_date = effective_dates[i+1]
+        for i in range(len(effective_events)):
+            loop_start_event = effective_events[i]
+            #print(corp_num,prev_event['event_date'],loop_start_event['event_timestmp'],last_event['event_date'])
+            if prev_event['event_date'] <= loop_start_event['event_timestmp'] and loop_start_event['event_timestmp'] <= last_event['event_date']:
+                #print("generate corp credential")
+                # generate corp credential
+                corp_cred = {}
+                corp_cred['registration_id'] = self.corp_num_with_prefix(corp_info['corp_typ_cd'], corp_info['corp_num'])
+                corp_cred['registration_date'] = corp_info['recognition_dts']
 
-            # generate corp credential
-            corp_cred = {}
-            corp_cred['registration_id'] = self.corp_num_with_prefix(corp_info['corp_typ_cd'], corp_info['corp_num'])
-            corp_cred['registration_date'] = corp_info['recognition_dts']
+                # org_names active at effective date
+                org_name = self.corp_rec_at_effective_date(corp_info['org_names'], loop_start_event)
+                if org_name is not None:
+                    corp_cred['entity_name'] = org_name['corp_nme']
+                    corp_cred['entity_name_effective'] = org_name['effective_start_date']
 
-            # org_names active at effective date
-            org_name = self.corp_rec_at_effective_date(corp_info['org_names'], loop_start_date, loop_end_date)
-            if org_name is not None:
-                corp_cred['entity_name'] = org_name['corp_nme']
-                corp_cred['entity_name_effective'] = org_name['effective_start_date']
+                # org_name_assumed active at effective date
+                org_name_assumed = self.corp_rec_at_effective_date(corp_info['org_name_assumed'], loop_start_event)
+                if org_name_assumed is not None:
+                    corp_cred['entity_name_assumed'] = org_name_assumed['corp_nme'] 
+                    corp_cred['entity_name_assumed_effective'] = org_name_assumed['effective_start_date']
 
-            # org_name_assumed active at effective date
-            org_name_assumed = self.corp_rec_at_effective_date(corp_info['org_name_assumed'], loop_start_date, loop_end_date)
-            if org_name_assumed is not None:
-                corp_cred['entity_name_assumed'] = org_name_assumed['corp_nme'] 
-                corp_cred['entity_name_assumed_effective'] = org_name_assumed['effective_start_date']
+                # corp_state active at effective date
+                corp_state = self.corp_rec_at_effective_date(corp_info['corp_state'], loop_start_event)
+                if corp_state is None:
+                    # no corp state found - take either the first or last in the list
+                    if len(corp_info['corp_state']) > 0:
+                        if loop_start_date <= corp_info['corp_state'][0]['effective_start_date']:
+                            corp_state = corp_info['corp_state'][0]
+                        else:
+                            corp_state = corp_info['corp_state'][len(corp_info['corp_state'])-1]
+                if corp_state is not None:
+                    corp_cred['entity_status'] = corp_state['op_state_typ_cd']
+                    #print('Effective start date', corp_state['effective_start_date'])
+                    corp_cred['entity_status_effective'] = corp_state['effective_start_date']
+                    corp_cred['entity_type'] = corp_info['corp_type']['full_desc']
 
-            # corp_state active at effective date
-            corp_state = self.corp_rec_at_effective_date(corp_info['corp_state'], loop_start_date, loop_end_date)
-            if corp_state is None:
-                # no corp state found - take either the first or last in the list
-                if len(corp_info['corp_state']) > 0:
-                    if loop_start_date <= corp_info['corp_state'][0]['effective_start_date']:
-                        corp_state = corp_info['corp_state'][0]
-                    else:
-                        corp_state = corp_info['corp_state'][len(corp_info['corp_state'])-1]
-            if corp_state is not None:
-                corp_cred['entity_status'] = corp_state['op_state_typ_cd']
-                #print('Effective start date', corp_state['effective_start_date'])
-                corp_cred['entity_status_effective'] = corp_state['effective_start_date']
-                corp_cred['entity_type'] = corp_info['corp_type']['full_desc']
+                # jurisdiction active at effective date
+                jurisdiction = self.corp_rec_at_effective_date(corp_info['jurisdiction'], loop_start_event)
+                corp_cred['home_jurisdiction'] = self.get_corp_jurisdiction(corp_info, jurisdiction)
+                if corp_cred['home_jurisdiction'] != 'BC':
+                    corp_cred['registered_jurisdiction'] = 'BC' 
+                else:
+                    corp_cred['registered_jurisdiction'] = '' 
+                corp_cred['registration_type'] = ''
 
-            # jurisdiction active at effective date
-            jurisdiction = self.corp_rec_at_effective_date(corp_info['jurisdiction'], loop_start_date, loop_end_date)
-            corp_cred['home_jurisdiction'] = self.get_corp_jurisdiction(corp_info, jurisdiction)
-            if corp_cred['home_jurisdiction'] != 'BC':
-                corp_cred['registered_jurisdiction'] = 'BC' 
-            else:
-                corp_cred['registered_jurisdiction'] = '' 
-            corp_cred['registration_type'] = ''
+                corp_cred['effective_date'] = self.credential_effective_date(corp_cred)
+                if corp_cred['effective_date'] is None:
+                    corp_cred['effective_date'] = corp_cred['registration_date']
 
-            corp_cred['effective_date'] = self.credential_effective_date(corp_cred)
-            if corp_cred['effective_date'] is None:
-                corp_cred['effective_date'] = corp_cred['registration_date']
+                reason_description = self.build_corp_reason_code(loop_start_event)
 
-            reason_description = self.build_corp_reason_code(corp_cred, corp_info, org_name, org_name_assumed, corp_state, jurisdiction, loop_start_date)
+                corp_cred = self.build_credential_dict(corp_credential, corp_schema, corp_version, corp_num, corp_cred, reason_description, corp_cred['effective_date'])
 
-            corp_cred = self.build_credential_dict(corp_credential, corp_schema, corp_version, corp_num, corp_cred, reason_description, corp_cred['effective_date'])
-
-            # these will be sorted by date, but we need to make sure we are not submitting duplicates
-            # checking against the previously generated credential is sufficient
-            if (len(corp_creds) == 0) or (len(corp_creds) > 0 and corp_cred['credential'] != corp_creds[len(corp_creds)-1]['credential']):
-                corp_creds.append(corp_cred)
+                # these will be sorted by date, but we need to make sure we are not submitting duplicates
+                # checking against the previously generated credential is sufficient
+                if (len(corp_creds) == 0) or (len(corp_creds) > 0 and corp_cred['credential'] != corp_creds[len(corp_creds)-1]['credential']):
+                    #print("Append reg cred")
+                    corp_creds.append(corp_cred)
+                #else:
+                    #print("Don't append", corp_cred)
 
         # generate addr credential(s)
-        for office in corp_info['office']:
-            # ensure address history is generated correctly
-            if 'office_typ_cd' in office:
-                if 'delivery_addr' in office and 'local_addr' in office['delivery_addr']:
-                    addr_cred = self.generate_address_credential(corp_num, corp_info, office, office['delivery_addr'], "", "")
-                    reason_description = self.build_addr_reason_code(office, office['delivery_addr'])
-                    corp_creds.append(self.build_credential_dict(addr_credential, addr_schema, addr_version, 
-                                                                corp_num + ',' + office['office_typ_cd'], 
-                                                                addr_cred, reason_description, addr_cred['effective_date']))
+        corp_offices = sorted(corp_info['office'], key=lambda k: k['effective_start_date'])
+        for office in corp_offices:
+            if prev_event['event_date'] <= office['start_event']['event_timestmp'] and office['start_event']['event_timestmp'] <= last_event['event_date']:
+                # ensure address history is generated correctly
+                if 'office_typ_cd' in office:
+                    if 'delivery_addr' in office and 'local_addr' in office['delivery_addr']:
+                        addr_cred = self.generate_address_credential(corp_num, corp_info, office, office['delivery_addr'], "", "")
+                        reason_description = self.build_addr_reason_code(office, office['delivery_addr'])
+                        corp_creds.append(self.build_credential_dict(addr_credential, addr_schema, addr_version, 
+                                                                    corp_num + ',' + office['office_typ_cd'], 
+                                                                    addr_cred, reason_description, addr_cred['effective_date']))
         
         corp_type = corp_info['corp_typ_cd']
         if corp_type == 'SP' or corp_type == 'MF':
@@ -768,18 +757,20 @@ class EventProcessor:
         if is_parent:
             if 'parties' in corp_info:
                 # ensure relationship history is generated correctly
-                for party in corp_info['parties']:
-                    if party['corp_info']['corp_typ_cd'] == 'SP' or party['corp_info']['corp_typ_cd'] == 'MF':
-                        dba_cred = {}
-                        dba_cred['registration_id'] = self.corp_num_with_prefix(corp_info['corp_typ_cd'], corp_info['corp_num'])
-                        dba_cred['associated_registration_id'] = self.corp_num_with_prefix(party['corp_info']['corp_typ_cd'], party['corp_info']['corp_num'])
-                        dba_cred['relationship'] = 'Owns'
-                        dba_cred['relationship_description'] = 'Does Business As'
-                        dba_cred['relationship_status'] = 'ACT'
-                        dba_cred['effective_date'] = party['effective_start_date']
-                        dba_cred['relationship_status_effective'] = dba_cred['effective_date']
-                        reason_description = self.build_dba_reason_code(party)
-                        corp_creds.append(self.build_credential_dict(dba_credential, dba_schema, dba_version, dba_cred['registration_id'], dba_cred, reason_description, dba_cred['effective_date']))
+                corp_parties = sorted(corp_info['parties'], key=lambda k: k['effective_start_date'])
+                for party in corp_parties:
+                    if prev_event['event_date'] <= party['start_event']['event_timestmp'] and party['start_event']['event_timestmp'] <= last_event['event_date']:
+                        if party['corp_info']['corp_typ_cd'] == 'SP' or party['corp_info']['corp_typ_cd'] == 'MF':
+                            dba_cred = {}
+                            dba_cred['registration_id'] = self.corp_num_with_prefix(corp_info['corp_typ_cd'], corp_info['corp_num'])
+                            dba_cred['associated_registration_id'] = self.corp_num_with_prefix(party['corp_info']['corp_typ_cd'], party['corp_info']['corp_num'])
+                            dba_cred['relationship'] = 'Owns'
+                            dba_cred['relationship_description'] = 'Does Business As'
+                            dba_cred['relationship_status'] = 'ACT'
+                            dba_cred['effective_date'] = party['effective_start_date']
+                            dba_cred['relationship_status_effective'] = dba_cred['effective_date']
+                            reason_description = self.build_dba_reason_code(party)
+                            corp_creds.append(self.build_credential_dict(dba_credential, dba_schema, dba_version, dba_cred['registration_id'], dba_cred, reason_description, dba_cred['effective_date']))
 
         return corp_creds
 

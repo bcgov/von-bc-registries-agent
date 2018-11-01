@@ -1,7 +1,7 @@
 
 import time
 
-from bcreg.bcregistries import BCRegistries, system_type
+from bcreg.bcregistries import BCRegistries, system_type, MIN_START_DATE, MAX_END_DATE
 from bcreg.eventprocessor import EventProcessor
 
 
@@ -46,16 +46,20 @@ def test_compare_corp_events():
                     ]
     
     with BCRegistries(False) as bc_registries:
+        prev_event_date = MIN_START_DATE
         prev_event_id = 0
-        max_event_id = bc_registries.get_max_event()
+        max_event_date = bc_registries.get_max_event_date()
+        max_event_id = bc_registries.get_max_event(max_event_date)
         baseline_corps = bc_registries.get_specific_corps(specific_corps)
-        baseline_corps = bc_registries.get_unprocessed_corp_events(prev_event_id, max_event_id, baseline_corps)
+        baseline_corps = bc_registries.get_unprocessed_corp_events(prev_event_id, prev_event_date, max_event_id, max_event_date, baseline_corps)
 
     with BCRegistries(True) as bc_registries:
+        prev_event_date = MIN_START_DATE
         prev_event_id = 0
-        max_event_id = bc_registries.get_max_event()
+        max_event_date = bc_registries.get_max_event_date()
+        max_event_id = bc_registries.get_max_event(max_event_date)
         corps = bc_registries.get_specific_corps(specific_corps)
-        corps = bc_registries.get_unprocessed_corp_events(prev_event_id, max_event_id, corps)
+        corps = bc_registries.get_unprocessed_corp_events(prev_event_id, prev_event_date, max_event_id, max_event_date, corps)
     
     assert len(baseline_corps) == len(corps)
     assert baseline_corps == corps
@@ -93,16 +97,19 @@ def test_compare_corp_infos():
                     ]
     
     with BCRegistries(True) as bc_registries:
+        prev_event_date = MIN_START_DATE
         prev_event_id = 0
-        max_event_id = bc_registries.get_max_event()
+        max_event_date = bc_registries.get_max_event_date()
+        max_event_id = bc_registries.get_max_event(max_event_date)
         corps = bc_registries.get_specific_corps(specific_corps)
-        corps = bc_registries.get_unprocessed_corp_events(prev_event_id, max_event_id, corps)
+        corps = bc_registries.get_unprocessed_corp_events(prev_event_id, prev_event_date, max_event_id, max_event_date, corps)
     
     with BCRegistries(False) as bc_registries:
         prev_event_id = 0
-        max_event_id = bc_registries.get_max_event()
+        max_event_date = bc_registries.get_max_event_date()
+        max_event_id = bc_registries.get_max_event(max_event_date)
         baseline_corps = bc_registries.get_specific_corps(specific_corps)
-        baseline_corps = bc_registries.get_unprocessed_corp_events(prev_event_id, max_event_id, baseline_corps)
+        baseline_corps = bc_registries.get_unprocessed_corp_events(prev_event_id, prev_event_date, max_event_id, max_event_date, corps)
 
     assert len(baseline_corps) == len(corps)
     assert baseline_corps == corps
@@ -117,7 +124,7 @@ def test_compare_corp_infos():
         bc_registries.cache_bcreg_corps(specific_corps)
         for corp in corps:
             print(corp)
-            corp_info[corp['CORP_NUM']] = bc_registries.get_bc_reg_corp_info(corp['CORP_NUM'], corp['LAST_EVENT_ID'])
+            corp_info[corp['CORP_NUM']] = bc_registries.get_bc_reg_corp_info(corp['CORP_NUM'])
         bcreg_loading_time = bcreg_loading_time + (time.perf_counter() - start_time)
 
     print('new load:', bcreg_loading_time)
@@ -128,7 +135,7 @@ def test_compare_corp_infos():
         start_time = time.perf_counter()
         for corp in corps:
             print(corp)
-            corp_info_baseline[corp['CORP_NUM']] = bc_registries.get_bc_reg_corp_info(corp['CORP_NUM'], corp['LAST_EVENT_ID'])
+            corp_info_baseline[corp['CORP_NUM']] = bc_registries.get_bc_reg_corp_info(corp['CORP_NUM'])
         bcreg_loading_time_baseline = bcreg_loading_time_baseline + (time.perf_counter() - start_time)
 
     print('baseline:', bcreg_loading_time_baseline, 'new load:', bcreg_loading_time)
@@ -139,20 +146,26 @@ def test_compare_corp_infos():
     corp_creds = {}
     with EventProcessor() as event_processor:
         for corp in corps:
-            corp_creds[corp['CORP_NUM']] = event_processor.generate_credentials(system_type, corp['PREV_EVENT_ID'], corp['LAST_EVENT_ID'], 
+            corp_creds[corp['CORP_NUM']] = event_processor.generate_credentials(system_type, corp['PREV_EVENT'], corp['LAST_EVENT'], 
     										corp['CORP_NUM'], corp_info[corp['CORP_NUM']])
 
     corp_creds_baseline = {}
     with EventProcessor() as event_processor:
         for corp in corps:
-            corp_creds_baseline[corp['CORP_NUM']] = event_processor.generate_credentials(system_type, corp['PREV_EVENT_ID'], corp['LAST_EVENT_ID'], 
+            corp_creds_baseline[corp['CORP_NUM']] = event_processor.generate_credentials(system_type, corp['PREV_EVENT'], corp['LAST_EVENT'], 
     										corp['CORP_NUM'], corp_info_baseline[corp['CORP_NUM']])
 
     diffs = []
     for corp in corps:
         if corp_creds[corp['CORP_NUM']] != corp_creds_baseline[corp['CORP_NUM']]:
             diffs.append(corp['CORP_NUM'])
-    print(diffs)
+            #print("==================================")
+            #print(corp_creds[corp['CORP_NUM']])
+            #print("----------------------------------")
+            #print(corp_creds_baseline[corp['CORP_NUM']])
+            #print("==================================")
+    if 0 < len(diffs):
+        print(diffs)
 
     assert 0 == len(diffs)
 
