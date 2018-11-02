@@ -530,36 +530,19 @@ class EventProcessor:
 
         # corp_state reason code
         if 'filing_typ_cd' in loop_start_event['filing']:
-            corp_reason = 'Filing: ' + loop_start_event['filing']['filing_typ_cd']
+            corp_reason = 'Filing:' + loop_start_event['filing']['filing_typ_cd'] + ':' + loop_start_event['filing']['full_desc']
         elif 'remarks' in loop_start_event['conv_event'] and loop_start_event['conv_event']['remarks'] is not None and 0 < len(loop_start_event['conv_event']['remarks']):
-            corp_reason = 'Conversion: ' + loop_start_event['event_typ_cd'] + ": " + loop_start_event['conv_event']['remarks']
+            corp_reason = 'Conversion:' + loop_start_event['event_typ_cd'] + ':' + loop_start_event['full_desc'] + '(' + loop_start_event['conv_event']['remarks'] + ')'
         else:
-            corp_reason = 'Event: ' + loop_start_event['event_typ_cd']
+            corp_reason = 'Event:' + loop_start_event['event_typ_cd'] + ':' + loop_start_event['full_desc']
 
         if (len(corp_reason) > 0 and corp_reason.startswith(", ")):
             corp_reason = corp_reason[2:]
         if (255 < len(corp_reason)):
-            corp_reason = corp_reason[:252] + '...'
+            endch = corp_reason[len(corp_reason)-1]
+            corp_reason = corp_reason[:251] + '...' + endch
 
         return corp_reason
-        
-    # determine reason for address credential
-    def build_addr_reason_code(self, office, address):
-        if 'filing_typ_cd' in office['start_event']['filing']:
-            return 'Filing: ' + office['start_event']['filing']['filing_typ_cd']
-        elif 'remarks' in office['start_event']['conv_event'] and office['start_event']['conv_event']['remarks'] is not None and 0 < len(office['start_event']['conv_event']['remarks']):
-            return 'Conversion: ' + office['start_event']['event_typ_cd'] + ": " + office['start_event']['conv_event']['remarks']
-        else:
-            return 'Event: ' + office['start_event']['event_typ_cd']
-        
-    # determine reason for address credential
-    def build_dba_reason_code(self, party):
-        if 'filing_typ_cd' in party['start_event']['filing']:
-            return 'Filing: ' + party['start_event']['filing']['filing_typ_cd']
-        elif 'remarks' in party['start_event']['conv_event'] and party['start_event']['conv_event']['remarks'] is not None and 0 < len(party['start_event']['conv_event']['remarks']):
-            return 'Conversion: ' + party['start_event']['event_typ_cd'] + ": " + party['start_event']['conv_event']['remarks']
-        else:
-            return 'Event: ' + party['start_event']['event_typ_cd']
         
     # generate address credential
     def generate_address_credential(self, corp_num, corp_info, office, address, dba_corp_num, dba_name):
@@ -616,6 +599,7 @@ class EventProcessor:
         for corp_record in corp_records:
             effective_events.append(corp_record['start_event'])
         # sort to get in date order, and determine ACT/HIS transition dates
+        effective_events = sorted(effective_events, key=lambda k: k['event_id'])
         effective_events = sorted(effective_events, key=lambda k: k['effective_date'])
         ret_effective_events = []
         prev_effective_event = None
@@ -736,6 +720,7 @@ class EventProcessor:
                     #print("Don't append", corp_cred)
 
         # generate addr credential(s)
+        corp_offices = sorted(corp_info['office'], key=lambda k: k['start_event_id'])
         corp_offices = sorted(corp_info['office'], key=lambda k: k['effective_start_date'])
         for office in corp_offices:
             if prev_event['event_date'] <= office['start_event']['event_timestmp'] and office['start_event']['event_timestmp'] <= last_event['event_date']:
@@ -743,7 +728,7 @@ class EventProcessor:
                 if 'office_typ_cd' in office:
                     if 'delivery_addr' in office and 'local_addr' in office['delivery_addr']:
                         addr_cred = self.generate_address_credential(corp_num, corp_info, office, office['delivery_addr'], "", "")
-                        reason_description = self.build_addr_reason_code(office, office['delivery_addr'])
+                        reason_description = self.build_corp_reason_code(office['start_event'])
                         corp_creds.append(self.build_credential_dict(addr_credential, addr_schema, addr_version, 
                                                                     corp_num + ',' + office['office_typ_cd'], 
                                                                     addr_cred, reason_description, addr_cred['effective_date']))
@@ -758,6 +743,7 @@ class EventProcessor:
         if is_parent:
             if 'parties' in corp_info:
                 # ensure relationship history is generated correctly
+                corp_parties = sorted(corp_info['parties'], key=lambda k: k['start_event_id'])
                 corp_parties = sorted(corp_info['parties'], key=lambda k: k['effective_start_date'])
                 for party in corp_parties:
                     if prev_event['event_date'] <= party['start_event']['event_timestmp'] and party['start_event']['event_timestmp'] <= last_event['event_date']:
@@ -770,7 +756,7 @@ class EventProcessor:
                             dba_cred['relationship_status'] = 'ACT'
                             dba_cred['effective_date'] = party['effective_start_date']
                             dba_cred['relationship_status_effective'] = dba_cred['effective_date']
-                            reason_description = self.build_dba_reason_code(party)
+                            reason_description = self.build_corp_reason_code(party['start_event'])
                             corp_creds.append(self.build_credential_dict(dba_credential, dba_schema, dba_version, dba_cred['registration_id'], dba_cred, reason_description, dba_cred['effective_date']))
 
         return corp_creds
