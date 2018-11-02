@@ -524,17 +524,17 @@ class EventProcessor:
             p_corp_num = 'BC' + corp_num
         return p_corp_num
 
-    # determine reason for address credential
+    # determine reason for address credential - returns reason code only
     def build_corp_reason_code(self, loop_start_event):
         corp_reason = ""
 
         # corp_state reason code
         if 'filing_typ_cd' in loop_start_event['filing']:
-            corp_reason = 'Filing:' + loop_start_event['filing']['filing_typ_cd'] + ':' + loop_start_event['filing']['full_desc']
-        elif 'remarks' in loop_start_event['conv_event'] and loop_start_event['conv_event']['remarks'] is not None and 0 < len(loop_start_event['conv_event']['remarks']):
-            corp_reason = 'Conversion:' + loop_start_event['event_typ_cd'] + ':' + loop_start_event['full_desc'] + '(' + loop_start_event['conv_event']['remarks'] + ')'
+            corp_reason = 'Filing:' + loop_start_event['filing']['filing_typ_cd'] # + ':' + loop_start_event['filing']['full_desc']
+        #elif 'remarks' in loop_start_event['conv_event'] and loop_start_event['conv_event']['remarks'] is not None and 0 < len(loop_start_event['conv_event']['remarks']):
+        #    corp_reason = 'Conversion:' + loop_start_event['event_typ_cd'] + ':' + loop_start_event['full_desc'] + '(' + loop_start_event['conv_event']['remarks'] + ')'
         else:
-            corp_reason = 'Event:' + loop_start_event['event_typ_cd'] + ':' + loop_start_event['full_desc']
+            corp_reason = 'Event:' + loop_start_event['event_typ_cd'] # + ':' + loop_start_event['full_desc']
 
         if (len(corp_reason) > 0 and corp_reason.startswith(", ")):
             corp_reason = corp_reason[2:]
