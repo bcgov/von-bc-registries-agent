@@ -213,7 +213,7 @@ issuers:
               value:
                 input: relationship_status_effective
                 from: claim
-          - model: attribute
+          - model: category
             fields:
               type:
                 input: reason_description
@@ -262,7 +262,7 @@ issuers:
               type:
                 input: address_type
                 from: claim
-          - model: attribute
+          - model: category
             fields:
               type:
                 input: reason_description
