@@ -35,60 +35,26 @@ specific_corps = [
                     '0874088',
                     '0803207',
                     '0873646',
-#                    '0454097',
-#                    '0873476',
-#                    '0497648',
-#                    '0873490',
-#                    '0752246',
-#                    '0644440',
-#                    '0086128',
-#                    'A0038634',
-#                    'A0052296',
-#                    'A0059958',
-#                    'A0066549',
-#                    '0136093',
-#                    'A0020613',
-#                    '0385191',
-#                    'A0060574',
-#                    'A0077151',
-#                    '0283339',
-#                    '0407802',
-#                    'A0035475',
-#                    'A0067161',
-#                    '0081818',
-#                    '0515727',
-#                    '0798904',
-#                    'A0023055',
-#                    'A0043981',
-#                    'A0051697',
-#                    'A0063075',
-#                    '0083251',
-#                    '0301510',
-#                    '0616986',
-#                    'A0021989',
-#                    'A0058845',
-#                    'A0068960',
-#                    'FM1000795',
-#                    '0083494',
-#                    '0354281',
-#                    '0471961',
-#                    '0581137',
-#                    '0754041',
-#                    '0873556',
-#                    'A0025804',
-#                    'A0037089',
-#                    'A0051728',
-#                    'A0071006',
-#                    '0211314',
-#                    '0332099',
-#                    '0429657',
-#                    '0533282',
-#                    '0548694',
-#                    '0873484',
-#                    '0873573',
-#                    'A0013794',
-#                    'A0041891',
-#                    'A0054033',
+                    '0078162',
+                    '0754041',
+                    'XS1000180',
+                    'LP1000140',
+                    'A0059911',
+                    'S1000080',
+                    '0637981',
+                    'A0051632',
+                    '0578221',
+                    '0497648',
+                    'A0038634',
+                    '0136093',
+                    '0869404',
+                    '0641396',
+                    'C0283576',
+                    '0860306',
+                    '0673578',
+                    '0763302',
+                    '0860695',
+                    'A0039853',
                     ]
 
 with BCRegistries() as bc_registries:
@@ -97,14 +63,19 @@ with BCRegistries() as bc_registries:
         prev_event_id = 0
 
         print("Get last max event")
-        max_event_id = bc_registries.get_max_event()
+        max_event_date = bc_registries.get_max_event_date()
+        max_event_id = bc_registries.get_max_event(max_event_date)
+        #max_event_id = 101944500 
+        #max_event_date = bc_registries.get_event_id_date(max_event_id)
         
         # get specific test corps (there are about 6)
         print("Get specific corps")
         corps = bc_registries.get_specific_corps(specific_corps)
         
         print("Find unprocessed events for each corp")
-        corps = bc_registries.get_unprocessed_corp_events(prev_event_id, max_event_id, corps)
+        last_event_dt = bc_registries.get_event_effective_date(prev_event_id)
+        max_event_dt = bc_registries.get_event_effective_date(max_event_id)
+        corps = bc_registries.get_unprocessed_corp_events(prev_event_id, last_event_dt, max_event_id, max_event_dt, corps)
         
         print("Update our queue")
-        event_processor.update_corp_event_queue(system_type, corps, max_event_id)
+        event_processor.update_corp_event_queue(system_type, corps, max_event_id, max_event_date)

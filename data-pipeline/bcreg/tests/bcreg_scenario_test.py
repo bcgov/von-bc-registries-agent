@@ -3,7 +3,7 @@ import time
 import datetime
 import json
 
-from bcreg.bcregistries import BCRegistries, system_type
+from bcreg.bcregistries import BCRegistries, system_type, MIN_START_DATE, MAX_END_DATE
 from bcreg.eventprocessor import EventProcessor
 from bcreg.tests.sample_corps import sample_test_corps
 
@@ -22,7 +22,7 @@ def test_scenario_basic_bc_corp():
     my_creds = generate_creds_for_corp(my_corp_dict)
 
     print("# basic BC corporation with an address and no DBA's")
-    assert len(my_creds) == 2
+    assert len(my_creds) == 4
 
     assert my_creds[0]['cred_type'] == 'REG'
     assert my_creds[0]['credential']['entity_status'] == 'ACT'
@@ -66,20 +66,20 @@ def test_scenario_basic_xcorp():
     my_creds = generate_creds_for_corp(my_corp_dict)
 
     print("# basic ex-corp with a non-BC jurisdiction and an address")
-    assert len(my_creds) == 2
+    assert len(my_creds) == 4
 
-    assert my_creds[0]['cred_type'] == 'REG'
-    assert my_creds[0]['credential']['entity_status'] == 'ACT'
-    assert my_creds[0]['credential']['entity_type'] == 'Extraprovincial Company'
-    assert my_creds[0]['credential']['home_jurisdiction'] == 'GB'
-    assert my_creds[0]['credential']['registered_jurisdiction'] == 'BC'
-    assert my_creds[0]['credential']['registration_id'] == 'A3781337'
-
-    assert my_creds[1]['cred_type'] == 'ADDR'
-    assert my_creds[1]['credential']['address_type'] == 'Head Office'
-    assert my_creds[1]['credential']['municipality'] == 'LONDON'
-    assert my_creds[1]['credential']['civic_address'] == 'UUBCWY DKNOCDWWNEVFSCKY O, LONDON, H8IU1N, GB'
+    assert my_creds[1]['cred_type'] == 'REG'
+    assert my_creds[1]['credential']['entity_status'] == 'ACT'
+    assert my_creds[1]['credential']['entity_type'] == 'Extraprovincial Company'
+    assert my_creds[1]['credential']['home_jurisdiction'] == 'GB'
+    assert my_creds[1]['credential']['registered_jurisdiction'] == 'BC'
     assert my_creds[1]['credential']['registration_id'] == 'A3781337'
+
+    assert my_creds[3]['cred_type'] == 'ADDR'
+    assert my_creds[3]['credential']['address_type'] == 'Head Office'
+    assert my_creds[3]['credential']['municipality'] == 'LONDON'
+    assert my_creds[3]['credential']['civic_address'] == 'UUBCWY DKNOCDWWNEVFSCKY O, LONDON, H8IU1N, GB'
+    assert my_creds[3]['credential']['registration_id'] == 'A3781337'
     
 
 # basic ex-corp with an assumed name
@@ -89,7 +89,7 @@ def test_scenario_assumed_name():
     my_creds = generate_creds_for_corp(my_corp_dict)
 
     print("# basic ex-corp with an assumed name")
-    assert len(my_creds) == 2
+    assert len(my_creds) == 3
 
     assert my_creds[0]['cred_type'] == 'REG'
     assert my_creds[0]['credential']['entity_status'] == 'ACT'
@@ -137,11 +137,11 @@ def test_scenario_single_dba():
     my_creds = generate_creds_for_corp(my_corp_dict)
 
     print("# basic corp with 1 DBA (no DBA address)")
-    assert len(my_creds) == 3
+    assert len(my_creds) == 5
 
     assert my_creds[0]['cred_type'] == 'REG'
     assert my_creds[1]['cred_type'] == 'ADDR'
-    assert my_creds[2]['cred_type'] == 'REL'
+    assert my_creds[4]['cred_type'] == 'REL'
 
     my_dba_num = 'FM3035075'
     my_corp_dict['corp_num'] = my_dba_num
@@ -158,7 +158,7 @@ def test_scenario_dba_with_address():
     my_creds = generate_creds_for_corp(my_corp_dict)
 
     print("# basic corp with 1 DBA with an address")
-    assert len(my_creds) == 3
+    assert len(my_creds) == 7
 
     my_dba_num = 'FM9129945'
     my_corp_dict['corp_num'] = my_dba_num
@@ -172,17 +172,17 @@ def test_scenario_dba_with_address():
     assert my_creds[0]['credential']['registered_jurisdiction'] == ''
     assert my_creds[0]['credential']['registration_id'] == 'C6020509'
 
-    assert my_creds[1]['cred_type'] == 'ADDR'
-    assert my_creds[1]['credential']['address_type'] == 'Registered Office'
-    assert my_creds[1]['credential']['municipality'] == 'testcity'
-    assert my_creds[1]['credential']['registration_id'] == 'C6020509'
+    assert my_creds[3]['cred_type'] == 'ADDR'
+    assert my_creds[3]['credential']['address_type'] == 'Registered Office'
+    assert my_creds[3]['credential']['municipality'] == 'testcity'
+    assert my_creds[3]['credential']['registration_id'] == 'C6020509'
 
-    assert my_creds[2]['cred_type'] == 'REL'
-    assert my_creds[2]['credential']['registration_id'] == 'C6020509'
-    assert my_creds[2]['credential']['associated_registration_id'] == 'FM9129945'
-    assert my_creds[2]['credential']['relationship'] == 'Owns'
-    assert my_creds[2]['credential']['relationship_description'] == 'Does Business As'
-    assert my_creds[2]['credential']['relationship_status'] == 'ACT'
+    assert my_creds[4]['cred_type'] == 'REL'
+    assert my_creds[4]['credential']['registration_id'] == 'C6020509'
+    assert my_creds[4]['credential']['associated_registration_id'] == 'FM9129945'
+    assert my_creds[4]['credential']['relationship'] == 'Owns'
+    assert my_creds[4]['credential']['relationship_description'] == 'Does Business As'
+    assert my_creds[4]['credential']['relationship_status'] == 'ACT'
 
     assert dba_creds[0]['cred_type'] == 'REG'
     assert dba_creds[0]['credential']['entity_status'] == 'ACT'
@@ -245,10 +245,12 @@ def generate_creds_for_corp(corp_dict):
     with BCRegistries(True) as cached_bc_reg:
         cached_bc_reg.cache_bcreg_code_tables()
         cached_bc_reg.insert_cache_sqls(corp_sqls)
-        corp_info = cached_bc_reg.get_bc_reg_corp_info(corp_num, 0)
+        corp_info = cached_bc_reg.get_bc_reg_corp_info(corp_num)
 
+    start_event = {'event_id':0, 'event_date':MIN_START_DATE}
+    end_event   = {'event_id':9999999999, 'event_date':MAX_END_DATE}
     with EventProcessor() as event_processor:
-        corp_creds = event_processor.generate_credentials(system_type, 0, 0, corp_num, corp_info)
+        corp_creds = event_processor.generate_credentials(system_type, start_event, end_event, corp_num, corp_info)
 
     #print("Corp: " + corp_num + " generated " + str(len(corp_creds)) + " credentials")
     #print(json.dumps(corp_creds, cls=DateTimeEncoder, indent=4, sort_keys=True))

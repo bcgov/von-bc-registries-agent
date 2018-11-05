@@ -29,7 +29,7 @@ issuers:
 
     credential_types:
       - description: Registration
-        schema: registration.bc_registries
+        schema: registration.registries
         issuer_url: $APPLICATION_URL_INCORP
         credential:
           effective_date:
@@ -146,9 +146,17 @@ issuers:
               value:
                 input: home_jurisdiction
                 from: claim
+          - model: category
+            fields:
+              type:
+                input: reason_description
+                from: value
+              value:
+                input: reason_description
+                from: claim
 
       - description: Relationship
-        schema: relationship.bc_registries
+        schema: relationship.registries
         issuer_url: $APPLICATION_URL_DBA
         credential:
           effective_date:
@@ -205,9 +213,17 @@ issuers:
               value:
                 input: relationship_status_effective
                 from: claim
+          - model: category
+            fields:
+              type:
+                input: reason_description
+                from: value
+              value:
+                input: reason_description
+                from: claim
 
       - description: Corporate Address
-        schema: address.bc_registries
+        schema: address.registries
         issuer_url: $APPLICATION_URL_ADDRESS
         credential:
           effective_date:
@@ -245,4 +261,12 @@ issuers:
                 from: claim
               type:
                 input: address_type
+                from: claim
+          - model: category
+            fields:
+              type:
+                input: reason_description
+                from: value
+              value:
+                input: reason_description
                 from: claim

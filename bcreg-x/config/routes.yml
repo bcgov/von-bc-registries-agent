@@ -2,7 +2,7 @@ forms:
   bcreg-incorp:
     path: /bcreg/registration
     type: issue-credential
-    schema_name: registration.bc_registries
+    schema_name: registration.registries
     page_title: BC Corporate Registry
     title: Registration
     template: bcgov.index.html
@@ -48,7 +48,7 @@ forms:
   bcreg-dba:
     path: /bcreg/dba
     type: issue-credential
-    schema_name: relationship.bc_registries
+    schema_name: relationship.registries
     page_title: BC Corporate Registry
     title: Doing Business As
     template: bcgov.index.html

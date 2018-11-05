@@ -1,7 +1,7 @@
 
 import time
 
-from bcreg.bcregistries import BCRegistries, system_type
+from bcreg.bcregistries import BCRegistries, system_type, MIN_START_DATE, MAX_END_DATE
 from bcreg.eventprocessor import EventProcessor
 from bcreg.tests.sample_corps import sample_test_corps
 
@@ -9,34 +9,6 @@ from bcreg.tests.sample_corps import sample_test_corps
 def test_generate_corp_sql():
     specific_corps = [
                     'A0059733','A0040189','A0059933','A0060938','A0060045',
-                    #'0641655',
-                    #'0820416',
-                    #'0700450',
-                    #'0803224',
-                    #'LLC0000192',
-                    #'C0277609',
-                    #'A0072972',
-                    #'A0051862',
-                    #'C0874156',
-                    #'0874244',
-                    #'0593707',
-                    #'A0068919',
-                    #'A0064760',
-                    #'LLC0000234',
-                    #'A0077118',
-                    #'A0062459',
-                    #'0708325',
-                    #'0679026',
-                    #'0707774',
-                    #'C0874057',
-                    #'A0028374',
-                    #'A0053381',
-                    #'A0051632',
-                    #'0578221',
-                    #'A0032100',
-                    #'0874088',
-                    #'0803207',
-                    #'0873646',
                     ]
     
     with BCRegistries(True) as bc_registries:
@@ -58,14 +30,16 @@ def test_generate_corp_sql():
                 cached_bc_reg.insert_cache_sqls(sqls)
 
                 # try running with dummy event id zero 
-                corp_info = cached_bc_reg.get_bc_reg_corp_info(fake_corp_num, 0)
+                corp_info = cached_bc_reg.get_bc_reg_corp_info(fake_corp_num)
                 #print('-------------------------')
                 #print('corp_info:')
                 #print(corp_info)
                 #print('-------------------------')
 
+            start_event = {'event_id':0, 'event_date':MIN_START_DATE}
+            end_event   = {'event_id':9999999999, 'event_date':MAX_END_DATE}
             with EventProcessor() as event_processor:
-                corp_creds = event_processor.generate_credentials(system_type, 0, 0, fake_corp_num, corp_info)
+                corp_creds = event_processor.generate_credentials(system_type, start_event, end_event, fake_corp_num, corp_info)
                 #print('-------------------------')
                 #print('corp_creds:')
                 #print(corp_creds)
@@ -189,6 +163,7 @@ def test_specific_corp_scenario():
             """insert into corporation (corp_num, corp_frozen_typ_cd, corp_typ_cd, recognition_dts, last_ar_filed_dt, transition_dt, bn_9, bn_15, accession_num, corp_password, prompt_question, admin_email, send_ar_ind, tilma_involved_ind, tilma_cessation_dt, firm_last_image_date, os_session, last_agm_date, firm_lp_xp_termination_date, last_ledger_dt, ar_reminder_option, ar_reminder_date, temp_password, temp_password_expiry_date)
             values
             ('FM8694883', null, 'SP', '1981-07-03 00:00:00', null, null, null, null, null, null, null, null, null, 'N', null, null, null, null, null, null, null, null, null, null)""",
+            """create table if not exists conv_event (event_id numeric, effective_dt timestamp, report_corp_ind text, prev_bc_ind text, activity_user_id text, activity_dt timestamp, activity_tm timestamp, annual_file_dt timestamp, corp_cre_typ_cd text, accession_num text, dd_event_id numeric, remarks text)""",
             """create table if not exists corp_state (corp_num text, start_event_id numeric, end_event_id numeric, state_typ_cd text, dd_corp_num text)""",
             """insert into corp_state (corp_num, start_event_id, end_event_id, state_typ_cd, dd_corp_num)
             values
@@ -265,14 +240,16 @@ def test_specific_corp_scenario():
         cached_bc_reg.insert_cache_sqls(corp_sqls)
 
         # try running with dummy event id zero 
-        corp_info = cached_bc_reg.get_bc_reg_corp_info(corp_num, 0)
+        corp_info = cached_bc_reg.get_bc_reg_corp_info(corp_num)
         #print('-------------------------')
         #print('corp_info:')
         #print(corp_info)
         #print('-------------------------')
 
+    start_event = {'event_id':0, 'event_date':MIN_START_DATE}
+    end_event   = {'event_id':9999999999, 'event_date':MAX_END_DATE}
     with EventProcessor() as event_processor:
-        corp_creds = event_processor.generate_credentials(system_type, 0, 0, corp_num, corp_info)
+        corp_creds = event_processor.generate_credentials(system_type, start_event, end_event, corp_num, corp_info)
         #print('-------------------------')
         #print('corp_creds:')
         #print(corp_creds)
@@ -287,10 +264,12 @@ def test_preset_corp_scenario_all():
         with BCRegistries(True) as cached_bc_reg:
             cached_bc_reg.cache_bcreg_code_tables()
             cached_bc_reg.insert_cache_sqls(corp_sqls)
-            corp_info = cached_bc_reg.get_bc_reg_corp_info(corp_num, 0)
+            corp_info = cached_bc_reg.get_bc_reg_corp_info(corp_num)
 
+        start_event = {'event_id':0, 'event_date':MIN_START_DATE}
+        end_event   = {'event_id':9999999999, 'event_date':MAX_END_DATE}
         with EventProcessor() as event_processor:
-            corp_creds = event_processor.generate_credentials(system_type, 0, 0, corp_num, corp_info)
+            corp_creds = event_processor.generate_credentials(system_type, start_event, end_event, corp_num, corp_info)
 
         #print("Corp: " + corp_num + " generated " + str(len(corp_creds)) + " credentials")
 
@@ -303,10 +282,12 @@ def test_preset_corp_scenario_3dbas():
     with BCRegistries(True) as cached_bc_reg:
         cached_bc_reg.cache_bcreg_code_tables()
         cached_bc_reg.insert_cache_sqls(corp_sqls)
-        corp_info = cached_bc_reg.get_bc_reg_corp_info(corp_num, 0)
+        corp_info = cached_bc_reg.get_bc_reg_corp_info(corp_num)
 
+    start_event = {'event_id':0, 'event_date':MIN_START_DATE}
+    end_event   = {'event_id':9999999999, 'event_date':MAX_END_DATE}
     with EventProcessor() as event_processor:
-        corp_creds = event_processor.generate_credentials(system_type, 0, 0, corp_num, corp_info)
+        corp_creds = event_processor.generate_credentials(system_type, start_event, end_event, corp_num, corp_info)
 
     #print(corp_creds)
     assert len(corp_creds) == 5

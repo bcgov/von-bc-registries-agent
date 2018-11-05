@@ -1,5 +1,5 @@
-- name: registration.bc_registries
-  version: '1.0.36'
+- name: registration.registries
+  version: '1.0.37'
   attributes:
     registration_id:
       description: Unique identifer assigned to entity by registrar
@@ -52,9 +52,12 @@
     effective_date:
       description: Date Credential is effective
       required: Y
+    reason_description:
+      description: Reason for credential issue/update
+      required: N
 
-- name: address.bc_registries
-  version: '1.0.36'
+- name: address.registries
+  version: '1.0.37'
   attributes:
     registration_id:
       description: Unique identifer assigned to entity by registrar
@@ -86,9 +89,12 @@
     effective_date:
       description: Date Credential is effective
       required: Y
+    reason_description:
+      description: Reason for credential issue/update
+      required: N
 
-- name: relationship.bc_registries
-  version: '1.0.36'
+- name: relationship.registries
+  version: '1.0.37'
   attributes:
     registration_id:
       description: Unique identifer assigned to entity by registrar
@@ -111,3 +117,6 @@
     effective_date:
       description: Date Credential is effective
       required: Y
+    reason_description:
+      description: Reason for credential issue/update
+      required: N
