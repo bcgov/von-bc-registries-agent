@@ -599,7 +599,7 @@ class EventProcessor:
         for corp_record in corp_records:
             effective_events.append(corp_record['start_event'])
         # sort to get in date order, and determine ACT/HIS transition dates
-        effective_events = sorted(effective_events, key=lambda k: k['event_id'])
+        effective_events = sorted(effective_events, key=lambda k: int(k['event_id']))
         effective_events = sorted(effective_events, key=lambda k: k['effective_date'])
         ret_effective_events = []
         prev_effective_event = None
@@ -723,7 +723,7 @@ class EventProcessor:
                     #print("Don't append", corp_cred)
 
         # generate addr credential(s)
-        corp_offices = sorted(corp_info['office'], key=lambda k: k['start_event_id'])
+        corp_offices = sorted(corp_info['office'], key=lambda k: int(k['start_event_id']))
         corp_offices = sorted(corp_info['office'], key=lambda k: k['effective_start_date'])
         for office in corp_offices:
             if prev_event['event_date'] <= office['start_event']['event_timestmp'] and office['start_event']['event_timestmp'] <= last_event['event_date']:
@@ -746,7 +746,7 @@ class EventProcessor:
         if is_parent:
             if 'parties' in corp_info:
                 # ensure relationship history is generated correctly
-                corp_parties = sorted(corp_info['parties'], key=lambda k: k['start_event_id'])
+                corp_parties = sorted(corp_info['parties'], key=lambda k: int(k['start_event_id']))
                 corp_parties = sorted(corp_info['parties'], key=lambda k: k['effective_start_date'])
                 for party in corp_parties:
                     if prev_event['event_date'] <= party['start_event']['event_timestmp'] and party['start_event']['event_timestmp'] <= last_event['event_date']:
