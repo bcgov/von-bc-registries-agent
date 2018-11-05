@@ -13,7 +13,7 @@ issuers:
 
     wallet:
       name: ${POSTGRESQL_WALLET_NAME:-bcreg_issuer}
-      seed: $WALLET_SEED_BCREG
+      seed: $INDY_WALLET_SEED
       type: $WALLET_TYPE
       params:
         storage_config:

@@ -46,9 +46,8 @@ services:
       POSTGRESQL_WALLET_PASSWORD: ${POSTGRESQL_PASSWORD}
       POSTGRESQL_WALLET_ADMIN_PASSWORD: ${POSTGRESQL_ADMIN_PASSWORD}
       WALLET_ENCRYPTION_KEY: ${WALLET_ENCRYPTION_KEY}
-      WALLET_SEED_BCREG: ${WALLET_SEED_BCREG:-}
-      ISSUER_WALLET_DID: ${ISSUER_WALLET_DID}
-      HTTP_FORCE_CLOSE_CONNECTIONS: "true"
+      INDY_WALLET_SEED: ${INDY_WALLET_SEED:-}
+      INDY_WALLET_DID: ${INDY_WALLET_DID}
     external_links:
        - tob_tob-api_1:tob-api
     networks:
@@ -61,8 +60,6 @@ services:
         echo sleeping ...;
         sleep 5;
         ../docker-entrypoint.sh;"
-    volumes:
-      - bcreg-agent-wallet:/home/indy/.indy_client/wallet
 
   bcregmara:
     build:
@@ -132,7 +129,6 @@ services:
 volumes:
   caddy-data:
   caddy-logs:
-  bcreg-agent-wallet:
   mara-data:
   wallet-db:
 
