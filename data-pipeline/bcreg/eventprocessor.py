@@ -601,6 +601,7 @@ class EventProcessor:
         # sort to get in date order, and determine ACT/HIS transition dates
         effective_events = sorted(effective_events, key=lambda k: int(k['event_id']))
         effective_events = sorted(effective_events, key=lambda k: k['effective_date'])
+        # eliminate duplicates
         ret_effective_events = []
         prev_effective_event = None
         for effective_event in effective_events:
@@ -642,18 +643,40 @@ class EventProcessor:
                 ret_corp_state = corp_state
         return ret_corp_state
 
-    # generate credentials for the provided corp
-    def generate_credentials(self, system_typ_cd, prev_event, last_event, corp_num, corp_info):
-        corp_creds = []
-
-        #print(corp_num)
-
+    # determine the unique event list for the current corp
+    def corp_unique_event_list(self, corp_num, corp_info):
         # generate a list of (sorted) effective dates for our corp registration credentials
         effective_events = self.unique_effective_events(corp_info['corp_state'], [])
         effective_events = self.unique_effective_events(corp_info['jurisdiction'], effective_events)
         effective_events = self.unique_effective_events(corp_info['org_names'], effective_events)
         effective_events = self.unique_effective_events(corp_info['org_name_assumed'], effective_events)
+        effective_events = self.unique_effective_events(corp_info['office'], effective_events)
+        effective_events = self.unique_effective_events(corp_info['parties'], effective_events)
         #print(corp_num, effective_events)
+
+        return effective_events
+
+    def current_and_future_corp_events(self, corp_num, corp_info):
+        # get events
+        effective_events = self.corp_unique_event_list(corp_num, corp_info)
+
+        # check if the effective date of any event is beyond "now()" (based on when the data was loaded from BC Reg)
+        future_events = []
+        past_events = []
+        for event in effective_events:
+            if event['effective_date'] > corp_info['current_date']:
+                future_events.append(event)
+            else:
+                past_events.append(event)
+
+        return (past_events, future_events)
+
+    # generate credentials for the provided corp
+    def generate_credentials(self, system_typ_cd, prev_event, last_event, corp_num, corp_info):
+        corp_creds = []
+
+        # get events - only generate credentials for events in the past
+        (effective_events, future_events) = self.current_and_future_corp_events(corp_num, corp_info)
 
         # loop based on start/end events
         for i in range(len(effective_events)):
@@ -921,28 +944,31 @@ class EventProcessor:
                             last_event_json = corp['LAST_EVENT']
 
                         if process_success:
+                            # get events - only generate credentials for events in the past
+                            (effective_events, future_events) = self.current_and_future_corp_events(corp['CORP_NUM'], corp_info)
+
                             corp_active_state = self.get_corp_active_state(corp_info)
 
-                        if process_success:
                             if generate_creds:
-                                try:
-                                    # generate and store credentials
-                                    cur = self.conn.cursor()
-                                    corp_creds = self.generate_credentials(corp['SYSTEM_TYPE_CD'], corp['PREV_EVENT'], corp['LAST_EVENT'], 
-                                                            corp['CORP_NUM'], corp_info)
-                                    self.store_credentials(cur, corp['SYSTEM_TYPE_CD'], corp['PREV_EVENT'], corp['LAST_EVENT'], 
-                                                            corp['CORP_NUM'], corp_active_state['op_state_typ_cd'], corp_info, corp_creds)
-                                    cur.close()
-                                    cur = None
-                                except (Exception, psycopg2.DatabaseError) as error:
-                                    print(error)
-                                    print(traceback.print_exc())
-                                    process_success = False
-                                    process_msg = str(error)
-                                    #raise
-                                finally:
-                                    if cur is not None:
+                                if 0 < len(effective_events):
+                                    try:
+                                        # generate and store credentials
+                                        cur = self.conn.cursor()
+                                        corp_creds = self.generate_credentials(corp['SYSTEM_TYPE_CD'], corp['PREV_EVENT'], corp['LAST_EVENT'], 
+                                                                corp['CORP_NUM'], corp_info)
+                                        self.store_credentials(cur, corp['SYSTEM_TYPE_CD'], corp['PREV_EVENT'], corp['LAST_EVENT'], 
+                                                                corp['CORP_NUM'], corp_active_state['op_state_typ_cd'], corp_info, corp_creds)
                                         cur.close()
+                                        cur = None
+                                    except (Exception, psycopg2.DatabaseError) as error:
+                                        print(error)
+                                        print(traceback.print_exc())
+                                        process_success = False
+                                        process_msg = str(error)
+                                        #raise
+                                    finally:
+                                        if cur is not None:
+                                            cur.close()
 
                                 # store corporate info 
                                 if process_success:
@@ -956,16 +982,22 @@ class EventProcessor:
                                         res = process_msg
                                 if load_regs:
                                     cur = self.conn.cursor()
-                                    cur.execute(sql2a, (corp['SYSTEM_TYPE_CD'], prev_event_json, last_event_json, corp['CORP_NUM'], 
-                                                        corp_active_state['op_state_typ_cd'], corp_info_json, datetime.datetime.now(), datetime.datetime.now(), flag, res,))
+                                    if 0 < len(effective_events):
+                                        cur.execute(sql2a, (corp['SYSTEM_TYPE_CD'], prev_event_json, last_event_json, corp['CORP_NUM'], 
+                                                            corp_active_state['op_state_typ_cd'], corp_info_json, datetime.datetime.now(), datetime.datetime.now(), flag, res,))
                                     cur.close()
                                     cur = None
                                 else:
                                     # update process date
                                     cur = self.conn.cursor()
-                                    cur.execute(sql3a, (datetime.datetime.now(), flag, res, corp['RECORD_ID'], ))
+                                    if 0 < len(effective_events):
+                                        cur.execute(sql3a, (datetime.datetime.now(), flag, res, corp['RECORD_ID'], ))
                                     cur.close()
                                     cur = None
+                                if 0 < len(effective_events) and 0 < len(future_events):
+                                    # create another record to handle future events
+                                    cur.execute(sql2, (corp['SYSTEM_TYPE_CD'], prev_event_json, last_event_json, corp['CORP_NUM'], 
+                                                        corp_active_state['op_state_typ_cd'], corp_info_json, datetime.datetime.now(),))
 
                             elif load_regs:
                                 try:

@@ -1289,6 +1289,7 @@ class BCRegistries:
             cur = self.get_db_connection().cursor()
             cur.execute(sql_corp, (corp_num,))
             row = cur.fetchone()
+            corp['current_date'] = datetime.datetime.now()
             corp['corp_num'] = row[0]
             if deep_copy:
                 corp['jurisdiction'] = self.get_jurisdictons(row[0])
