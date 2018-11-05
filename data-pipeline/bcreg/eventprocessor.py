@@ -683,10 +683,13 @@ class EventProcessor:
                 if corp_state is None:
                     # no corp state found - take either the first or last in the list
                     if len(corp_info['corp_state']) > 0:
-                        print("No active state found for ", corp_num)
+                        #print("No active state found for ", corp_num, loop_start_event['effective_date'])
+                        #print(loop_start_event)
                         if loop_start_event['effective_date'] <= corp_info['corp_state'][0]['effective_start_date']:
+                            #print("using corp state[0]", corp_info['corp_state'][0]['effective_start_date'], corp_info['corp_state'][0]['effective_end_date'])
                             corp_state = corp_info['corp_state'][0]
                         else:
+                            #print("using corp state[n]", corp_info['corp_state'][len(corp_info['corp_state'])-1]['effective_start_date'], corp_info['corp_state'][len(corp_info['corp_state'])-1]['effective_end_date'])
                             corp_state = corp_info['corp_state'][len(corp_info['corp_state'])-1]
                 if corp_state is not None:
                     corp_cred['entity_status'] = corp_state['op_state_typ_cd']
