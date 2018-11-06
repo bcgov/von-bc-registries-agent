@@ -962,6 +962,13 @@ class EventProcessor:
 
                             corp_active_state = self.get_corp_active_state(corp_info)
 
+                            # if corporation is "withdrawn" then don't create any events
+                            withdrawn_corp = corp_active_state['state_typ_cd'] == 'HWT'
+                            if withdrawn_corp:
+                                # setting these to empty arrays will force a status update with no creds generated
+                                effective_events = []
+                                future_events = []
+
                             if generate_creds:
                                 corp_creds = []
                                 if 0 < len(effective_events):
@@ -990,7 +997,10 @@ class EventProcessor:
                                 # store corporate info 
                                 if process_success:
                                     flag = 'Y'
-                                    res = None
+                                    if withdrawn_corp:
+                                        res = 'Withdrawn'
+                                    else:
+                                        res = None
                                 else:
                                     flag = 'N'
                                     if 255 < len(process_msg):
