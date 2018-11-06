@@ -1323,6 +1323,8 @@ class BCRegistries:
                         corp_state['effective_end_date'] = MAX_END_DATE
 
                 # sort to get in date order, and determine ACT/HIS transition dates
+                corp_states = sorted(corp_states, key=lambda k: k['effective_end_date'])
+                corp_states = sorted(corp_states, key=lambda k: int(k['start_event_id']))
                 corp['corp_state'] = sorted(corp_states, key=lambda k: k['event_date'])
                 prev_state = None
                 prev_state_effective_event = None

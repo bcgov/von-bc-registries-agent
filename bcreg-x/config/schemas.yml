@@ -89,6 +89,9 @@
     effective_date:
       description: Date Credential is effective
       required: Y
+    address_expiry_date:
+      description: Date Credential expires
+      required: N
     reason_description:
       description: Reason for credential issue/update
       required: N
@@ -117,6 +120,9 @@
     effective_date:
       description: Date Credential is effective
       required: Y
+    relationship_expiry_date:
+      description: Date Credential expires
+      required: N
     reason_description:
       description: Reason for credential issue/update
       required: N

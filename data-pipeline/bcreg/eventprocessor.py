@@ -8,7 +8,7 @@ import time
 import hashlib
 import traceback
 from bcreg.config import config
-from bcreg.bcregistries import BCRegistries, event_dict
+from bcreg.bcregistries import BCRegistries, CustomJsonEncoder, event_dict
 
 
 corp_credential = 'REG'
@@ -53,7 +53,7 @@ class DateTimeEncoder(json.JSONEncoder):
 
 
 def event_json(event):
-    return json.dumps(event, cls=DateTimeEncoder, sort_keys=True)
+    return json.dumps(event, cls=CustomJsonEncoder, sort_keys=True)
 
 def event_dict_from_json(event_json):
     return json.loads(event_json)
@@ -471,7 +471,7 @@ class EventProcessor:
                 SCHEMA_NAME, SCHEMA_VERSION, CREDENTIAL_JSON, CREDENTIAL_HASH, CREDENTIAL_REASON, ENTRY_DATE, PROCESS_DATE, PROCESS_SUCCESS)
                 VALUES(%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s) RETURNING RECORD_ID;"""
         # create row(s) for corp creds json info
-        cred_json = json.dumps(credential, cls=DateTimeEncoder, sort_keys=True)
+        cred_json = json.dumps(credential, cls=CustomJsonEncoder, sort_keys=True)
         cred_hash = hashlib.sha256(cred_json.encode('utf-8')).hexdigest()
         try:
             cur.execute("savepoint save_" + cred_type)
@@ -532,11 +532,9 @@ class EventProcessor:
 
         # corp_state reason code
         if 'filing_typ_cd' in loop_start_event['filing']:
-            corp_reason = 'Filing:' + loop_start_event['filing']['filing_typ_cd'] # + ':' + loop_start_event['filing']['full_desc']
-        #elif 'remarks' in loop_start_event['conv_event'] and loop_start_event['conv_event']['remarks'] is not None and 0 < len(loop_start_event['conv_event']['remarks']):
-        #    corp_reason = 'Conversion:' + loop_start_event['event_typ_cd'] + ':' + loop_start_event['full_desc'] + '(' + loop_start_event['conv_event']['remarks'] + ')'
+            corp_reason = 'Filing:' + loop_start_event['filing']['filing_typ_cd'] 
         else:
-            corp_reason = 'Event:' + loop_start_event['event_typ_cd'] # + ':' + loop_start_event['full_desc']
+            corp_reason = 'Event:' + loop_start_event['event_typ_cd'] 
 
         if (len(corp_reason) > 0 and corp_reason.startswith(", ")):
             corp_reason = corp_reason[2:]
@@ -564,8 +562,10 @@ class EventProcessor:
             addr_cred['postal_code'] = address['postal_cd']
         if 'country_typ_cd' in address:
             addr_cred['country'] = address['country_typ_cd']
-        addr_cred['address_effective_date'] = office['effective_start_date']
+        addr_cred['address_effective_date'] = self.filter_min_date(office['effective_start_date'])
         addr_cred['effective_date'] = addr_cred['address_effective_date']
+        if office['end_event_id'] is not None and office['end_event']['effective_date'] <= corp_info['current_date']:
+            addr_cred['address_expiry_date'] = office['effective_end_date']
 
         return addr_cred
 
@@ -602,6 +602,9 @@ class EventProcessor:
     def unique_effective_events(self, corp_records, effective_events):
         for corp_record in corp_records:
             effective_events.append(corp_record['start_event'])
+            if corp_record['end_event_id'] is not None:
+                effective_events.append(corp_record['end_event'])
+
         # sort to get in date order, and determine ACT/HIS transition dates
         effective_events = sorted(effective_events, key=lambda k: int(k['event_id']))
         effective_events = sorted(effective_events, key=lambda k: k['effective_date'])
@@ -609,7 +612,7 @@ class EventProcessor:
         ret_effective_events = []
         prev_effective_event = None
         for effective_event in effective_events:
-            if prev_effective_event is None or effective_event['effective_date'] > prev_effective_event['effective_date']:
+            if prev_effective_event is None or effective_event['event_id'] != prev_effective_event['event_id']:
                 ret_effective_events.append(effective_event)
             prev_effective_event = effective_event
         return ret_effective_events
@@ -618,16 +621,21 @@ class EventProcessor:
     def corp_rec_at_effective_date(self, corp_recs, loop_start_event):
         # pick the lowest effective date where the passed in start date is in range
         loop_start_date = loop_start_event['effective_date']
+        loop_start_id = loop_start_event['event_id']
         ret_corp_rec = None
+
+        # find record matching the provided event
         for corp_rec in corp_recs:
-            if corp_rec['effective_start_date'] <= loop_start_date and loop_start_date < corp_rec['effective_end_date']:
+            if corp_rec['start_event_id'] == loop_start_id:
+                # if the start event id matches then we have a match
+                return corp_rec
+            elif corp_rec['effective_start_date'] <= loop_start_date:
+                # if the record date is earlier than the event effective date, it is potential match
                 if ret_corp_rec is None:
                     ret_corp_rec = corp_rec
                 elif corp_rec['effective_start_date'] < ret_corp_rec['effective_start_date']:
+                    # pick the earliest record based on effective date
                     ret_corp_rec = corp_rec
-            #else:
-                # (corp_rec['effective_start_date'] <= loop_end_date and loop_end_date < corp_rec['effective_end_date']) 
-                # or (loop_start_date <= corp_rec['effective_start_date'] and corp_rec['effective_end_date'] < loop_end_date)
 
         return ret_corp_rec
 
@@ -675,6 +683,15 @@ class EventProcessor:
 
         return (past_events, future_events)
 
+    def filter_min_date(self, cred_date):
+        if isinstance(cred_date, str):
+            if cred_date == MIN_START_DATE_TZ:
+                return ""
+        #elif isinstance(cred_date, datetime.date):
+        #    if cred_date == MIN_START_DATE:
+        #        return ?TBD?
+        return cred_date
+
     # generate credentials for the provided corp
     def generate_credentials(self, system_typ_cd, prev_event, last_event, corp_num, corp_info):
         corp_creds = []
@@ -682,46 +699,49 @@ class EventProcessor:
         # get events - only generate credentials for events in the past
         (effective_events, future_events) = self.current_and_future_corp_events(corp_num, corp_info)
 
+        if 0 == len(effective_events):
+            return
+
+        prev_effective_event = event_dict(effective_events[0]['event_id'], effective_events[0]['event_timestmp'])
+        last_effective_event = event_dict(effective_events[len(effective_events)-1]['event_id'], effective_events[len(effective_events)-1]['event_timestmp'])
+        if prev_effective_event['event_date'] > prev_event['event_date']:
+            prev_event = prev_effective_event
+        if last_effective_event['event_date'] < last_event['event_date']:
+            last_event = last_effective_event
+
         # loop based on start/end events
         for i in range(len(effective_events)):
             loop_start_event = effective_events[i]
-            #print("Corp", corp_num,prev_event['event_date'],loop_start_event['event_timestmp'],last_event['event_date'])
             if prev_event['event_date'] <= loop_start_event['event_timestmp'] and loop_start_event['event_timestmp'] <= last_event['event_date']:
-                #print("generate corp credential")
                 # generate corp credential
                 corp_cred = {}
                 corp_cred['registration_id'] = self.corp_num_with_prefix(corp_info['corp_typ_cd'], corp_info['corp_num'])
-                corp_cred['registration_date'] = corp_info['recognition_dts']
+                corp_cred['registration_date'] = self.filter_min_date(corp_info['recognition_dts'])
 
                 # org_names active at effective date
                 org_name = self.corp_rec_at_effective_date(corp_info['org_names'], loop_start_event)
                 if org_name is not None:
                     corp_cred['entity_name'] = org_name['corp_nme']
-                    corp_cred['entity_name_effective'] = org_name['effective_start_date']
+                    corp_cred['entity_name_effective'] = self.filter_min_date(org_name['effective_start_date'])
 
                 # org_name_assumed active at effective date
                 org_name_assumed = self.corp_rec_at_effective_date(corp_info['org_name_assumed'], loop_start_event)
                 if org_name_assumed is not None:
                     corp_cred['entity_name_assumed'] = org_name_assumed['corp_nme'] 
-                    corp_cred['entity_name_assumed_effective'] = org_name_assumed['effective_start_date']
+                    corp_cred['entity_name_assumed_effective'] = self.filter_min_date(org_name_assumed['effective_start_date'])
 
                 # corp_state active at effective date
                 corp_state = self.corp_rec_at_effective_date(corp_info['corp_state'], loop_start_event)
                 if corp_state is None:
                     # no corp state found - take either the first or last in the list
                     if len(corp_info['corp_state']) > 0:
-                        #print("No active state found for ", corp_num, loop_start_event['effective_date'])
-                        #print(loop_start_event)
                         if loop_start_event['effective_date'] <= corp_info['corp_state'][0]['effective_start_date']:
-                            #print("using corp state[0]", corp_info['corp_state'][0]['effective_start_date'], corp_info['corp_state'][0]['effective_end_date'])
                             corp_state = corp_info['corp_state'][0]
                         else:
-                            #print("using corp state[n]", corp_info['corp_state'][len(corp_info['corp_state'])-1]['effective_start_date'], corp_info['corp_state'][len(corp_info['corp_state'])-1]['effective_end_date'])
                             corp_state = corp_info['corp_state'][len(corp_info['corp_state'])-1]
                 if corp_state is not None:
                     corp_cred['entity_status'] = corp_state['op_state_typ_cd']
-                    #print('Effective start date', corp_state['effective_start_date'])
-                    corp_cred['entity_status_effective'] = corp_state['effective_start_date']
+                    corp_cred['entity_status_effective'] = self.filter_min_date(corp_state['effective_start_date'])
                     corp_cred['entity_type'] = corp_info['corp_type']['full_desc']
 
                 # jurisdiction active at effective date
@@ -744,27 +764,22 @@ class EventProcessor:
                 # these will be sorted by date, but we need to make sure we are not submitting duplicates
                 # checking against the previously generated credential is sufficient
                 if (len(corp_creds) == 0) or (len(corp_creds) > 0 and corp_cred['credential'] != corp_creds[len(corp_creds)-1]['credential']):
-                    #print("Append reg cred")
                     corp_creds.append(corp_cred)
-                #else:
-                    #print("Don't append", corp_cred)
 
         # generate addr credential(s)
         corp_offices = sorted(corp_info['office'], key=lambda k: int(k['start_event_id']))
         corp_offices = sorted(corp_info['office'], key=lambda k: k['effective_start_date'])
         for office in corp_offices:
-            #print("Addr", corp_num,prev_event['event_date'],loop_start_event['event_timestmp'],last_event['event_date'])
-            if prev_event['event_date'] <= loop_start_event['event_timestmp'] and loop_start_event['event_timestmp'] <= last_event['event_date']:
-                if prev_event['event_date'] <= office['start_event']['event_timestmp'] and office['start_event']['event_timestmp'] <= last_event['event_date']:
-                    #print("generate address credential")
-                    # ensure address history is generated correctly
-                    if 'office_typ_cd' in office:
-                        if 'delivery_addr' in office and 'local_addr' in office['delivery_addr']:
-                            addr_cred = self.generate_address_credential(corp_num, corp_info, office, office['delivery_addr'], "", "")
-                            reason_description = self.build_corp_reason_code(office['start_event'])
-                            corp_creds.append(self.build_credential_dict(addr_credential, addr_schema, addr_version, 
-                                                                        corp_num + ',' + office['office_typ_cd'], 
-                                                                        addr_cred, reason_description, addr_cred['effective_date']))
+            if ((prev_event['event_date'] <= office['start_event']['event_timestmp'] and office['start_event']['event_timestmp'] <= last_event['event_date']) or
+                (office['end_event_id'] is not None and prev_event['event_date'] <= office['end_event']['event_timestmp'] and office['end_event']['event_timestmp'] <= last_event['event_date'])):
+                # ensure address history is generated correctly
+                if 'office_typ_cd' in office:
+                    if 'delivery_addr' in office and 'local_addr' in office['delivery_addr']:
+                        addr_cred = self.generate_address_credential(corp_num, corp_info, office, office['delivery_addr'], "", "")
+                        reason_description = self.build_corp_reason_code(office['start_event'])
+                        corp_creds.append(self.build_credential_dict(addr_credential, addr_schema, addr_version, 
+                                                                    corp_num + ',' + office['office_typ_cd'], 
+                                                                    addr_cred, reason_description, addr_cred['effective_date']))
         
         corp_type = corp_info['corp_typ_cd']
         if corp_type == 'SP' or corp_type == 'MF':
@@ -779,21 +794,21 @@ class EventProcessor:
                 corp_parties = sorted(corp_info['parties'], key=lambda k: int(k['start_event_id']))
                 corp_parties = sorted(corp_info['parties'], key=lambda k: k['effective_start_date'])
                 for party in corp_parties:
-                    #print("Rel", corp_num,prev_event['event_date'],loop_start_event['event_timestmp'],last_event['event_date'])
-                    if prev_event['event_date'] <= loop_start_event['event_timestmp'] and loop_start_event['event_timestmp'] <= last_event['event_date']:
-                        if prev_event['event_date'] <= party['start_event']['event_timestmp'] and party['start_event']['event_timestmp'] <= last_event['event_date']:
-                            #print("generate relationship credential")
-                            if party['corp_info']['corp_typ_cd'] == 'SP' or party['corp_info']['corp_typ_cd'] == 'MF':
-                                dba_cred = {}
-                                dba_cred['registration_id'] = self.corp_num_with_prefix(corp_info['corp_typ_cd'], corp_info['corp_num'])
-                                dba_cred['associated_registration_id'] = self.corp_num_with_prefix(party['corp_info']['corp_typ_cd'], party['corp_info']['corp_num'])
-                                dba_cred['relationship'] = 'Owns'
-                                dba_cred['relationship_description'] = 'Does Business As'
-                                dba_cred['relationship_status'] = 'ACT'
-                                dba_cred['effective_date'] = party['effective_start_date']
-                                dba_cred['relationship_status_effective'] = dba_cred['effective_date']
-                                reason_description = self.build_corp_reason_code(party['start_event'])
-                                corp_creds.append(self.build_credential_dict(dba_credential, dba_schema, dba_version, dba_cred['registration_id'], dba_cred, reason_description, dba_cred['effective_date']))
+                    if ((prev_event['event_date'] <= party['start_event']['event_timestmp'] and party['start_event']['event_timestmp'] <= last_event['event_date']) or
+                        (party['end_event_id'] is not None and prev_event['event_date'] <= party['end_event']['event_timestmp'] and party['end_event']['event_timestmp'] <= last_event['event_date'])):
+                        if party['corp_info']['corp_typ_cd'] == 'SP' or party['corp_info']['corp_typ_cd'] == 'MF':
+                            dba_cred = {}
+                            dba_cred['registration_id'] = self.corp_num_with_prefix(corp_info['corp_typ_cd'], corp_info['corp_num'])
+                            dba_cred['associated_registration_id'] = self.corp_num_with_prefix(party['corp_info']['corp_typ_cd'], party['corp_info']['corp_num'])
+                            dba_cred['relationship'] = 'Owns'
+                            dba_cred['relationship_description'] = 'Does Business As'
+                            dba_cred['relationship_status'] = 'ACT'
+                            dba_cred['effective_date'] = party['effective_start_date']
+                            dba_cred['relationship_status_effective'] = self.filter_min_date(dba_cred['effective_date'])
+                            if party['end_event_id'] is not None and party['end_event']['effective_date'] <= corp_info['current_date']:
+                                dba_cred['relationship_expiry_date'] = party['effective_end_date']
+                            reason_description = self.build_corp_reason_code(party['start_event'])
+                            corp_creds.append(self.build_credential_dict(dba_credential, dba_schema, dba_version, dba_cred['registration_id'], dba_cred, reason_description, dba_cred['effective_date']))
 
         return corp_creds
 
@@ -840,6 +855,8 @@ class EventProcessor:
                   VALUES(%s, %s, %s, %s, %s, %s, %s) RETURNING RECORD_ID;"""
         sql2a = """INSERT INTO CORP_HISTORY_LOG (SYSTEM_TYPE_CD, PREV_EVENT, LAST_EVENT, CORP_NUM, CORP_STATE, CORP_JSON, ENTRY_DATE, PROCESS_DATE, PROCESS_SUCCESS, PROCESS_MSG)
                   VALUES(%s, %s, %s, %s, %s, %s, %s, %s, %s, %s) RETURNING RECORD_ID;"""
+        sql2b = """INSERT INTO EVENT_BY_CORP_FILING (SYSTEM_TYPE_CD, PREV_EVENT_ID, PREV_EVENT_DATE, LAST_EVENT_ID, LAST_EVENT_DATE, CORP_NUM, ENTRY_DATE)
+                 VALUES(%s, %s, %s, %s, %s, %s, %s) RETURNING RECORD_ID;"""
 
         sql3 = """UPDATE EVENT_BY_CORP_FILING
                   SET PROCESS_DATE = %s, PROCESS_SUCCESS = %s, PROCESS_MSG = %s
@@ -975,8 +992,7 @@ class EventProcessor:
                                     try:
                                         # generate and store credentials
                                         #print("Generating credentials")
-                                        corp_creds = self.generate_credentials(corp['SYSTEM_TYPE_CD'], corp['PREV_EVENT'], corp['LAST_EVENT'], 
-                                                                corp['CORP_NUM'], corp_info)
+                                        corp_creds = self.generate_credentials(corp['SYSTEM_TYPE_CD'], corp['PREV_EVENT'], corp['LAST_EVENT'], corp['CORP_NUM'], corp_info)
                                         if len(corp_creds) > 0:
                                             #print("Storing credentials")
                                             cur = self.conn.cursor()
@@ -1024,16 +1040,13 @@ class EventProcessor:
                                     cur.close()
                                     cur = None
                                 if (0 < len(future_events)) and (0 < len(corp_creds) or load_regs):
-                                    # create another record to handle future events
+                                    # create another record to handle future events (will do a re-load)
                                     future_events = sorted(future_events, key=lambda k: int(k['event_id']))
                                     future_events = sorted(future_events, key=lambda k: k['event_timestmp'])
-                                    f_start_event = event_dict(future_events[0]['event_id'], future_events[0]['event_timestmp'])
-                                    f_end_event = event_dict(future_events[len(future_events)-1]['event_id'], future_events[len(future_events)-1]['event_timestmp'])
-                                    f_start_event_json = event_json(f_start_event)
-                                    f_end_event_json = event_json(f_end_event)
                                     cur = self.conn.cursor()
-                                    cur.execute(sql2, (corp['SYSTEM_TYPE_CD'], f_start_event_json, f_end_event_json, corp['CORP_NUM'], 
-                                                        corp_active_state['op_state_typ_cd'], corp_info_json, datetime.datetime.now(),))
+                                    cur.execute(sql2b, (corp['SYSTEM_TYPE_CD'], future_events[0]['event_id'], future_events[0]['event_timestmp'], 
+                                                        future_events[len(future_events)-1]['event_id'], future_events[len(future_events)-1]['event_timestmp'],  
+                                                        corp['CORP_NUM'], datetime.datetime.now(),))
                                     cur.close()
                                     cur = None
                             elif load_regs:

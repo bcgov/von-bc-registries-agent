@@ -44,10 +44,10 @@ def test_scenario_history():
     my_creds = generate_all_creds_for_corp(my_info)
     my_event_creds = generate_creds_for_corp_by_event(my_info)
 
-    assert len(my_creds) == 20
-    assert len(my_event_creds) == 20
+    assert len(my_creds) == 6
+    assert len(my_event_creds) == 6
 
-    for i in range(20):
+    for i in range(6):
         assert my_creds[i]['cred_type'] == my_event_creds[i]['cred_type']
         assert my_creds[i]['credential'] == my_event_creds[i]['credential']
 
@@ -57,18 +57,18 @@ def test_scenario_history_1():
     my_info = generate_info_for_corp(my_corp_dict)
     my_creds = generate_all_creds_for_corp(my_info)
 
-    assert len(my_creds) == 3
+    assert len(my_creds) == 4
 
-    assert my_creds[0]['cred_type'] == 'REG'
-    assert my_creds[0]['credential']['entity_status'] == 'ACT'
-    assert my_creds[0]['credential']['entity_type'] == 'Extraprovincial Company'
-    assert my_creds[0]['credential']['home_jurisdiction'] == 'ON'
-    assert my_creds[0]['credential']['registered_jurisdiction'] == 'BC'
-    assert my_creds[0]['credential']['registration_id'] == 'A0212812'
-
-    assert my_creds[1]['cred_type'] == 'ADDR'
-    assert my_creds[1]['credential']['address_type'] == 'Head Office'
+    assert my_creds[1]['cred_type'] == 'REG'
+    assert my_creds[1]['credential']['entity_status'] == 'ACT'
+    assert my_creds[1]['credential']['entity_type'] == 'Extraprovincial Company'
+    assert my_creds[1]['credential']['home_jurisdiction'] == 'ON'
+    assert my_creds[1]['credential']['registered_jurisdiction'] == 'BC'
     assert my_creds[1]['credential']['registration_id'] == 'A0212812'
+
+    assert my_creds[2]['cred_type'] == 'ADDR'
+    assert my_creds[2]['credential']['address_type'] == 'Head Office'
+    assert my_creds[2]['credential']['registration_id'] == 'A0212812'
 
 def test_scenario_history_2():
     my_corp_num = '5993202'
@@ -89,6 +89,25 @@ def test_scenario_history_2():
     assert my_creds[3]['credential']['address_type'] == 'Registered Office'
     assert my_creds[3]['credential']['registration_id'] == 'BC5993202'
 
+def test_scenario_history_future_date():
+    my_corp_num = '6217522'
+    my_corp_dict = sample_history_corps['corp_' + my_corp_num]
+    my_info = generate_info_for_corp(my_corp_dict)
+    my_creds = generate_all_creds_for_corp(my_info)
+
+    assert len(my_creds) == 5
+
+    assert my_creds[0]['cred_type'] == 'REG'
+    assert my_creds[0]['credential']['entity_status'] == 'ACT'
+    assert my_creds[0]['credential']['entity_type'] == 'BC Company'
+    assert my_creds[0]['credential']['home_jurisdiction'] == 'BC'
+    assert my_creds[0]['credential']['registered_jurisdiction'] == ''
+    assert my_creds[0]['credential']['registration_id'] == 'BC6217522'
+
+    assert my_creds[3]['cred_type'] == 'ADDR'
+    assert my_creds[3]['credential']['address_type'] == 'Registered Office'
+    assert my_creds[3]['credential']['registration_id'] == 'BC6217522'
+
 
 # utility method to process the selected corp and generate credentails
 def generate_info_for_corp(corp_dict):
@@ -103,9 +122,7 @@ def generate_info_for_corp(corp_dict):
     #print("Corp: " + corp_num + " loaded.")
     #print(json.dumps(corp_info, cls=CustomJsonEncoder, default=str, indent=4, sort_keys=True))
 
-    corp_states = sorted(corp_info['corp_state'], key=lambda k: k['start_event_id'])
-    corp_states = sorted(corp_states, key=lambda k: k['effective_start_date'])
-    #for corp_state in corp_states:
+    #for corp_state in corp_info['corp_state']:
     #    print(corp_state['corp_num'], corp_state['start_event']['event_id'], 
     #            corp_state['end_event']['event_id'] if 'end_event' in corp_state else 0, 
     #            corp_state['effective_start_date'], corp_state['effective_end_date'], 
