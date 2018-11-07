@@ -633,8 +633,8 @@ class EventProcessor:
                 # if the record date is earlier than the event effective date, it is potential match
                 if ret_corp_rec is None:
                     ret_corp_rec = corp_rec
-                elif corp_rec['effective_start_date'] < ret_corp_rec['effective_start_date']:
-                    # pick the earliest record based on effective date
+                elif corp_rec['effective_start_date'] > ret_corp_rec['effective_start_date']:
+                    # pick the latest record based on effective date
                     ret_corp_rec = corp_rec
 
         return ret_corp_rec
