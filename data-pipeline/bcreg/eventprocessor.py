@@ -755,7 +755,7 @@ class EventProcessor:
 
                 corp_cred['effective_date'] = self.credential_effective_date(corp_cred)
                 if corp_cred['effective_date'] is None:
-                    corp_cred['effective_date'] = corp_cred['registration_date']
+                    corp_cred['effective_date'] = loop_start_event['effective_date']
 
                 reason_description = self.build_corp_reason_code(loop_start_event)
 
