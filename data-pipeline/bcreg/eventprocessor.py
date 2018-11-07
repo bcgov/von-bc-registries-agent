@@ -12,16 +12,16 @@ from bcreg.bcregistries import BCRegistries, CustomJsonEncoder, event_dict
 
 
 corp_credential = 'REG'
-corp_schema = 'registration.registries'
-corp_version = '1.0.37'
+corp_schema = 'registration.registries.ca'
+corp_version = '1.0.38'
 
 addr_credential = 'ADDR'
-addr_schema = 'address.registries'
-addr_version = '1.0.37'
+addr_schema = 'address.registries.ca'
+addr_version = '1.0.38'
 
 dba_credential = 'REL'
-dba_schema = 'relationship.registries'
-dba_version = '1.0.37'
+dba_schema = 'relationship.registries.ca'
+dba_version = '1.0.38'
 
 CORP_BATCH_SIZE = 3000
 FALLBACK_CORP_BATCH_SIZE = 300
@@ -751,7 +751,7 @@ class EventProcessor:
                     corp_cred['registered_jurisdiction'] = 'BC' 
                 else:
                     corp_cred['registered_jurisdiction'] = '' 
-                corp_cred['registration_type'] = ''
+                corp_cred['extra_jurisdictional_registration'] = ''
 
                 corp_cred['effective_date'] = self.credential_effective_date(corp_cred)
                 if corp_cred['effective_date'] is None:

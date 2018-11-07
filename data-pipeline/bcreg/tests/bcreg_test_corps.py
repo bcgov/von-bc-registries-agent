@@ -96,7 +96,8 @@ def test_generate_corp_nums():
 #            '0763302',
 #            '0860695',
 #            'A0039853',
-            '0403029',
+#            '0403029',
+            'A0073185',
     ]
     selected_corp_list = ''
     i = 0
