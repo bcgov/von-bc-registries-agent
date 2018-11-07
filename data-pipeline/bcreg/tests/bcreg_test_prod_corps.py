@@ -6,9 +6,9 @@ from bcreg.eventprocessor import EventProcessor
 from bcreg.tests.sample_corps import sample_test_corps
 
 
-def _test_dev_corp_sql1():
+def test_dev_corp_sql1():
     specific_corps = [
-                    'A0073185',
+                    'FM0128548',
                    ]
 
     # try caching everything
