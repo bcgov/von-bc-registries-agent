@@ -43,7 +43,6 @@ class DateTimeEncoder(json.JSONEncoder):
                 tz_aware = timezone.localize(o)
                 return tz_aware.astimezone(pytz.utc).isoformat()
             except (Exception) as error:
-                #print("Event Processor Date conversion error", o, error)
                 if o.year <= datetime.MINYEAR+1:
                     return MIN_START_DATE_TZ.astimezone(pytz.utc).isoformat()
                 elif o.year >= datetime.MAXYEAR-1:
@@ -321,7 +320,7 @@ class EventProcessor:
         try:
             cur = self.conn.cursor()
             cur.execute(sql, (system_type, event_id, event_date, datetime.datetime.now(),))
-            record_id = cur.fetchone()[0]
+            _record_id = cur.fetchone()[0]
             self.conn.commit()
             cur.close()
             cur = None
@@ -383,7 +382,7 @@ class EventProcessor:
             cur = self.conn.cursor()
             cur.execute(sql, (system_type, prev_event_id, prev_event_dt, last_event_id, last_event_dt, 
                                 corp_num, datetime.datetime.now(),))
-            record_id = cur.fetchone()[0]
+            _record_id = cur.fetchone()[0]
             self.conn.commit()
             cur.close()
             cur = None
@@ -426,7 +425,7 @@ class EventProcessor:
             for i,corp in enumerate(corps): 
                 cur = self.conn.cursor()
                 cur.execute(sql, (system_type, corp['PREV_EVENT']['event_id'], corp['PREV_EVENT']['event_date'], corp['LAST_EVENT']['event_id'], corp['LAST_EVENT']['event_date'], corp['CORP_NUM'], datetime.datetime.now(),))
-                record_id = cur.fetchone()[0]
+                _record_id = cur.fetchone()[0]
                 cur.close()
                 cur = None
             cur = self.conn.cursor()
@@ -450,7 +449,7 @@ class EventProcessor:
         try:
             cur = self.conn.cursor()
             cur.execute(sql, (system_type, prev_event_json, last_event_json, corp_num, corp_state, corp_json, datetime.datetime.now(),))
-            record_id = cur.fetchone()[0]
+            _record_id = cur.fetchone()[0]
             self.conn.commit()
             cur.close()
             cur = None
@@ -642,11 +641,7 @@ class EventProcessor:
     # currently active state record
     def get_corp_active_state(self, corp_info):
         ret_corp_state = None
-        #print('=====')
-        #print(corp_info['corp_state'])
         for corp_state in corp_info['corp_state']:
-            #print('-------')
-            #print(corp_state)
             if corp_state['end_event_id'] is None:
                 return corp_state
             elif ret_corp_state is None:
@@ -664,7 +659,6 @@ class EventProcessor:
         effective_events = self.unique_effective_events(corp_info['org_name_assumed'], effective_events)
         effective_events = self.unique_effective_events(corp_info['office'], effective_events)
         effective_events = self.unique_effective_events(corp_info['parties'], effective_events)
-        #print(corp_num, effective_events)
 
         return effective_events
 
@@ -974,8 +968,6 @@ class EventProcessor:
                         if process_success:
                             # get events - only generate credentials for events in the past
                             (effective_events, future_events) = self.current_and_future_corp_events(corp['CORP_NUM'], corp_info)
-                            #print("Effective events", corp['CORP_NUM'], effective_events)
-                            #print("Future events", corp['CORP_NUM'], future_events)
 
                             corp_active_state = self.get_corp_active_state(corp_info)
 
@@ -991,10 +983,8 @@ class EventProcessor:
                                 if 0 < len(effective_events):
                                     try:
                                         # generate and store credentials
-                                        #print("Generating credentials")
                                         corp_creds = self.generate_credentials(corp['SYSTEM_TYPE_CD'], corp['PREV_EVENT'], corp['LAST_EVENT'], corp['CORP_NUM'], corp_info)
                                         if len(corp_creds) > 0:
-                                            #print("Storing credentials")
                                             cur = self.conn.cursor()
                                             saved_creds = saved_creds + self.store_credentials(cur, corp['SYSTEM_TYPE_CD'], corp['PREV_EVENT'], corp['LAST_EVENT'], 
                                                                     corp['CORP_NUM'], corp_active_state['op_state_typ_cd'], corp_info, corp_creds)
@@ -1026,7 +1016,6 @@ class EventProcessor:
                                 if load_regs:
                                     cur = self.conn.cursor()
                                     if 0 < len(corp_creds) or 0 == len(future_events):
-                                        #print("Updating corp json")
                                         cur.execute(sql2a, (corp['SYSTEM_TYPE_CD'], prev_event_json, last_event_json, corp['CORP_NUM'], 
                                                             corp_active_state['op_state_typ_cd'], corp_info_json, datetime.datetime.now(), datetime.datetime.now(), flag, res,))
                                     cur.close()
@@ -1035,7 +1024,6 @@ class EventProcessor:
                                     # update process date
                                     cur = self.conn.cursor()
                                     if 0 < len(corp_creds) or 0 == len(future_events):
-                                        #print("Updating corp json status")
                                         cur.execute(sql3a, (datetime.datetime.now(), flag, res, corp['RECORD_ID'], ))
                                     cur.close()
                                     cur = None
@@ -1115,7 +1103,7 @@ class EventProcessor:
         try:
             cur = self.conn.cursor()
             cur.execute(sql, (system_type, credential_typ_cd, mapping_transform, schema_name, schema_version,))
-            record_id = cur.fetchone()[0]
+            _record_id = cur.fetchone()[0]
             self.conn.commit()
             cur.close()
             cur = None
@@ -1149,7 +1137,6 @@ class EventProcessor:
         return self.get_record_count('credential_log')
         
     def get_record_count(self, table, unprocessed=True):
-        tables = ['event_by_corp_filing', 'corp_history_log', 'credential_log']
         sql_ct_select = 'select count(*) from'
         sql_corp_ct_processed   = 'where process_date is not null'
         sql_corp_ct_outstanding = 'where process_date is null'
