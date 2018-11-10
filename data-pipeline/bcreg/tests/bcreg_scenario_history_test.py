@@ -95,14 +95,14 @@ def test_scenario_history_future_date():
     my_info = generate_info_for_corp(my_corp_dict)
     my_creds = generate_all_creds_for_corp(my_info)
 
-    assert len(my_creds) == 5
+    print(my_creds)
 
-    assert my_creds[0]['cred_type'] == 'REG'
-    assert my_creds[0]['credential']['entity_status'] == 'ACT'
-    assert my_creds[0]['credential']['entity_type'] == 'BC Company'
-    assert my_creds[0]['credential']['home_jurisdiction'] == 'BC'
-    assert my_creds[0]['credential']['registered_jurisdiction'] == ''
-    assert my_creds[0]['credential']['registration_id'] == 'BC6217522'
+    assert my_creds[1]['cred_type'] == 'REG'
+    assert my_creds[1]['credential']['entity_status'] == 'ACT'
+    assert my_creds[1]['credential']['entity_type'] == 'BC Company'
+    assert my_creds[1]['credential']['home_jurisdiction'] == 'BC'
+    assert my_creds[1]['credential']['registered_jurisdiction'] == ''
+    assert my_creds[1]['credential']['registration_id'] == 'BC6217522'
 
     assert my_creds[3]['cred_type'] == 'ADDR'
     assert my_creds[3]['credential']['address_type'] == 'Registered Office'

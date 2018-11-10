@@ -590,8 +590,10 @@ class EventProcessor:
 
     # credential effective date is the latest of the individual effective dates in the credential
     def credential_effective_date(self, corp_cred):
-        effective_date = corp_cred['entity_status_effective']
-        if effective_date is None or ('entity_name_effective' in corp_cred and effective_date < corp_cred['entity_name_effective']):
+        effective_date = None
+        if corp_cred['entity_status_effective'] is not None and corp_cred['entity_status_effective'] != '':
+            effective_date = corp_cred['entity_status_effective']
+        if effective_date is None or ('entity_name_effective' in corp_cred and corp_cred['entity_name_effective'] != '' and effective_date < corp_cred['entity_name_effective']):
             effective_date = corp_cred['entity_name_effective']
         if effective_date is None or ('entity_name_assumed_effective' in corp_cred and effective_date < corp_cred['entity_name_assumed_effective']):
             effective_date = corp_cred['entity_name_assumed_effective']
@@ -717,6 +719,9 @@ class EventProcessor:
                 if org_name is not None:
                     corp_cred['entity_name'] = org_name['corp_nme']
                     corp_cred['entity_name_effective'] = self.filter_min_date(org_name['effective_start_date'])
+                else:
+                    corp_cred['entity_name'] = ''
+                    corp_cred['entity_name_effective'] = ''
 
                 # org_name_assumed active at effective date
                 org_name_assumed = self.corp_rec_at_effective_date(corp_info['org_name_assumed'], loop_start_event)
@@ -726,17 +731,21 @@ class EventProcessor:
 
                 # corp_state active at effective date
                 corp_state = self.corp_rec_at_effective_date(corp_info['corp_state'], loop_start_event)
-                if corp_state is None:
-                    # no corp state found - take either the first or last in the list
-                    if len(corp_info['corp_state']) > 0:
-                        if loop_start_event['effective_date'] <= corp_info['corp_state'][0]['effective_start_date']:
-                            corp_state = corp_info['corp_state'][0]
-                        else:
-                            corp_state = corp_info['corp_state'][len(corp_info['corp_state'])-1]
+                #if corp_state is None:
+                #    # no corp state found - take either the first or last in the list
+                #    if len(corp_info['corp_state']) > 0:
+                #        if loop_start_event['effective_date'] <= corp_info['corp_state'][0]['effective_start_date']:
+                #            corp_state = corp_info['corp_state'][0]
+                #        else:
+                #            corp_state = corp_info['corp_state'][len(corp_info['corp_state'])-1]
                 if corp_state is not None:
                     corp_cred['entity_status'] = corp_state['op_state_typ_cd']
                     corp_cred['entity_status_effective'] = self.filter_min_date(corp_state['effective_start_date'])
-                    corp_cred['entity_type'] = corp_info['corp_type']['full_desc']
+                else:
+                    corp_cred['entity_status'] = ''
+                    corp_cred['entity_status_effective'] = ''
+
+                corp_cred['entity_type'] = corp_info['corp_type']['full_desc']
 
                 # jurisdiction active at effective date
                 jurisdiction = self.corp_rec_at_effective_date(corp_info['jurisdiction'], loop_start_event)
