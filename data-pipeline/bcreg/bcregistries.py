@@ -47,7 +47,6 @@ class CustomJsonEncoder(json.JSONEncoder):
                 tz_aware = timezone.localize(o)
                 return tz_aware.astimezone(pytz.utc).isoformat()
             except (Exception) as error:
-                #print("BC Reg Date conversion error", o, error)
                 if o.year <= datetime.MINYEAR+1:
                     return MIN_START_DATE_TZ.astimezone(pytz.utc).isoformat()
                 elif o.year >= datetime.MAXYEAR-1:
@@ -135,7 +134,6 @@ class BCRegistries:
 
     def add_cache_miss(self, table, corp_num, row_id, row):
         miss = {'table':table, 'corp_num':corp_num, 'row_id':row_id, 'row':row}
-        #print('cache miss!!!', miss)
         self.cache_miss.append(miss)
     
 
@@ -172,7 +170,6 @@ class BCRegistries:
             else:
                 break
         new_corp_num = alpha_prefix + self.random_numeric_string(len(corp_num) - len(alpha_prefix))
-        #print(corp_num, ' ===>>> ', new_corp_num)
         self.generated_corp_nums[corp_num] = new_corp_num
         return new_corp_num
 
@@ -210,7 +207,7 @@ class BCRegistries:
         for col in table_desc:
             col_name = col[0]
             col_type = self.get_sql_col_type(col[1])
-            col_len = col[3]
+            _col_len = col[3]
             table_sql = table_sql + col_name + ' ' + col_type 
             i = i + 1
             if i < len(table_desc):
@@ -394,16 +391,10 @@ class BCRegistries:
         insert_sql = 'insert into ' + table + ' (' + insert_keys + ') values (' + insert_placeholders + ')'
 
         if generate_individual_sql:
-            #print(create_sql)
             self.generated_sqls.append(create_sql)
             for insert_sql in insert_sqls:
-                #print(insert_sql)
                 self.generated_sqls.append(insert_sql)
         else:
-            #print(create_sql)
-            #print(insert_sql)
-            #print(inserts)
-
             cache_cursor = None
             try:
                 cache_cursor = self.cache.cursor()
@@ -541,41 +532,27 @@ class BCRegistries:
             self.generated_corp_nums = {}
             # ensure we have a unique list
             specific_corps = list({s_corp for s_corp in specific_corps})
-            #print('specific_corps (1) = ', specific_corps)
             specific_corps_lists = self.split_list(specific_corps, MAX_WHERE_IN)
 
             addr_id_list = []
             for corp_nums_list in specific_corps_lists:
                 corp_list = self.id_where_in(corp_nums_list, True)
                 corp_party_where = 'bus_company_num in (' + corp_list + ') or corp_num in (' + corp_list + ')'
-                #print(self.other_tables[0])
                 party_rows = self.get_bcreg_table(self.other_tables[0], corp_party_where, '', True, generate_individual_sql)
-                #print(self.other_tables[0], len(party_rows))
 
                 # include all corp_num from the parties just returned (dba related companies)
                 for party in party_rows:
                     specific_corps.append(party['corp_num'])
 
-                # leave out for now, just look at office addresses
-                # address id (416674) gives a sql error 
-                #for party in party_rows:
-                #    if party['mailing_addr_id'] is not None:
-                #        addr_id_list.append(str(party['mailing_addr_id']))
-                #    if party['delivery_addr_id'] is not None:
-                #        addr_id_list.append(str(party['delivery_addr_id']))
-
             # ensure we have a unique list
             specific_corps = list({s_corp for s_corp in specific_corps})
-            #print('specific_corps (2) = ', specific_corps)
             specific_corps_lists = self.split_list(specific_corps, MAX_WHERE_IN)
 
             event_ids = []
             for corp_nums_list in specific_corps_lists:
                 corp_nums_list = self.id_where_in(corp_nums_list, True)
                 event_where = 'corp_num in (' + corp_nums_list + ')'
-                #print(self.other_tables[1])
                 event_rows = self.get_bcreg_table(self.other_tables[1], event_where, '', True, generate_individual_sql)
-                #print(self.other_tables[1], len(event_rows))
 
                 for event in event_rows:
                     event_ids.append(str(event['event_id']))
@@ -587,26 +564,18 @@ class BCRegistries:
             for ids_list in event_ids_lists:
                 event_list = self.id_where_in(ids_list)
                 filing_where = 'event_id in (' + event_list + ')'
-                #print(self.other_tables[2])
-                rows = self.get_bcreg_table(self.other_tables[2], filing_where, '', True, generate_individual_sql)
-                #print(self.other_tables[2], len(rows))
-                #print(self.other_tables[3], filing_where)
-                rows = self.get_bcreg_table(self.other_tables[3], filing_where, '', True, generate_individual_sql)
-                #print(self.other_tables[3], len(rows))
+                _rows = self.get_bcreg_table(self.other_tables[2], filing_where, '', True, generate_individual_sql)
+                _rows = self.get_bcreg_table(self.other_tables[3], filing_where, '', True, generate_individual_sql)
 
             print('Caching data for corporations ...')
             for corp_nums_list in specific_corps_lists:
                 corp_nums_list = self.id_where_in(corp_nums_list, True)
                 corp_num_where = 'corp_num in (' + corp_nums_list + ')'
                 for corp_table in self.corp_tables:
-                    #print(corp_table, corp_num_where)
-                    rows = self.get_bcreg_table(corp_table, corp_num_where, '', True, generate_individual_sql)
-                    #print(corp_table, len(rows))
+                    _rows = self.get_bcreg_table(corp_table, corp_num_where, '', True, generate_individual_sql)
 
                 office_where = 'corp_num in (' + corp_nums_list + ')'
-                #print(self.other_tables[4])
                 office_rows = self.get_bcreg_table(self.other_tables[4], office_where, '', True, generate_individual_sql)
-                #print(self.other_tables[4], len(office_rows))
 
                 for office in office_rows:
                     if office['mailing_addr_id'] is not None:
@@ -620,10 +589,7 @@ class BCRegistries:
             for ids_list in addr_ids_lists:
                 addr_list = self.id_where_in(ids_list)
                 address_where = 'addr_id in (' + addr_list + ')'
-                #print(self.other_tables[5])
-                #print('select * from bc_registries.address where ' + address_where + ';')
-                rows = self.get_bcreg_table(self.other_tables[5], address_where, '', True, generate_individual_sql)
-                #print(self.other_tables[5], len(rows))
+                _rows = self.get_bcreg_table(self.other_tables[5], address_where, '', True, generate_individual_sql)
 
     # load all bc registries data for the specified corps into our in-mem cache
     def cache_bcreg_code_tables(self, generate_individual_sql=False):
@@ -632,9 +598,7 @@ class BCRegistries:
             self.generated_sqls = []
             self.generated_corp_nums = {}
             for code_table in self.code_tables:
-                #print(code_table)
-                rows = self.get_bcreg_table(code_table, '', '', True, generate_individual_sql)
-                #print(code_table, len(rows))
+                _rows = self.get_bcreg_table(code_table, '', '', True, generate_individual_sql)
 
     # clear in-mem cache - delete all existing data
     def cache_cleanup(self):
@@ -656,7 +620,6 @@ class BCRegistries:
     def get_bcreg_sql(self, table, sql, cache=False, generate_individual_sql=False):
         cursor = None
         try:
-            #print(sql)
             cursor = self.conn.cursor()
             cursor.execute(sql)
             desc = cursor.description
@@ -945,7 +908,6 @@ class BCRegistries:
             else:
                 # check for a cache miss
                 if self.use_local_cache() and (not force_query_remote):
-                    #print('Cache miss for event')
                     event = self.get_event(corp_num, event_id, True)
                     self.add_cache_miss('event', corp_num, event_id, event)
                     ret_event = event
@@ -1019,7 +981,6 @@ class BCRegistries:
                 return filing_event[0]
             # check for a cache miss
             if self.use_local_cache() and (not force_query_remote):
-                #print('Cache miss for filing ', event_type)
                 filing_event = self.get_filing_event(corp_num, event_id, event_type, True)
                 self.add_cache_miss('filing', corp_num, event_id, filing_event)
                 return filing_event
@@ -1289,6 +1250,7 @@ class BCRegistries:
             cur = self.get_db_connection().cursor()
             cur.execute(sql_corp, (corp_num,))
             row = cur.fetchone()
+            corp['current_date'] = datetime.datetime.now()
             corp['corp_num'] = row[0]
             if deep_copy:
                 corp['jurisdiction'] = self.get_jurisdictons(row[0])
@@ -1322,6 +1284,8 @@ class BCRegistries:
                         corp_state['effective_end_date'] = MAX_END_DATE
 
                 # sort to get in date order, and determine ACT/HIS transition dates
+                corp_states = sorted(corp_states, key=lambda k: k['effective_end_date'])
+                corp_states = sorted(corp_states, key=lambda k: int(k['start_event_id']))
                 corp['corp_state'] = sorted(corp_states, key=lambda k: k['event_date'])
                 prev_state = None
                 prev_state_effective_event = None

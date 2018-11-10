@@ -1,5 +1,5 @@
-- name: registration.registries
-  version: '1.0.37'
+- name: registration.registries.ca
+  version: '1.0.38'
   attributes:
     registration_id:
       description: Unique identifer assigned to entity by registrar
@@ -43,7 +43,7 @@
     registered_jurisdiction:
       description: Name of the jurisdiction that registered the organization
       required: N
-    registration_type:
+    extra_jurisdictional_registration:
       description: Flag to indicate extra-jurisdictional registrations
       required: N
     home_jurisdiction:
@@ -56,8 +56,8 @@
       description: Reason for credential issue/update
       required: N
 
-- name: address.registries
-  version: '1.0.37'
+- name: address.registries.ca
+  version: '1.0.38'
   attributes:
     registration_id:
       description: Unique identifer assigned to entity by registrar
@@ -89,12 +89,15 @@
     effective_date:
       description: Date Credential is effective
       required: Y
+    address_expiry_date:
+      description: Date Credential expires
+      required: N
     reason_description:
       description: Reason for credential issue/update
       required: N
 
-- name: relationship.registries
-  version: '1.0.37'
+- name: relationship.registries.ca
+  version: '1.0.38'
   attributes:
     registration_id:
       description: Unique identifer assigned to entity by registrar
@@ -117,6 +120,9 @@
     effective_date:
       description: Date Credential is effective
       required: Y
+    relationship_expiry_date:
+      description: Date Credential expires
+      required: N
     reason_description:
       description: Reason for credential issue/update
       required: N

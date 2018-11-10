@@ -16,7 +16,6 @@ def test_connect_bcreg_baseline():
 def test_compare_corp_events():
     specific_corps = [
                     '0641655',
-                    #'0820416',
                     '0700450',
                     '0803224',
                     'LLC0000192',
@@ -25,7 +24,6 @@ def test_compare_corp_events():
                     'A0051862',
                     'C0874156',
                     '0874244',
-                    '0593707',
                     'A0068919',
                     'A0064760',
                     'LLC0000234',
@@ -38,11 +36,9 @@ def test_compare_corp_events():
                     'A0028374',
                     'A0053381',
                     'A0051632',
-                    '0578221',
                     'A0032100',
                     '0874088',
                     '0803207',
-                    #'0873646',
                     ]
     
     with BCRegistries(False) as bc_registries:

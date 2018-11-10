@@ -45,7 +45,7 @@ def bc_reg_pipeline():
     sub_pipeline1_2.add(Task(id='register_un_processed_events', description='Register un-processed events',
                           commands=[ExecutePython('./bcreg/find-unprocessed-events.py')]))
     sub_pipeline1_2.add(Task(id='load_bc_reg_data', description='Load BC Registries data',
-                          commands=[ExecutePython('./bcreg/process-corps.py')]), ['register_un_processed_events'])
+                          commands=[ExecutePython('./bcreg/process-corps-generate-creds.py')]), ['register_un_processed_events'])
     sub_pipeline1_2.add(Task(id='create_bc_reg_credentials', description='Create credentials',
                           commands=[ExecutePython('./bcreg/generate-creds.py')]), ['load_bc_reg_data'])
     pipeline1.add(sub_pipeline1_2)
@@ -68,9 +68,7 @@ def bc_reg_pipeline_single_thread():
     sub_pipeline1_2.add(Task(id='register_un_processed_events_single_thread', description='Register un-processed events',
                           commands=[ExecutePython('./bcreg/find-unprocessed-events.py')]))
     sub_pipeline1_2.add(Task(id='load_bc_reg_data_single_thread', description='Load BC Registries data',
-                          commands=[ExecutePython('./bcreg/process-corps.py')]), ['register_un_processed_events_single_thread'])
-    sub_pipeline1_2.add(Task(id='create_bc_reg_credentials_single_thread', description='Create credentials',
-                          commands=[ExecutePython('./bcreg/generate-creds.py')]), ['load_bc_reg_data_single_thread'])
+                          commands=[ExecutePython('./bcreg/register_un_processed_events')]), ['register_un_processed_events_single_thread'])
     pipeline1.add(sub_pipeline1_2)
 
     sub_pipeline1_3 = Pipeline(id='submit_bc_reg_credentials_single_thread', description='Submit BC Reg credentials to P-X')

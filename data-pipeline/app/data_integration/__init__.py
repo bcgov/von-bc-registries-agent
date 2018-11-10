@@ -10,8 +10,6 @@ from mara_app.monkey_patch import patch
 import app.config
 
 from bcreg.bcreg_pipelines import bc_reg_root_pipeline
-#from bcreg.bcreg_pipelines import db_init_pipeline, bc_reg_pipeline, bc_reg_pipeline_status, bc_reg_pipeline_initial_load, bc_reg_pipeline_post_credentials
-#from bcreg.bcreg_pipelines import bc_init_test_data, bc_reg_test_corps, bc_reg_pipeline_jsonbender
 
 patch(data_integration.config.data_dir)(lambda: app.config.data_dir())
 patch(data_integration.config.first_date)(lambda: app.config.first_date())

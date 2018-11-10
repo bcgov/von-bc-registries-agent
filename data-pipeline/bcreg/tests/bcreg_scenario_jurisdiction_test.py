@@ -130,7 +130,7 @@ def test_scenario_jurisdiction_notonfile():
     assert len(my_creds) == 3
 
     assert my_creds[1]['cred_type'] == 'REG'
-    assert my_creds[1]['credential']['entity_status'] == 'HIS'
+    assert my_creds[1]['credential']['entity_status'] == 'ACT'
     assert my_creds[1]['credential']['entity_type'] == 'Extraprovincial Company'
     assert my_creds[1]['credential']['home_jurisdiction'] == 'OT'
     assert my_creds[1]['credential']['registered_jurisdiction'] == 'BC'
