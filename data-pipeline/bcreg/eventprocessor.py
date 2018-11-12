@@ -756,9 +756,12 @@ class EventProcessor:
                     corp_cred['registered_jurisdiction'] = '' 
                 corp_cred['extra_jurisdictional_registration'] = ''
 
+                # make sure we set an effective date for the credential!
                 corp_cred['effective_date'] = self.credential_effective_date(corp_cred)
-                if corp_cred['effective_date'] is None:
+                if corp_cred['effective_date'] is None or corp_cred['effective_date'] == '':
                     corp_cred['effective_date'] = loop_start_event['effective_date']
+                if corp_cred['effective_date'] is None or corp_cred['effective_date'] == '':
+                    corp_cred['effective_date'] = corp_cred['registration_date']
 
                 reason_description = self.build_corp_reason_code(loop_start_event)
 

@@ -204,13 +204,13 @@ def test_scenario_multi_dbas():
     my_creds = generate_creds_for_corp(my_corp_dict)
 
     print("# basic corp with multiple DBA's (3)")
-    assert len(my_creds) == 8
+    assert len(my_creds) == 9
 
-    assert my_creds[3]['cred_type'] == 'REG'
-    assert my_creds[4]['cred_type'] == 'ADDR'
-    assert my_creds[5]['cred_type'] == 'REL'
+    assert my_creds[4]['cred_type'] == 'REG'
+    assert my_creds[5]['cred_type'] == 'ADDR'
     assert my_creds[6]['cred_type'] == 'REL'
     assert my_creds[7]['cred_type'] == 'REL'
+    assert my_creds[8]['cred_type'] == 'REL'
 
     my_dba_nums = ['FM3834099','FM8823648','FM9877026']
     my_dba_ct = [1,1,2]
