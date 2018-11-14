@@ -35,6 +35,10 @@ usage () {
     resetMaraDatabase
       - Drop and recreate the mara database.
 
+    deleteDatabase
+      - Deletes all databases off a pod and recycles the pod leaving it in a clean state.
+      - Useful when database credentials change.
+
     hardReset
       - Delete the persistent indy wallet information.
       - Drop and recreate the event database.
@@ -160,6 +164,23 @@ resetDatabase() {
   echoWarning "\nThe ${_dbPodName} database has been deleted and recreated."
 }
 
+deleteDatabase() {
+  _dbPodName=${1}
+  if [ -z "${_dbPodName}" ]; then
+    echo -e \\n"resetDatabase; Missing parameter!"\\n
+    exit 1
+  fi
+
+  printAndAskToContinue "If you contiune all of the databases on ${_dbPodName} will be deleted.  All data will be lost."
+
+  switchProject
+  exitOnError
+
+  deleteAndRecreateDatabase ${_dbPodName}
+
+  echoWarning "\nThe databases on ${_dbPodName} have been deleted."
+}
+
 hardReset() {
   _agentPodName=${1}
   _dbPodName=${2}
@@ -229,6 +250,10 @@ case "${_cmd}" in
     # Allow all of the other parameters to be overridden ...
     dbPodName=${1:-mara-db}
     resetDatabase "${dbPodName}"
+    ;;
+  deletedatabase)
+    dbPodName=${1}
+    deleteDatabase "${dbPodName}"
     ;;
   hardreset)
     # Allow all of the other parameters to be overridden ...
