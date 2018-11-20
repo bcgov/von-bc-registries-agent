@@ -1351,15 +1351,15 @@ class BCRegistries:
                 for corp_state in corp['corp_state']:
                     # check if state has changed
                     use_registration_dt = False
+                    if prev_state is None and corp_state['op_state_typ_cd'] == 'ACT':
+                        use_registration_dt = True
                     if prev_state is None or prev_state != corp_state['op_state_typ_cd']:
-                        if prev_state is None and corp_state['op_state_typ_cd'] == 'ACT':
-                            use_registration_dt = True
                         # state has changed
                         prev_state = corp_state['op_state_typ_cd']
                         prev_state_effective_event = corp_state['start_event']
                     corp_state['corp_state_effective_event'] = prev_state_effective_event
                     corp_state['effective_start_date'] = prev_state_effective_event['effective_date']
-                    if use_registration_dt:
+                    if use_registration_dt and corp['recognition_dts'] is not None:
                         corp_state['effective_start_date'] = corp['recognition_dts']
 
             return corp

@@ -547,6 +547,24 @@ class EventProcessor:
         if cred_attr not in corp_cred or corp_cred[cred_attr] is None or corp_cred[cred_attr] == '':
             print(">>>Data Issue Credential " + corp_num + " " + cred_attr + ":", corp_cred)
 
+    def compare_dates(self, first_date, op, second_date, msg):
+        if first_date is None:
+            print(msg, "first date is None")
+        if second_date is None:
+            print(msg, "second date is None")
+        if op == "==":
+            return first_date == second_date
+        elif op == "<=":
+            return first_date <= second_date
+        elif op == "<":
+            return first_date < second_date
+        elif op == ">":
+            return first_date > second_date
+        elif op == ">=":
+            return first_date >= second_date
+        print(msg, "invalid date op", op)
+        return False
+
     # generate address credential
     def generate_address_credential(self, corp_num, corp_info, office, address, dba_corp_num, dba_name):
         addr_cred = {}
@@ -634,11 +652,11 @@ class EventProcessor:
             if corp_rec['start_event_id'] == loop_start_id:
                 # if the start event id matches then we have a match
                 return corp_rec
-            elif corp_rec['effective_start_date'] <= loop_start_date:
+            elif self.compare_dates(corp_rec['effective_start_date'], "<=", loop_start_date, str(corp_rec)):
                 # if the record date is earlier than the event effective date, it is potential match
                 if ret_corp_rec is None:
                     ret_corp_rec = corp_rec
-                elif corp_rec['effective_start_date'] > ret_corp_rec['effective_start_date']:
+                elif self.compare_dates(corp_rec['effective_start_date'], ">", ret_corp_rec['effective_start_date'], str(corp_rec)):
                     # pick the latest record based on effective date
                     ret_corp_rec = corp_rec
 
