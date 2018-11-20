@@ -939,8 +939,8 @@ class BCRegistries:
                 return {}
 
             # don't use data conversion date as a timestamp
-            if self.is_data_conversion_event(ret_event):
-                ret_event['event_timestmp'] = ''
+            #if self.is_data_conversion_event(ret_event):
+            #    ret_event['event_timestmp'] = ''
 
             # fill in filing and conv_event
             if 'filing' not in ret_event:
