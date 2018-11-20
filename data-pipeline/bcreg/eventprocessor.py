@@ -769,9 +769,9 @@ class EventProcessor:
 
                 reason_description = self.build_corp_reason_code(loop_start_event)
 
-                self.check_required_field(corp_num, corp_cred, 'registration_date')
-                self.check_required_field(corp_num, corp_cred, 'entity_name')
-                self.check_required_field(corp_num, corp_cred, 'entity_status')
+                #self.check_required_field(corp_num, corp_cred, 'registration_date')
+                #self.check_required_field(corp_num, corp_cred, 'entity_name')
+                #self.check_required_field(corp_num, corp_cred, 'entity_status')
 
                 corp_cred = self.build_credential_dict(corp_credential, corp_schema, corp_version, corp_num, corp_cred, reason_description, corp_cred['effective_date'])
 
