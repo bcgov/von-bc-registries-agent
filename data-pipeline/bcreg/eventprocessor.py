@@ -543,6 +543,10 @@ class EventProcessor:
 
         return corp_reason
         
+    def check_required_field(self, corp_num, corp_cred, cred_attr):
+        if cred_attr not in corp_cred or corp_cred[cred_attr] is None or corp_cred[cred_attr] == '':
+            print(">>>Data Issue Credential " + corp_num + " " + cred_attr + ":", corp_cred)
+
     # generate address credential
     def generate_address_credential(self, corp_num, corp_info, office, address, dba_corp_num, dba_name):
         addr_cred = {}
@@ -765,6 +769,10 @@ class EventProcessor:
 
                 reason_description = self.build_corp_reason_code(loop_start_event)
 
+                self.check_required_field(corp_num, corp_cred, 'registration_date')
+                self.check_required_field(corp_num, corp_cred, 'entity_name')
+                self.check_required_field(corp_num, corp_cred, 'entity_status')
+
                 corp_cred = self.build_credential_dict(corp_credential, corp_schema, corp_version, corp_num, corp_cred, reason_description, corp_cred['effective_date'])
 
                 # these will be sorted by date, but we need to make sure we are not submitting duplicates
@@ -931,15 +939,17 @@ class EventProcessor:
                 continue_loop = False
             else:
                 saved_creds = 0
+                force_continue = False
                 # now generate credentials from the corporate data
                 with BCRegistries(use_cache) as bc_registries:
                     if use_cache:
                         try:
                             bc_registries.cache_bcreg_corps(specific_corps)
-                        except (Exception, psycopg2.DatabaseError) as error:
+                        except (Exception, psycopg2.DatabaseError, psycopg2.DataError) as error:
                             # raises a SQL error if error during caching
                             print(error)
                             print(traceback.print_exc())
+                            force_continue = True
                             if max_batch_size == CORP_BATCH_SIZE:
                                 print("Error during caching operation, switching to smaller cache size")
                                 corps = []
@@ -1085,7 +1095,8 @@ class EventProcessor:
                 print('Processing: ' + str(processing_time))
 
                 # if we are generating creds but didn't on the last loop, bail
-                if generate_creds and 0 == saved_creds:
+                if generate_creds and 0 == saved_creds and not force_continue:
+                    print("Didn't complete any activity this loop, so bail")
                     continue_loop = False
 
                 # if we processed a set of corps in non-cached mode, try to switch back
