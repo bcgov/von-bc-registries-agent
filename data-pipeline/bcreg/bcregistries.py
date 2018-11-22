@@ -1025,12 +1025,19 @@ class BCRegistries:
         sorted_records = sorted(records, key=lambda k: k[date_key])
         prev_date = None
         flag = False
+        i = 0
+        active_id = None
         for record in sorted_records:
             if prev_date is not None and record[date_key] == prev_date:
                 flag = True
             prev_date = record[date_key]
-        #if flag:
-        #    print(">>>Data Issue Date same " + corp_num + " " + record_type + ":", records)
+            i = i + 1
+            if 'end_event_id' not in record or record['end_event_id'] is None:
+                active_id = i
+        if flag:
+            print(">>>Data Issue:Same Start Date:" + corp_num + ":" + record_type + ":", records)
+        if active_id is not None and active_id != len(sorted_records):
+            print(">>>Data Issue:Active Record:" + corp_num + ":" + record_type + ":", records)
 
     def get_offices(self, corp_num):
         sql_office = """SELECT * from """ + self.get_table_prefix() + """office
@@ -1059,9 +1066,10 @@ class BCRegistries:
                 else:
                     office['effective_end_date'] = MAX_END_DATE
 
-                #if office['effective_start_date'] > office['effective_end_date']:
-                #    print(">>>Data Issue Date Office", office)
+                if office['effective_start_date'] > office['effective_end_date']:
+                    print(">>>Data Issue:Date:" + corp_num + ":Office:", office)
 
+            #self.check_same_start_date(corp_num, 'office', offices, 'effective_start_date')
             return offices
         except (Exception, psycopg2.DatabaseError) as error:
             print(error)
@@ -1149,8 +1157,8 @@ class BCRegistries:
                 corp_name['corp_nme'] = row[6]
                 corp_name['dd_corp_num'] = row[7]
 
-                #if corp_name['effective_start_date'] > corp_name['effective_end_date']:
-                #    print(">>>Data Issue Date Corp Name", corp_name)
+                if corp_name['effective_start_date'] > corp_name['effective_end_date']:
+                    print(">>>Data Issue:Date:" + corp_num + ":Corp_Name:", corp_name)
 
                 names.append(corp_name)
                 row = cur.fetchone()
@@ -1161,7 +1169,7 @@ class BCRegistries:
             if len(names) == 1 and (names[0]['effective_start_date'] is None or names[0]['effective_start_date'] == ''):
                 names[0]['effective_start_date'] = registration_date
 
-            self.check_same_start_date(corp_num, 'corp_name', names, 'effective_start_date')
+            #self.check_same_start_date(corp_num, 'corp_name', names, 'effective_start_date')
 
             return names
         except (Exception, psycopg2.DatabaseError) as error:
@@ -1224,8 +1232,9 @@ class BCRegistries:
                     else:
                         jurisdiction['effective_end_date'] = MAX_END_DATE
 
-                    #if jurisdiction['effective_start_date'] > jurisdiction['effective_end_date']:
-                    #    print(">>>Data Issue Date Jurisdiction", jurisdiction)
+                    if jurisdiction['effective_start_date'] > jurisdiction['effective_end_date']:
+                        print(">>>Data Issue:Date:" + corp_num + ":Jurisdiction:", jurisdiction)
+                #self.check_same_start_date(corp_num, 'jurisdiction', jurisdictions, 'effective_start_date')
                 return jurisdictions
             return []
         except (Exception, psycopg2.DatabaseError) as error:
@@ -1323,7 +1332,7 @@ class BCRegistries:
                 # get corp names
                 corp['org_names'] = self.get_names(corp_num, ['CO','NB'], corp['recognition_dts'])
                 corp['org_name_assumed'] = self.get_names(corp_num, ['AS'], corp['recognition_dts'])
-                corp['org_name_trans'] = self.get_names(corp_num, ['TR', 'NO'], corp['recognition_dts'])
+                #corp['org_name_trans'] = self.get_names(corp_num, ['TR', 'NO'], corp['recognition_dts'])
                 corp['office'] = self.get_offices(corp_num)
 
                 # get corp state (active, historical), and get the start/end date of each state change
@@ -1337,8 +1346,8 @@ class BCRegistries:
                     else:
                         corp_state['effective_end_date'] = MAX_END_DATE
 
-                    #if corp_state['event_date'] > corp_state['effective_end_date']:
-                    #    print(">>>Data Issue Date Corp State", corp_state)
+                    if corp_state['event_date'] > corp_state['effective_end_date']:
+                        print(">>>Data Issue:Date:" + corp_num + ":Corp_State:", corp_state)
 
                 self.check_same_start_date(corp_num, 'corp_state', corp_states, 'event_date')
 
@@ -1432,8 +1441,8 @@ class BCRegistries:
                 corp_party['phone'] = row[16]
                 corp_party['reason_typ_cd'] = row[17]
 
-                #if corp_party['effective_start_date'] > corp_party['effective_end_date']:
-                #    print(">>>Data Issue Date Corp Party", corp_party)
+                if corp_party['effective_start_date'] > corp_party['effective_end_date']:
+                    print(">>>Data Issue:Date:" + corp_num + ":Corp_Party:", corp_party)
 
                 # note we need to pull corporate info for DBA companies
                 # actually no since we are only issuing a relationship credential (with the two corp_nums)

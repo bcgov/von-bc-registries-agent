@@ -545,7 +545,7 @@ class EventProcessor:
         
     def check_required_field(self, corp_num, corp_cred, cred_attr):
         if cred_attr not in corp_cred or corp_cred[cred_attr] is None or corp_cred[cred_attr] == '':
-            print(">>>Data Issue Credential " + corp_num + " " + cred_attr + ":", corp_cred)
+            print(">>>Data Issue:Credential:" + corp_num + ":" + cred_attr + ":", corp_cred)
 
     def compare_dates(self, first_date, op, second_date, msg):
         if first_date is None:
@@ -573,7 +573,7 @@ class EventProcessor:
             org_name = self.corp_rec_at_effective_date(corp_info['org_names'], office['start_event'])
             if org_name is not None:
                 addr_cred['addressee'] = org_name['corp_nme']
-        addr_cred['address_type'] = office['office_type']['full_desc']
+        addr_cred['address_type'] = office['office_type']['office_typ_cd']
         addr_cred['civic_address'] = address['local_addr']
         if 'city' in address:
             addr_cred['municipality'] = address['city']
@@ -682,7 +682,7 @@ class EventProcessor:
         effective_events = self.unique_effective_events(corp_info['org_names'], effective_events)
         effective_events = self.unique_effective_events(corp_info['org_name_assumed'], effective_events)
         effective_events = self.unique_effective_events(corp_info['office'], effective_events)
-        effective_events = self.unique_effective_events(corp_info['parties'], effective_events)
+        #effective_events = self.unique_effective_events(corp_info['parties'], effective_events)
 
         return effective_events
 
@@ -767,7 +767,7 @@ class EventProcessor:
                     corp_cred['entity_status'] = ''
                     corp_cred['entity_status_effective'] = ''
 
-                corp_cred['entity_type'] = corp_info['corp_type']['full_desc']
+                corp_cred['entity_type'] = corp_info['corp_type']['corp_typ_cd']
 
                 # jurisdiction active at effective date
                 jurisdiction = self.corp_rec_at_effective_date(corp_info['jurisdiction'], loop_start_event)
@@ -787,9 +787,9 @@ class EventProcessor:
 
                 reason_description = self.build_corp_reason_code(loop_start_event)
 
-                #self.check_required_field(corp_num, corp_cred, 'registration_date')
-                #self.check_required_field(corp_num, corp_cred, 'entity_name')
-                #self.check_required_field(corp_num, corp_cred, 'entity_status')
+                self.check_required_field(corp_num, corp_cred, 'registration_date')
+                self.check_required_field(corp_num, corp_cred, 'entity_name')
+                self.check_required_field(corp_num, corp_cred, 'entity_status')
 
                 corp_cred = self.build_credential_dict(corp_credential, corp_schema, corp_version, corp_num, corp_cred, reason_description, corp_cred['effective_date'])
 
