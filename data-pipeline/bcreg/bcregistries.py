@@ -1066,8 +1066,8 @@ class BCRegistries:
                 else:
                     office['effective_end_date'] = MAX_END_DATE
 
-                if office['effective_start_date'] > office['effective_end_date']:
-                    print(">>>Data Issue:Date:" + corp_num + ":Office:", office)
+                #if office['effective_start_date'] > office['effective_end_date']:
+                #    print(">>>Data Issue:Date:" + corp_num + ":Office:", office)
 
             #self.check_same_start_date(corp_num, 'office', offices, 'effective_start_date')
             return offices
@@ -1157,8 +1157,8 @@ class BCRegistries:
                 corp_name['corp_nme'] = row[6]
                 corp_name['dd_corp_num'] = row[7]
 
-                if corp_name['effective_start_date'] > corp_name['effective_end_date']:
-                    print(">>>Data Issue:Date:" + corp_num + ":Corp_Name:", corp_name)
+                #if corp_name['effective_start_date'] > corp_name['effective_end_date']:
+                #    print(">>>Data Issue:Date:" + corp_num + ":Corp_Name:", corp_name)
 
                 names.append(corp_name)
                 row = cur.fetchone()
@@ -1232,8 +1232,8 @@ class BCRegistries:
                     else:
                         jurisdiction['effective_end_date'] = MAX_END_DATE
 
-                    if jurisdiction['effective_start_date'] > jurisdiction['effective_end_date']:
-                        print(">>>Data Issue:Date:" + corp_num + ":Jurisdiction:", jurisdiction)
+                    #if jurisdiction['effective_start_date'] > jurisdiction['effective_end_date']:
+                    #    print(">>>Data Issue:Date:" + corp_num + ":Jurisdiction:", jurisdiction)
                 #self.check_same_start_date(corp_num, 'jurisdiction', jurisdictions, 'effective_start_date')
                 return jurisdictions
             return []
@@ -1346,10 +1346,10 @@ class BCRegistries:
                     else:
                         corp_state['effective_end_date'] = MAX_END_DATE
 
-                    if corp_state['event_date'] > corp_state['effective_end_date']:
-                        print(">>>Data Issue:Date:" + corp_num + ":Corp_State:", corp_state)
+                    #if corp_state['event_date'] > corp_state['effective_end_date']:
+                    #    print(">>>Data Issue:Date:" + corp_num + ":Corp_State:", corp_state)
 
-                self.check_same_start_date(corp_num, 'corp_state', corp_states, 'event_date')
+                #self.check_same_start_date(corp_num, 'corp_state', corp_states, 'event_date')
 
                 # sort to get in date order, and determine ACT/HIS transition dates
                 corp_states = sorted(corp_states, key=lambda k: k['effective_end_date'])
@@ -1441,8 +1441,8 @@ class BCRegistries:
                 corp_party['phone'] = row[16]
                 corp_party['reason_typ_cd'] = row[17]
 
-                if corp_party['effective_start_date'] > corp_party['effective_end_date']:
-                    print(">>>Data Issue:Date:" + corp_num + ":Corp_Party:", corp_party)
+                #if corp_party['effective_start_date'] > corp_party['effective_end_date']:
+                #    print(">>>Data Issue:Date:" + corp_num + ":Corp_Party:", corp_party)
 
                 # note we need to pull corporate info for DBA companies
                 # actually no since we are only issuing a relationship credential (with the two corp_nums)

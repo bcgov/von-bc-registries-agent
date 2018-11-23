@@ -649,16 +649,21 @@ class EventProcessor:
 
         # find record matching the provided event
         for corp_rec in corp_recs:
-            if corp_rec['start_event_id'] == loop_start_id:
-                # if the start event id matches then we have a match
-                return corp_rec
-            elif self.compare_dates(corp_rec['effective_start_date'], "<=", loop_start_date, str(corp_rec)):
-                # if the record date is earlier than the event effective date, it is potential match
-                if ret_corp_rec is None:
-                    ret_corp_rec = corp_rec
-                elif self.compare_dates(corp_rec['effective_start_date'], ">", ret_corp_rec['effective_start_date'], str(corp_rec)):
-                    # pick the latest record based on effective date
-                    ret_corp_rec = corp_rec
+            # ignore the record if start_date > end_date
+            if self.compare_dates(corp_rec['effective_start_date'], "<=", corp_rec['effective_end_date'], str(corp_rec)):
+                if corp_rec['start_event_id'] == loop_start_id:
+                    # if the start event id matches then we have a match
+                    return corp_rec
+                elif 'end_event_id' not in corp_rec or corp_rec['start_event_id'] is None:
+                    # if we hit the active record, use it (ignore anything dated after the start date of the currently active record)
+                    return corp_rec
+                elif self.compare_dates(corp_rec['effective_start_date'], "<=", loop_start_date, str(corp_rec)):
+                    # if the record date is earlier than the event effective date, it is potential match
+                    if ret_corp_rec is None:
+                        ret_corp_rec = corp_rec
+                    elif self.compare_dates(corp_rec['effective_start_date'], ">", ret_corp_rec['effective_start_date'], str(corp_rec)):
+                        # pick the latest record based on effective date
+                        ret_corp_rec = corp_rec
 
         return ret_corp_rec
 
@@ -681,7 +686,7 @@ class EventProcessor:
         effective_events = self.unique_effective_events(corp_info['jurisdiction'], effective_events)
         effective_events = self.unique_effective_events(corp_info['org_names'], effective_events)
         effective_events = self.unique_effective_events(corp_info['org_name_assumed'], effective_events)
-        effective_events = self.unique_effective_events(corp_info['office'], effective_events)
+        #effective_events = self.unique_effective_events(corp_info['office'], effective_events)
         #effective_events = self.unique_effective_events(corp_info['parties'], effective_events)
 
         return effective_events
@@ -787,9 +792,9 @@ class EventProcessor:
 
                 reason_description = self.build_corp_reason_code(loop_start_event)
 
-                self.check_required_field(corp_num, corp_cred, 'registration_date')
-                self.check_required_field(corp_num, corp_cred, 'entity_name')
-                self.check_required_field(corp_num, corp_cred, 'entity_status')
+                #self.check_required_field(corp_num, corp_cred, 'registration_date')
+                #self.check_required_field(corp_num, corp_cred, 'entity_name')
+                #self.check_required_field(corp_num, corp_cred, 'entity_status')
 
                 corp_cred = self.build_credential_dict(corp_credential, corp_schema, corp_version, corp_num, corp_cred, reason_description, corp_cred['effective_date'])
 
