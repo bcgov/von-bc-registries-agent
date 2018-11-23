@@ -543,6 +543,28 @@ class EventProcessor:
 
         return corp_reason
         
+    def check_required_field(self, corp_num, corp_cred, cred_attr):
+        if cred_attr not in corp_cred or corp_cred[cred_attr] is None or corp_cred[cred_attr] == '':
+            print(">>>Data Issue:Credential:" + corp_num + ":" + cred_attr + ":", corp_cred)
+
+    def compare_dates(self, first_date, op, second_date, msg):
+        if first_date is None:
+            print(msg, "first date is None")
+        if second_date is None:
+            print(msg, "second date is None")
+        if op == "==":
+            return first_date == second_date
+        elif op == "<=":
+            return first_date <= second_date
+        elif op == "<":
+            return first_date < second_date
+        elif op == ">":
+            return first_date > second_date
+        elif op == ">=":
+            return first_date >= second_date
+        print(msg, "invalid date op", op)
+        return False
+
     # generate address credential
     def generate_address_credential(self, corp_num, corp_info, office, address, dba_corp_num, dba_name):
         addr_cred = {}
@@ -551,7 +573,7 @@ class EventProcessor:
             org_name = self.corp_rec_at_effective_date(corp_info['org_names'], office['start_event'])
             if org_name is not None:
                 addr_cred['addressee'] = org_name['corp_nme']
-        addr_cred['address_type'] = office['office_type']['full_desc']
+        addr_cred['address_type'] = office['office_type']['office_typ_cd']
         addr_cred['civic_address'] = address['local_addr']
         if 'city' in address:
             addr_cred['municipality'] = address['city']
@@ -627,16 +649,21 @@ class EventProcessor:
 
         # find record matching the provided event
         for corp_rec in corp_recs:
-            if corp_rec['start_event_id'] == loop_start_id:
-                # if the start event id matches then we have a match
-                return corp_rec
-            elif corp_rec['effective_start_date'] <= loop_start_date:
-                # if the record date is earlier than the event effective date, it is potential match
-                if ret_corp_rec is None:
-                    ret_corp_rec = corp_rec
-                elif corp_rec['effective_start_date'] > ret_corp_rec['effective_start_date']:
-                    # pick the latest record based on effective date
-                    ret_corp_rec = corp_rec
+            # ignore the record if start_date > end_date
+            if self.compare_dates(corp_rec['effective_start_date'], "<=", corp_rec['effective_end_date'], str(corp_rec)):
+                if corp_rec['start_event_id'] == loop_start_id:
+                    # if the start event id matches then we have a match
+                    return corp_rec
+                elif 'end_event_id' not in corp_rec or corp_rec['start_event_id'] is None:
+                    # if we hit the active record, use it (ignore anything dated after the start date of the currently active record)
+                    return corp_rec
+                elif self.compare_dates(corp_rec['effective_start_date'], "<=", loop_start_date, str(corp_rec)):
+                    # if the record date is earlier than the event effective date, it is potential match
+                    if ret_corp_rec is None:
+                        ret_corp_rec = corp_rec
+                    elif self.compare_dates(corp_rec['effective_start_date'], ">", ret_corp_rec['effective_start_date'], str(corp_rec)):
+                        # pick the latest record based on effective date
+                        ret_corp_rec = corp_rec
 
         return ret_corp_rec
 
@@ -659,8 +686,8 @@ class EventProcessor:
         effective_events = self.unique_effective_events(corp_info['jurisdiction'], effective_events)
         effective_events = self.unique_effective_events(corp_info['org_names'], effective_events)
         effective_events = self.unique_effective_events(corp_info['org_name_assumed'], effective_events)
-        effective_events = self.unique_effective_events(corp_info['office'], effective_events)
-        effective_events = self.unique_effective_events(corp_info['parties'], effective_events)
+        #effective_events = self.unique_effective_events(corp_info['office'], effective_events)
+        #effective_events = self.unique_effective_events(corp_info['parties'], effective_events)
 
         return effective_events
 
@@ -745,7 +772,7 @@ class EventProcessor:
                     corp_cred['entity_status'] = ''
                     corp_cred['entity_status_effective'] = ''
 
-                corp_cred['entity_type'] = corp_info['corp_type']['full_desc']
+                corp_cred['entity_type'] = corp_info['corp_type']['corp_typ_cd']
 
                 # jurisdiction active at effective date
                 jurisdiction = self.corp_rec_at_effective_date(corp_info['jurisdiction'], loop_start_event)
@@ -764,6 +791,10 @@ class EventProcessor:
                     corp_cred['effective_date'] = corp_cred['registration_date']
 
                 reason_description = self.build_corp_reason_code(loop_start_event)
+
+                #self.check_required_field(corp_num, corp_cred, 'registration_date')
+                #self.check_required_field(corp_num, corp_cred, 'entity_name')
+                #self.check_required_field(corp_num, corp_cred, 'entity_status')
 
                 corp_cred = self.build_credential_dict(corp_credential, corp_schema, corp_version, corp_num, corp_cred, reason_description, corp_cred['effective_date'])
 
@@ -931,15 +962,17 @@ class EventProcessor:
                 continue_loop = False
             else:
                 saved_creds = 0
+                force_continue = False
                 # now generate credentials from the corporate data
                 with BCRegistries(use_cache) as bc_registries:
                     if use_cache:
                         try:
                             bc_registries.cache_bcreg_corps(specific_corps)
-                        except (Exception, psycopg2.DatabaseError) as error:
+                        except (Exception, psycopg2.DatabaseError, psycopg2.DataError) as error:
                             # raises a SQL error if error during caching
                             print(error)
                             print(traceback.print_exc())
+                            force_continue = True
                             if max_batch_size == CORP_BATCH_SIZE:
                                 print("Error during caching operation, switching to smaller cache size")
                                 corps = []
@@ -1085,7 +1118,8 @@ class EventProcessor:
                 print('Processing: ' + str(processing_time))
 
                 # if we are generating creds but didn't on the last loop, bail
-                if generate_creds and 0 == saved_creds:
+                if generate_creds and 0 == saved_creds and not force_continue:
+                    print("Didn't complete any activity this loop, so bail")
                     continue_loop = False
 
                 # if we processed a set of corps in non-cached mode, try to switch back

@@ -20,12 +20,14 @@ MAX_WHERE_IN = 1000
 
 MIN_START_DATE = datetime.datetime(datetime.MINYEAR+1, 1, 1)
 MAX_END_DATE   = datetime.datetime(datetime.MAXYEAR-1, 12, 31)
+DATA_CONVERSION_DATE = datetime.datetime(2004, 3, 26)
 
 # for now, we are in PST time
 timezone = pytz.timezone("America/Los_Angeles")
 
 MIN_START_DATE_TZ = timezone.localize(MIN_START_DATE)
 MAX_END_DATE_TZ   = timezone.localize(MAX_END_DATE)
+DATA_CONVERSION_DATE_TZ = timezone.localize(DATA_CONVERSION_DATE)
 
 
 def adapt_decimal(d):
@@ -727,6 +729,13 @@ class BCRegistries:
         sql = """SELECT distinct(corp_num) from """ + BC_REGISTRIES_TABLE_PREFIX + """event
                 where corp_num in ({})
                 order by corp_num;"""
+        sql2 = """SELECT distinct(corp.corp_num) from """ + BC_REGISTRIES_TABLE_PREFIX + """corporation corp,
+                            """ + BC_REGISTRIES_TABLE_PREFIX + """corp_party party
+                         where corp.corp_typ_cd in ('SP','MF')
+                          and corp.corp_num = party.corp_num
+                          and party.party_typ_cd in ('FBO')
+                          and party.bus_company_num is not null
+                          and party.bus_company_num in ({})"""
         cur = None
         try:
             cur = self.conn.cursor()
@@ -739,6 +748,15 @@ class BCRegistries:
                 # print(row)
                 corps.append({'CORP_NUM':row[0],})
                 row = cur.fetchone()
+
+            sql2 = sql2.format(placeholders)
+            cur.execute(sql2, tuple(corp_filter))
+            row = cur.fetchone()
+            while row is not None:
+                # print(row)
+                corps.append({'CORP_NUM':row[0],})
+                row = cur.fetchone()
+
             cur.close()
             cur = None
             return corps
@@ -862,14 +880,15 @@ class BCRegistries:
 
         # else use the conversion event if present
         if ret_date is None and 'conv_event' in event and 'effective_dt' in event['conv_event']:
-            if event['conv_event']['effective_dt'] is None:
-                ret_date = event['conv_event']['activity_dt']
-            else:
+            if event['conv_event']['effective_dt'] is not None:
                 ret_date = event['conv_event']['effective_dt']
         
         # finally use the event timestamp if we have no other option
         if ret_date is None:
-            ret_date = event['event_timestmp']
+            if event['event_timestmp'] is None or event['event_timestmp'] == '':
+                ret_date = None
+            else:
+                ret_date = event['event_timestmp']
 
         if ret_date is None:
             print('Error ret_date is None', event)
@@ -884,6 +903,11 @@ class BCRegistries:
         event = self.get_event('0', event_id)
         #filing = self.get_filing_event('0', event_id, event['event_typ_cd'])
         return self.get_event_filing_effective_date(event)
+
+    def is_data_conversion_event(self, event):
+        if event['event_timestmp'].year == DATA_CONVERSION_DATE.year and event['event_timestmp'].month == DATA_CONVERSION_DATE.month and event['event_timestmp'].day == DATA_CONVERSION_DATE.day:
+            return True
+        return False
 
     # find a specific event, 
     # return None if not found
@@ -913,6 +937,10 @@ class BCRegistries:
                     ret_event = event
             if ret_event is None:
                 return {}
+
+            # don't use data conversion date as a timestamp
+            #if self.is_data_conversion_event(ret_event):
+            #    ret_event['event_timestmp'] = ''
 
             # fill in filing and conv_event
             if 'filing' not in ret_event:
@@ -993,6 +1021,24 @@ class BCRegistries:
             if cursor is not None:
                 cursor.close()
 
+    def check_same_start_date(self, corp_num, record_type, records, date_key):
+        sorted_records = sorted(records, key=lambda k: k[date_key])
+        prev_date = None
+        flag = False
+        i = 0
+        active_id = None
+        for record in sorted_records:
+            if prev_date is not None and record[date_key] == prev_date:
+                flag = True
+            prev_date = record[date_key]
+            i = i + 1
+            if 'end_event_id' not in record or record['end_event_id'] is None:
+                active_id = i
+        if flag:
+            print(">>>Data Issue:Same Start Date:" + corp_num + ":" + record_type + ":", records)
+        if active_id is not None and active_id != len(sorted_records):
+            print(">>>Data Issue:Active Record:" + corp_num + ":" + record_type + ":", records)
+
     def get_offices(self, corp_num):
         sql_office = """SELECT * from """ + self.get_table_prefix() + """office
                         WHERE corp_num = """ + self.get_db_sql_param() + """ and office_typ_cd in ('RG','HD','FO')"""
@@ -1020,6 +1066,10 @@ class BCRegistries:
                 else:
                     office['effective_end_date'] = MAX_END_DATE
 
+                #if office['effective_start_date'] > office['effective_end_date']:
+                #    print(">>>Data Issue:Date:" + corp_num + ":Office:", office)
+
+            #self.check_same_start_date(corp_num, 'office', offices, 'effective_start_date')
             return offices
         except (Exception, psycopg2.DatabaseError) as error:
             print(error)
@@ -1076,7 +1126,7 @@ class BCRegistries:
             if cursor is not None:
                 cursor.close()
 
-    def get_names(self, corp_num, name_typ_cds):
+    def get_names(self, corp_num, name_typ_cds, registration_date):
         sql_name = """SELECT corp_num, corp_name_typ_cd, start_event_id, end_event_id, corp_name_seq_num, srch_nme, corp_nme, dd_corp_num
                   FROM """ + self.get_table_prefix() + """corp_name
                   WHERE corp_num = """ + self.get_db_sql_param() + """ AND corp_name_typ_cd in ({}) """
@@ -1106,10 +1156,21 @@ class BCRegistries:
                 corp_name['srch_nme'] = row[5]
                 corp_name['corp_nme'] = row[6]
                 corp_name['dd_corp_num'] = row[7]
+
+                #if corp_name['effective_start_date'] > corp_name['effective_end_date']:
+                #    print(">>>Data Issue:Date:" + corp_num + ":Corp_Name:", corp_name)
+
                 names.append(corp_name)
                 row = cur.fetchone()
+
             cur.close()
             cur = None
+
+            if len(names) == 1 and (names[0]['effective_start_date'] is None or names[0]['effective_start_date'] == ''):
+                names[0]['effective_start_date'] = registration_date
+
+            #self.check_same_start_date(corp_num, 'corp_name', names, 'effective_start_date')
+
             return names
         except (Exception, psycopg2.DatabaseError) as error:
             print(error)
@@ -1126,8 +1187,6 @@ class BCRegistries:
                         op_state.op_state_typ_cd op_state_typ_cd, op_state.short_desc short_desc, op_state.full_desc full_desc
                         FROM """ + self.get_table_prefix() + """corp_state state, """ + self.get_table_prefix() + """corp_op_state op_state
                         WHERE corp_num = """ + self.get_db_sql_param() + """ and op_state.state_typ_cd = state.state_typ_cd"""
-        #sql_state_active = """ and end_event_id is null"""
-        #sql_state_inactive = """ order by end_event_id desc LIMIT 1"""
         cursor = None
         try:
             cursor = self.get_db_connection().cursor()
@@ -1172,6 +1231,10 @@ class BCRegistries:
                         jurisdiction['effective_end_date'] = jurisdiction['end_event']['effective_date']
                     else:
                         jurisdiction['effective_end_date'] = MAX_END_DATE
+
+                    #if jurisdiction['effective_start_date'] > jurisdiction['effective_end_date']:
+                    #    print(">>>Data Issue:Date:" + corp_num + ":Jurisdiction:", jurisdiction)
+                #self.check_same_start_date(corp_num, 'jurisdiction', jurisdictions, 'effective_start_date')
                 return jurisdictions
             return []
         except (Exception, psycopg2.DatabaseError) as error:
@@ -1267,9 +1330,9 @@ class BCRegistries:
      
             if deep_copy:
                 # get corp names
-                corp['org_names'] = self.get_names(corp_num, ['CO','NB'])
-                corp['org_name_assumed'] = self.get_names(corp_num, ['AS'])
-                corp['org_name_trans'] = self.get_names(corp_num, ['TR', 'NO'])
+                corp['org_names'] = self.get_names(corp_num, ['CO','NB'], corp['recognition_dts'])
+                corp['org_name_assumed'] = self.get_names(corp_num, ['AS'], corp['recognition_dts'])
+                #corp['org_name_trans'] = self.get_names(corp_num, ['TR', 'NO'], corp['recognition_dts'])
                 corp['office'] = self.get_offices(corp_num)
 
                 # get corp state (active, historical), and get the start/end date of each state change
@@ -1283,6 +1346,11 @@ class BCRegistries:
                     else:
                         corp_state['effective_end_date'] = MAX_END_DATE
 
+                    #if corp_state['event_date'] > corp_state['effective_end_date']:
+                    #    print(">>>Data Issue:Date:" + corp_num + ":Corp_State:", corp_state)
+
+                #self.check_same_start_date(corp_num, 'corp_state', corp_states, 'event_date')
+
                 # sort to get in date order, and determine ACT/HIS transition dates
                 corp_states = sorted(corp_states, key=lambda k: k['effective_end_date'])
                 corp_states = sorted(corp_states, key=lambda k: int(k['start_event_id']))
@@ -1291,12 +1359,17 @@ class BCRegistries:
                 prev_state_effective_event = None
                 for corp_state in corp['corp_state']:
                     # check if state has changed
+                    use_registration_dt = False
+                    if prev_state is None and corp_state['op_state_typ_cd'] == 'ACT':
+                        use_registration_dt = True
                     if prev_state is None or prev_state != corp_state['op_state_typ_cd']:
                         # state has changed
                         prev_state = corp_state['op_state_typ_cd']
                         prev_state_effective_event = corp_state['start_event']
                     corp_state['corp_state_effective_event'] = prev_state_effective_event
                     corp_state['effective_start_date'] = prev_state_effective_event['effective_date']
+                    if use_registration_dt and corp['recognition_dts'] is not None:
+                        corp_state['effective_start_date'] = corp['recognition_dts']
 
             return corp
         except (Exception, psycopg2.DatabaseError) as error:
@@ -1367,6 +1440,10 @@ class BCRegistries:
                 corp_party['office_notification_dt'] = row[15]
                 corp_party['phone'] = row[16]
                 corp_party['reason_typ_cd'] = row[17]
+
+                #if corp_party['effective_start_date'] > corp_party['effective_end_date']:
+                #    print(">>>Data Issue:Date:" + corp_num + ":Corp_Party:", corp_party)
+
                 # note we need to pull corporate info for DBA companies
                 # actually no since we are only issuing a relationship credential (with the two corp_nums)
                 corp_party['corp_info'] = self.get_basic_corp_info(corp_party['corp_num'], False)

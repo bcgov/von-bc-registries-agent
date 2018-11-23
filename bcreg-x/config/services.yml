@@ -162,6 +162,9 @@ issuers:
           effective_date:
             input: effective_date
             from: claim
+          revoked_date:
+            input: relationship_expiry_date
+            from: claim
         topic:
           related_source_id:
             input: associated_registration_id
@@ -228,6 +231,9 @@ issuers:
         credential:
           effective_date:
             input: effective_date
+            from: claim
+          revoked_date:
+            input: address_expiry_date
             from: claim
         topic:
           source_id:
