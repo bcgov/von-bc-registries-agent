@@ -48,8 +48,6 @@ services:
       WALLET_ENCRYPTION_KEY: ${WALLET_ENCRYPTION_KEY}
       INDY_WALLET_SEED: ${INDY_WALLET_SEED:-}
       INDY_WALLET_DID: ${INDY_WALLET_DID}
-    external_links:
-       - tob_tob-api_1:tob-api
     networks:
       - orgbook
       - vonx
