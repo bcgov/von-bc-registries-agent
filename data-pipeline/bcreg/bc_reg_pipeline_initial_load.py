@@ -28,11 +28,13 @@ mara_db.config.databases \
 
 (initial_load_pipeline, success) = data_integration.pipelines.find_node(['initialization_and_load_tasks','bc_reg_corp_loader']) 
 if success:
-	corps_ct = 1
-	while 0 < corps_ct:
-		# run at least once to get an initial data load
-		run_pipeline(initial_load_pipeline)
-		with EventProcessor() as eventprocessor:
-			corps_ct = eventprocessor.get_outstanding_corps_record_count()
+    corps_ct = 1
+    prev_corps_ct = 0
+    while 0 < corps_ct and corps_ct != prev_corps_ct:
+        # run at least once to get an initial data load
+        run_pipeline(initial_load_pipeline)
+        with EventProcessor() as eventprocessor:
+            prev_corps_ct = corps_ct
+            corps_ct = eventprocessor.get_outstanding_corps_record_count()
 else:
-	print("Pipeline not found")
+    print("Pipeline not found")
