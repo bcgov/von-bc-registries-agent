@@ -722,86 +722,88 @@ class EventProcessor:
         # get events - only generate credentials for events in the past
         (effective_events, future_events) = self.current_and_future_corp_events(corp_num, corp_info)
 
-        if 0 == len(effective_events):
-            return
+        if 0 < len(effective_events):
+            prev_effective_event = event_dict(effective_events[0]['event_id'], effective_events[0]['event_timestmp'])
+            last_effective_event = event_dict(effective_events[len(effective_events)-1]['event_id'], effective_events[len(effective_events)-1]['event_timestmp'])
+            if prev_effective_event['event_date'] > prev_event['event_date']:
+                use_prev_event = prev_effective_event
+            else:
+                use_prev_event = prev_event
+            if last_effective_event['event_date'] < last_event['event_date']:
+                use_last_event = last_effective_event
+            else:
+                use_last_event = last_event
 
-        prev_effective_event = event_dict(effective_events[0]['event_id'], effective_events[0]['event_timestmp'])
-        last_effective_event = event_dict(effective_events[len(effective_events)-1]['event_id'], effective_events[len(effective_events)-1]['event_timestmp'])
-        if prev_effective_event['event_date'] > prev_event['event_date']:
-            prev_event = prev_effective_event
-        if last_effective_event['event_date'] < last_event['event_date']:
-            last_event = last_effective_event
+            # loop based on start/end events
+            for i in range(len(effective_events)):
+                loop_start_event = effective_events[i]
+                if use_prev_event['event_date'] <= loop_start_event['event_timestmp'] and loop_start_event['event_timestmp'] <= use_last_event['event_date']:
+                    # generate corp credential
+                    corp_cred = {}
+                    corp_cred['registration_id'] = self.corp_num_with_prefix(corp_info['corp_typ_cd'], corp_info['corp_num'])
+                    corp_cred['registration_date'] = self.filter_min_date(corp_info['recognition_dts'])
 
-        # loop based on start/end events
-        for i in range(len(effective_events)):
-            loop_start_event = effective_events[i]
-            if prev_event['event_date'] <= loop_start_event['event_timestmp'] and loop_start_event['event_timestmp'] <= last_event['event_date']:
-                # generate corp credential
-                corp_cred = {}
-                corp_cred['registration_id'] = self.corp_num_with_prefix(corp_info['corp_typ_cd'], corp_info['corp_num'])
-                corp_cred['registration_date'] = self.filter_min_date(corp_info['recognition_dts'])
+                    # org_names active at effective date
+                    org_name = self.corp_rec_at_effective_date(corp_info['org_names'], loop_start_event)
+                    if org_name is not None:
+                        corp_cred['entity_name'] = org_name['corp_nme']
+                        corp_cred['entity_name_effective'] = self.filter_min_date(org_name['effective_start_date'])
+                    else:
+                        corp_cred['entity_name'] = ''
+                        corp_cred['entity_name_effective'] = ''
 
-                # org_names active at effective date
-                org_name = self.corp_rec_at_effective_date(corp_info['org_names'], loop_start_event)
-                if org_name is not None:
-                    corp_cred['entity_name'] = org_name['corp_nme']
-                    corp_cred['entity_name_effective'] = self.filter_min_date(org_name['effective_start_date'])
-                else:
-                    corp_cred['entity_name'] = ''
-                    corp_cred['entity_name_effective'] = ''
+                    # org_name_assumed active at effective date
+                    org_name_assumed = self.corp_rec_at_effective_date(corp_info['org_name_assumed'], loop_start_event)
+                    if org_name_assumed is not None:
+                        corp_cred['entity_name_assumed'] = org_name_assumed['corp_nme'] 
+                        corp_cred['entity_name_assumed_effective'] = self.filter_min_date(org_name_assumed['effective_start_date'])
 
-                # org_name_assumed active at effective date
-                org_name_assumed = self.corp_rec_at_effective_date(corp_info['org_name_assumed'], loop_start_event)
-                if org_name_assumed is not None:
-                    corp_cred['entity_name_assumed'] = org_name_assumed['corp_nme'] 
-                    corp_cred['entity_name_assumed_effective'] = self.filter_min_date(org_name_assumed['effective_start_date'])
+                    # corp_state active at effective date
+                    corp_state = self.corp_rec_at_effective_date(corp_info['corp_state'], loop_start_event)
+                    #if corp_state is None:
+                    #    # no corp state found - take either the first or last in the list
+                    #    if len(corp_info['corp_state']) > 0:
+                    #        if loop_start_event['effective_date'] <= corp_info['corp_state'][0]['effective_start_date']:
+                    #            corp_state = corp_info['corp_state'][0]
+                    #        else:
+                    #            corp_state = corp_info['corp_state'][len(corp_info['corp_state'])-1]
+                    if corp_state is not None:
+                        corp_cred['entity_status'] = corp_state['op_state_typ_cd']
+                        corp_cred['entity_status_effective'] = self.filter_min_date(corp_state['effective_start_date'])
+                    else:
+                        corp_cred['entity_status'] = ''
+                        corp_cred['entity_status_effective'] = ''
 
-                # corp_state active at effective date
-                corp_state = self.corp_rec_at_effective_date(corp_info['corp_state'], loop_start_event)
-                #if corp_state is None:
-                #    # no corp state found - take either the first or last in the list
-                #    if len(corp_info['corp_state']) > 0:
-                #        if loop_start_event['effective_date'] <= corp_info['corp_state'][0]['effective_start_date']:
-                #            corp_state = corp_info['corp_state'][0]
-                #        else:
-                #            corp_state = corp_info['corp_state'][len(corp_info['corp_state'])-1]
-                if corp_state is not None:
-                    corp_cred['entity_status'] = corp_state['op_state_typ_cd']
-                    corp_cred['entity_status_effective'] = self.filter_min_date(corp_state['effective_start_date'])
-                else:
-                    corp_cred['entity_status'] = ''
-                    corp_cred['entity_status_effective'] = ''
+                    corp_cred['entity_type'] = corp_info['corp_type']['corp_typ_cd']
 
-                corp_cred['entity_type'] = corp_info['corp_type']['corp_typ_cd']
+                    # jurisdiction active at effective date
+                    jurisdiction = self.corp_rec_at_effective_date(corp_info['jurisdiction'], loop_start_event)
+                    corp_cred['home_jurisdiction'] = self.get_corp_jurisdiction(corp_info, jurisdiction)
+                    if corp_cred['home_jurisdiction'] != 'BC':
+                        corp_cred['registered_jurisdiction'] = 'BC' 
+                    else:
+                        corp_cred['registered_jurisdiction'] = '' 
+                    corp_cred['extra_jurisdictional_registration'] = ''
 
-                # jurisdiction active at effective date
-                jurisdiction = self.corp_rec_at_effective_date(corp_info['jurisdiction'], loop_start_event)
-                corp_cred['home_jurisdiction'] = self.get_corp_jurisdiction(corp_info, jurisdiction)
-                if corp_cred['home_jurisdiction'] != 'BC':
-                    corp_cred['registered_jurisdiction'] = 'BC' 
-                else:
-                    corp_cred['registered_jurisdiction'] = '' 
-                corp_cred['extra_jurisdictional_registration'] = ''
+                    # make sure we set an effective date for the credential!
+                    corp_cred['effective_date'] = self.credential_effective_date(corp_cred)
+                    if corp_cred['effective_date'] is None or corp_cred['effective_date'] == '':
+                        corp_cred['effective_date'] = loop_start_event['effective_date']
+                    if corp_cred['effective_date'] is None or corp_cred['effective_date'] == '':
+                        corp_cred['effective_date'] = corp_cred['registration_date']
 
-                # make sure we set an effective date for the credential!
-                corp_cred['effective_date'] = self.credential_effective_date(corp_cred)
-                if corp_cred['effective_date'] is None or corp_cred['effective_date'] == '':
-                    corp_cred['effective_date'] = loop_start_event['effective_date']
-                if corp_cred['effective_date'] is None or corp_cred['effective_date'] == '':
-                    corp_cred['effective_date'] = corp_cred['registration_date']
+                    reason_description = self.build_corp_reason_code(loop_start_event)
 
-                reason_description = self.build_corp_reason_code(loop_start_event)
+                    #self.check_required_field(corp_num, corp_cred, 'registration_date')
+                    #self.check_required_field(corp_num, corp_cred, 'entity_name')
+                    #self.check_required_field(corp_num, corp_cred, 'entity_status')
 
-                #self.check_required_field(corp_num, corp_cred, 'registration_date')
-                #self.check_required_field(corp_num, corp_cred, 'entity_name')
-                #self.check_required_field(corp_num, corp_cred, 'entity_status')
+                    corp_cred = self.build_credential_dict(corp_credential, corp_schema, corp_version, corp_num, corp_cred, reason_description, corp_cred['effective_date'])
 
-                corp_cred = self.build_credential_dict(corp_credential, corp_schema, corp_version, corp_num, corp_cred, reason_description, corp_cred['effective_date'])
-
-                # these will be sorted by date, but we need to make sure we are not submitting duplicates
-                # checking against the previously generated credential is sufficient
-                if (len(corp_creds) == 0) or (len(corp_creds) > 0 and corp_cred['credential'] != corp_creds[len(corp_creds)-1]['credential']):
-                    corp_creds.append(corp_cred)
+                    # these will be sorted by date, but we need to make sure we are not submitting duplicates
+                    # checking against the previously generated credential is sufficient
+                    if (len(corp_creds) == 0) or (len(corp_creds) > 0 and corp_cred['credential'] != corp_creds[len(corp_creds)-1]['credential']):
+                        corp_creds.append(corp_cred)
 
         # generate addr credential(s)
         corp_offices = sorted(corp_info['office'], key=lambda k: int(k['start_event_id']))
