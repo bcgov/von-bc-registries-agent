@@ -10,7 +10,7 @@ usage () {
 
   Allows you to manage certain aspects of the environment.
 
-  Usage: 
+  Usage:
     $0 [options] [commands]
 
   Example:
@@ -23,7 +23,7 @@ usage () {
     -e <Environment> the environment (dev/test/prod) into which you are deploying (default: ${DEPLOYMENT_ENV_NAME})
     -l apply local settings and parameters
     -p <profile> load a specific settings profile; setting.<profile>.sh
-    -P Use the default settings profile; settings.sh.  Use this flag to ignore all but the default 
+    -P Use the default settings profile; settings.sh.  Use this flag to ignore all but the default
        settings profile when there is more than one settings profile defined for a project.
     -x run the script in debug mode to see what's happening
 
@@ -48,6 +48,11 @@ usage () {
         For example;
           $0 -e dev deleteWallets bcreg-x-agent
 
+    getPipelineStatus
+      - Get the pipeline status for the given environment.
+        Runs the './run-step.sh bcreg/display_pipeline_status.py' pipeline script
+        on an instance of a mara pod.
+
     scaleUp
       - Scale up one or more pods.
         For example;
@@ -64,9 +69,9 @@ usage () {
           $0 -e dev recycle mara
 
     createDeployConfig
-      - Create one or more deployment configurations in an OpenShift environment 
+      - Create one or more deployment configurations in an OpenShift environment
         using pre-generated deployment configuration files.
-        
+
         Examples;
           $0 -e dev createDeployConfig
           - This will create deployment configurations from all of the existing deployment configuration files.
@@ -75,9 +80,9 @@ usage () {
           - This will create a deployment configurations from the specified deployment configuration file.
 
     updateDeployConfig
-      - Update one or more deployment configurations in an OpenShift environment 
+      - Update one or more deployment configurations in an OpenShift environment
         using pre-generated deployment configuration files.
-        
+
         Examples;
           $0 -e dev updateDeployConfig
           - This will replace deployment configurations for all of the existing deployment configuration files.
@@ -95,7 +100,7 @@ exit 1
 while getopts p:Pe:lxh FLAG; do
   case $FLAG in
     p ) export PROFILE=$OPTARG ;;
-    P ) export IGNORE_PROFILES=1 ;;    
+    P ) export IGNORE_PROFILES=1 ;;
     e ) export DEPLOYMENT_ENV_NAME=$OPTARG ;;
     l ) export APPLY_LOCAL_SETTINGS=1 ;;
     x ) export DEBUG=1 ;;
@@ -216,7 +221,7 @@ hardReset() {
   exitOnError
   printAndWait "Wait for the ${_agentPodName} pod to completely start up before continuing."
 
-  echoWarning "\nThe project's database and indy wallets have been reset."  
+  echoWarning "\nThe project's database and indy wallets have been reset."
 }
 
 createDeployconfigs(){
@@ -234,6 +239,20 @@ updateDeployconfigs(){
   export OC_ACTION=replace
   deployConfigs ${@}
 }
+
+getPipelineStatus() {
+  _maraPodName=${1}
+  if [ -z "${_maraPodName}" ]; then
+    echo -e \\n"getPipelineStatus; Missing parameter!"\\n
+    exit 1
+  fi
+
+  echo
+
+  runInContainer \
+    ${_maraPodName} \
+    'cd scripts && ./run-step.sh bcreg/display_pipeline_status.py'
+}
 # =================================================================================================================
 
 pushd ${SCRIPT_HOME} >/dev/null
@@ -241,12 +260,12 @@ _cmd=$(toLower ${1})
 shift
 
 case "${_cmd}" in
-  reseteventdatabase)    
+  reseteventdatabase)
     # Allow all of the other parameters to be overridden ...
     dbPodName=${1:-event-db}
     resetDatabase "${dbPodName}"
     ;;
-  resetmaradatabase)    
+  resetmaradatabase)
     # Allow all of the other parameters to be overridden ...
     dbPodName=${1:-mara-db}
     resetDatabase "${dbPodName}"
@@ -265,6 +284,10 @@ case "${_cmd}" in
   deletewallets)
     deleteWallets ${@}
     recyclePods ${@}
+    ;;
+  getpipelinestatus)
+    maraPodName=${1:-mara}
+    getPipelineStatus "${maraPodName}"
     ;;
   scaleup)
     switchProject
