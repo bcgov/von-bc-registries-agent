@@ -1039,6 +1039,17 @@ class BCRegistries:
         if active_id is not None and active_id != len(sorted_records):
             print(">>>Data Issue:Active Record:" + corp_num + ":" + record_type + ":", records)
 
+    def flag_start_events_which_are_not_also_end_events(self, corp_num, corp_recs):
+        end_events = []
+        for rec in corp_recs:
+            end_events.append(rec['end_event_id'])
+        for rec in corp_recs:
+            flag = False
+            for i in range(end_events):
+                if rec['start_event_id'] == end_events[i]:
+                    flag = True
+            rec['start_event']['appears_as_end_event'] = flag
+
     def get_offices(self, corp_num):
         sql_office = """SELECT * from """ + self.get_table_prefix() + """office
                         WHERE corp_num = """ + self.get_db_sql_param() + """ and office_typ_cd in ('RG','HD','FO')"""
@@ -1331,7 +1342,9 @@ class BCRegistries:
             if deep_copy:
                 # get corp names
                 corp['org_names'] = self.get_names(corp_num, ['CO','NB'], corp['recognition_dts'])
+                #self.flag_start_events_which_are_not_also_end_events(corp_num, corp['org_names'])
                 corp['org_name_assumed'] = self.get_names(corp_num, ['AS'], corp['recognition_dts'])
+                #self.flag_start_events_which_are_not_also_end_events(corp_num, corp['org_name_assumed'])
                 #corp['org_name_trans'] = self.get_names(corp_num, ['TR', 'NO'], corp['recognition_dts'])
                 corp['office'] = self.get_offices(corp_num)
 
@@ -1348,6 +1361,7 @@ class BCRegistries:
 
                     #if corp_state['event_date'] > corp_state['effective_end_date']:
                     #    print(">>>Data Issue:Date:" + corp_num + ":Corp_State:", corp_state)
+                #self.flag_start_events_which_are_not_also_end_events(corp_num, corp_states)
 
                 #self.check_same_start_date(corp_num, 'corp_state', corp_states, 'event_date')
 
