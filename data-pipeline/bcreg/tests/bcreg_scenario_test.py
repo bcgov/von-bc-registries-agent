@@ -26,13 +26,13 @@ def test_scenario_basic_bc_corp():
 
     assert my_creds[0]['cred_type'] == 'REG'
     assert my_creds[0]['credential']['entity_status'] == 'ACT'
-    assert my_creds[0]['credential']['entity_type'] == 'BC Company'
+    assert my_creds[0]['credential']['entity_type'] == 'BC'
     assert my_creds[0]['credential']['home_jurisdiction'] == 'BC'
     assert my_creds[0]['credential']['registered_jurisdiction'] == ''
     assert my_creds[0]['credential']['registration_id'] == 'BC9645624'
 
     assert my_creds[1]['cred_type'] == 'ADDR'
-    assert my_creds[1]['credential']['address_type'] == 'Registered Office'
+    assert my_creds[1]['credential']['address_type'] == 'RG'
     assert my_creds[1]['credential']['municipality'] == 'VANCOUVER'
     assert my_creds[1]['credential']['registration_id'] == 'BC9645624'
 
@@ -48,13 +48,13 @@ def test_scenario_basic_dba_firm():
 
     assert my_creds[0]['cred_type'] == 'REG'
     assert my_creds[0]['credential']['entity_status'] == 'ACT'
-    assert my_creds[0]['credential']['entity_type'] == 'Sole Proprietorship'
+    assert my_creds[0]['credential']['entity_type'] == 'SP'
     assert my_creds[0]['credential']['home_jurisdiction'] == 'BC'
     assert my_creds[0]['credential']['registered_jurisdiction'] == ''
     assert my_creds[0]['credential']['registration_id'] == 'FM7768377'
 
     assert my_creds[1]['cred_type'] == 'ADDR'
-    assert my_creds[1]['credential']['address_type'] == 'Firm Office'
+    assert my_creds[1]['credential']['address_type'] == 'FO'
     assert my_creds[1]['credential']['municipality'] == 'DELTA'
     assert my_creds[1]['credential']['registration_id'] == 'FM7768377'
     
@@ -70,13 +70,13 @@ def test_scenario_basic_xcorp():
 
     assert my_creds[5]['cred_type'] == 'REG'
     assert my_creds[5]['credential']['entity_status'] == 'ACT'
-    assert my_creds[5]['credential']['entity_type'] == 'Extraprovincial Company'
+    assert my_creds[5]['credential']['entity_type'] == 'A'
     assert my_creds[5]['credential']['home_jurisdiction'] == 'GB'
     assert my_creds[5]['credential']['registered_jurisdiction'] == 'BC'
     assert my_creds[5]['credential']['registration_id'] == 'A3781337'
 
     assert my_creds[7]['cred_type'] == 'ADDR'
-    assert my_creds[7]['credential']['address_type'] == 'Head Office'
+    assert my_creds[7]['credential']['address_type'] == 'HD'
     assert my_creds[7]['credential']['municipality'] == 'LONDON'
     assert my_creds[7]['credential']['civic_address'] == 'UUBCWY DKNOCDWWNEVFSCKY O, LONDON, H8IU1N, GB'
     assert my_creds[7]['credential']['registration_id'] == 'A3781337'
@@ -93,7 +93,7 @@ def test_scenario_assumed_name():
 
     assert my_creds[0]['cred_type'] == 'REG'
     assert my_creds[0]['credential']['entity_status'] == 'ACT'
-    assert my_creds[0]['credential']['entity_type'] == 'Extraprovincial Company'
+    assert my_creds[0]['credential']['entity_type'] == 'A'
     assert my_creds[0]['credential']['home_jurisdiction'] == 'ON'
     assert my_creds[0]['credential']['registered_jurisdiction'] == 'BC'
     assert my_creds[0]['credential']['registration_id'] == 'A1196902'
@@ -101,7 +101,7 @@ def test_scenario_assumed_name():
     assert my_creds[0]['credential']['entity_name_assumed'] == 'UFTOBFEBMBKB  UVEUKHNGEMZ'
 
     assert my_creds[1]['cred_type'] == 'ADDR'
-    assert my_creds[1]['credential']['address_type'] == 'Head Office'
+    assert my_creds[1]['credential']['address_type'] == 'HD'
     assert my_creds[1]['credential']['municipality'] == 'Toronto'
     assert my_creds[1]['credential']['registration_id'] == 'A1196902'
     
@@ -117,7 +117,7 @@ def test_scenario_trans_name():
 
     assert my_creds[0]['cred_type'] == 'REG'
     assert my_creds[0]['credential']['entity_status'] == 'ACT'
-    assert my_creds[0]['credential']['entity_type'] == 'BC Company'
+    assert my_creds[0]['credential']['entity_type'] == 'BC'
     assert my_creds[0]['credential']['home_jurisdiction'] == 'BC'
     assert my_creds[0]['credential']['registered_jurisdiction'] == ''
     assert my_creds[0]['credential']['registration_id'] == 'BC4241301'
@@ -125,7 +125,7 @@ def test_scenario_trans_name():
     # assert my_creds[0]['credential']['entity_name_trans'] == 'MMRTKDCWLGXOFULSZYEIIHKRO'
 
     assert my_creds[1]['cred_type'] == 'ADDR'
-    assert my_creds[1]['credential']['address_type'] == 'Registered Office'
+    assert my_creds[1]['credential']['address_type'] == 'RG'
     assert my_creds[1]['credential']['municipality'] == 'Kelowna'
     assert my_creds[1]['credential']['registration_id'] == 'BC4241301'
     
@@ -137,11 +137,11 @@ def test_scenario_single_dba():
     my_creds = generate_creds_for_corp(my_corp_dict)
 
     print("# basic corp with 1 DBA (no DBA address)")
-    assert len(my_creds) == 8
+    assert len(my_creds) == 6
 
-    assert my_creds[3]['cred_type'] == 'REG'
-    assert my_creds[6]['cred_type'] == 'ADDR'
-    assert my_creds[7]['cred_type'] == 'REL'
+    assert my_creds[1]['cred_type'] == 'REG'
+    assert my_creds[4]['cred_type'] == 'ADDR'
+    assert my_creds[5]['cred_type'] == 'REL'
 
     my_dba_num = 'FM3035075'
     my_corp_dict['corp_num'] = my_dba_num
@@ -167,13 +167,13 @@ def test_scenario_dba_with_address():
     
     assert my_creds[0]['cred_type'] == 'REG'
     assert my_creds[0]['credential']['entity_status'] == 'ACT'
-    assert my_creds[0]['credential']['entity_type'] == 'Continuation In as a BC ULC'
+    assert my_creds[0]['credential']['entity_type'] == 'CUL'
     assert my_creds[0]['credential']['home_jurisdiction'] == 'BC'
     assert my_creds[0]['credential']['registered_jurisdiction'] == ''
     assert my_creds[0]['credential']['registration_id'] == 'C6020509'
 
     assert my_creds[3]['cred_type'] == 'ADDR'
-    assert my_creds[3]['credential']['address_type'] == 'Registered Office'
+    assert my_creds[3]['credential']['address_type'] == 'RG'
     assert my_creds[3]['credential']['municipality'] == 'testcity'
     assert my_creds[3]['credential']['registration_id'] == 'C6020509'
 
@@ -186,13 +186,13 @@ def test_scenario_dba_with_address():
 
     assert dba_creds[0]['cred_type'] == 'REG'
     assert dba_creds[0]['credential']['entity_status'] == 'ACT'
-    assert dba_creds[0]['credential']['entity_type'] == 'Sole Proprietorship'
+    assert dba_creds[0]['credential']['entity_type'] == 'SP'
     assert dba_creds[0]['credential']['home_jurisdiction'] == 'BC'
     assert my_creds[0]['credential']['registered_jurisdiction'] == ''
     assert dba_creds[0]['credential']['registration_id'] == 'FM9129945'
 
     assert dba_creds[1]['cred_type'] == 'ADDR'
-    assert dba_creds[1]['credential']['address_type'] == 'Firm Office'
+    assert dba_creds[1]['credential']['address_type'] == 'FO'
     assert dba_creds[1]['credential']['municipality'] == 'VANCOUVER'
     assert dba_creds[1]['credential']['registration_id'] == 'FM9129945'
 
@@ -204,13 +204,13 @@ def test_scenario_multi_dbas():
     my_creds = generate_creds_for_corp(my_corp_dict)
 
     print("# basic corp with multiple DBA's (3)")
-    assert len(my_creds) == 9
+    assert len(my_creds) == 7
 
-    assert my_creds[4]['cred_type'] == 'REG'
-    assert my_creds[5]['cred_type'] == 'ADDR'
+    assert my_creds[2]['cred_type'] == 'REG'
+    assert my_creds[3]['cred_type'] == 'ADDR'
+    assert my_creds[4]['cred_type'] == 'REL'
+    assert my_creds[5]['cred_type'] == 'REL'
     assert my_creds[6]['cred_type'] == 'REL'
-    assert my_creds[7]['cred_type'] == 'REL'
-    assert my_creds[8]['cred_type'] == 'REL'
 
     my_dba_nums = ['FM3834099','FM8823648','FM9877026']
     my_dba_ct = [1,1,2]
