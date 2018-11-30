@@ -290,9 +290,9 @@ def test_preset_corp_scenario_3dbas():
         corp_creds = event_processor.generate_credentials(system_type, start_event, end_event, corp_num, corp_info)
 
     #print(corp_creds)
-    assert len(corp_creds) == 9
-    assert corp_creds[4]['cred_type'] == 'REG'
-    assert corp_creds[5]['cred_type'] == 'ADDR'
+    assert len(corp_creds) == 7
+    assert corp_creds[2]['cred_type'] == 'REG'
+    assert corp_creds[3]['cred_type'] == 'ADDR'
+    assert corp_creds[4]['cred_type'] == 'REL'
+    assert corp_creds[5]['cred_type'] == 'REL'
     assert corp_creds[6]['cred_type'] == 'REL'
-    assert corp_creds[7]['cred_type'] == 'REL'
-    assert corp_creds[8]['cred_type'] == 'REL'
