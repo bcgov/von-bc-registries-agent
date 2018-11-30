@@ -46,13 +46,13 @@ def test_scenario_dates_1():
 
     assert my_creds[0]['cred_type'] == 'REG'
     assert my_creds[0]['credential']['entity_status'] == 'ACT'
-    assert my_creds[0]['credential']['entity_type'] == 'BC Company'
+    assert my_creds[0]['credential']['entity_type'] == 'BC'
     assert my_creds[0]['credential']['home_jurisdiction'] == 'BC'
     assert my_creds[0]['credential']['registered_jurisdiction'] == ''
     assert my_creds[0]['credential']['registration_id'] == 'BC1529559'
 
     assert my_creds[1]['cred_type'] == 'ADDR'
-    assert my_creds[1]['credential']['address_type'] == 'Registered Office'
+    assert my_creds[1]['credential']['address_type'] == 'RG'
     assert my_creds[1]['credential']['registration_id'] == 'BC1529559'
 
 
