@@ -1168,8 +1168,10 @@ class BCRegistries:
                 corp_name['corp_nme'] = row[6]
                 corp_name['dd_corp_num'] = row[7]
 
-                #if corp_name['effective_start_date'] > corp_name['effective_end_date']:
-                #    print(">>>Data Issue:Date:" + corp_num + ":Corp_Name:", corp_name)
+                if corp_name['effective_start_date'] > corp_name['effective_end_date']:
+                    #print(">>>Data Issue:Date:" + corp_num + ":Corp_Name:", corp_name)
+                    if self.is_data_conversion_event(corp_name['start_event']) and registration_date is not None:
+                        corp_name['effective_start_date'] = registration_date
 
                 names.append(corp_name)
                 row = cur.fetchone()
@@ -1370,20 +1372,21 @@ class BCRegistries:
                 corp_states = sorted(corp_states, key=lambda k: int(k['start_event_id']))
                 corp['corp_state'] = sorted(corp_states, key=lambda k: k['event_date'])
                 prev_state = None
-                prev_state_effective_event = None
                 for corp_state in corp['corp_state']:
                     # check if state has changed
                     use_registration_dt = False
                     if prev_state is None and corp_state['op_state_typ_cd'] == 'ACT':
                         use_registration_dt = True
-                    if prev_state is None or prev_state != corp_state['op_state_typ_cd']:
+                    if prev_state is None or prev_state['op_state_typ_cd'] != corp_state['op_state_typ_cd']:
                         # state has changed
-                        prev_state = corp_state['op_state_typ_cd']
-                        prev_state_effective_event = corp_state['start_event']
-                    corp_state['corp_state_effective_event'] = prev_state_effective_event
-                    corp_state['effective_start_date'] = prev_state_effective_event['effective_date']
-                    if use_registration_dt and corp['recognition_dts'] is not None:
-                        corp_state['effective_start_date'] = corp['recognition_dts']
+                        prev_state = corp_state
+                        prev_state['corp_state_effective_event'] = prev_state['start_event']
+                        if use_registration_dt and corp['recognition_dts'] is not None:
+                            prev_state['effective_start_date'] = corp['recognition_dts']
+                        else:
+                            prev_state['effective_start_date'] = prev_state['event_date']
+                    corp_state['corp_state_effective_event'] = prev_state['corp_state_effective_event']
+                    corp_state['effective_start_date'] = prev_state['effective_start_date']
 
             return corp
         except (Exception, psycopg2.DatabaseError) as error:
