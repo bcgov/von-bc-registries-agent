@@ -419,14 +419,14 @@
       "displayName": "TOB API URL",
       "description": "The URL of the TOB API.",
       "required": true,
-      "value": "https://django-devex-von-bc-tob-dev.pathfinder.gov.bc.ca/api/v2"
+      "value": "https://dev-api.orgbook.gov.bc.ca/api/v2"
     },
     {
       "name": "TOB_APP_URL",
       "displayName": "TOB Application URL",
       "description": "The URL of the TOB application.",
       "required": true,
-      "value": "https://angular-on-nginx-devex-von-bc-tob-dev.pathfinder.gov.bc.ca/"
+      "value": "https://dev.orgbook.gov.bc.ca/"
     },
     {
       "name": "WALLET_TYPE",
