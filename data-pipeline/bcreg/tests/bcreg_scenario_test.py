@@ -66,20 +66,20 @@ def test_scenario_basic_xcorp():
     my_creds = generate_creds_for_corp(my_corp_dict)
 
     print("# basic ex-corp with a non-BC jurisdiction and an address")
-    assert len(my_creds) == 8
+    assert len(my_creds) == 5
 
-    assert my_creds[5]['cred_type'] == 'REG'
-    assert my_creds[5]['credential']['entity_status'] == 'ACT'
-    assert my_creds[5]['credential']['entity_type'] == 'A'
-    assert my_creds[5]['credential']['home_jurisdiction'] == 'GB'
-    assert my_creds[5]['credential']['registered_jurisdiction'] == 'BC'
-    assert my_creds[5]['credential']['registration_id'] == 'A3781337'
+    assert my_creds[2]['cred_type'] == 'REG'
+    assert my_creds[2]['credential']['entity_status'] == 'ACT'
+    assert my_creds[2]['credential']['entity_type'] == 'A'
+    assert my_creds[2]['credential']['home_jurisdiction'] == 'GB'
+    assert my_creds[2]['credential']['registered_jurisdiction'] == 'BC'
+    assert my_creds[2]['credential']['registration_id'] == 'A3781337'
 
-    assert my_creds[7]['cred_type'] == 'ADDR'
-    assert my_creds[7]['credential']['address_type'] == 'HD'
-    assert my_creds[7]['credential']['municipality'] == 'LONDON'
-    assert my_creds[7]['credential']['civic_address'] == 'UUBCWY DKNOCDWWNEVFSCKY O, LONDON, H8IU1N, GB'
-    assert my_creds[7]['credential']['registration_id'] == 'A3781337'
+    assert my_creds[4]['cred_type'] == 'ADDR'
+    assert my_creds[4]['credential']['address_type'] == 'HD'
+    assert my_creds[4]['credential']['municipality'] == 'LONDON'
+    assert my_creds[4]['credential']['civic_address'] == 'UUBCWY DKNOCDWWNEVFSCKY O, LONDON, H8IU1N, GB'
+    assert my_creds[4]['credential']['registration_id'] == 'A3781337'
     
 
 # basic ex-corp with an assumed name
@@ -204,13 +204,13 @@ def test_scenario_multi_dbas():
     my_creds = generate_creds_for_corp(my_corp_dict)
 
     print("# basic corp with multiple DBA's (3)")
-    assert len(my_creds) == 7
+    assert len(my_creds) == 6
 
-    assert my_creds[2]['cred_type'] == 'REG'
-    assert my_creds[3]['cred_type'] == 'ADDR'
+    assert my_creds[1]['cred_type'] == 'REG'
+    assert my_creds[2]['cred_type'] == 'ADDR'
+    assert my_creds[3]['cred_type'] == 'REL'
     assert my_creds[4]['cred_type'] == 'REL'
     assert my_creds[5]['cred_type'] == 'REL'
-    assert my_creds[6]['cred_type'] == 'REL'
 
     my_dba_nums = ['FM3834099','FM8823648','FM9877026']
     my_dba_ct = [1,1,2]

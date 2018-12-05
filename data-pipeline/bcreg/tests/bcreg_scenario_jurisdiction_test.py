@@ -85,19 +85,19 @@ def test_scenario_jurisdiction_washington():
     my_creds = generate_creds_for_corp(my_corp_dict)
 
     print("# Home Jurisdiction Washington (can_jur_typ_cd = ‘OT’ and othr_juris_desc = ‘US, WA’)")
-    assert len(my_creds) == 2
+    assert len(my_creds) == 3
 
-    assert my_creds[0]['cred_type'] == 'REG'
-    assert my_creds[0]['credential']['entity_status'] == 'HIS'
-    assert my_creds[0]['credential']['entity_type'] == 'A'
-    assert my_creds[0]['credential']['home_jurisdiction'] == 'US, WA'
-    assert my_creds[0]['credential']['registered_jurisdiction'] == 'BC'
-    assert my_creds[0]['credential']['registration_id'] == 'A5462935'
-
-    assert my_creds[1]['cred_type'] == 'ADDR'
-    assert my_creds[1]['credential']['address_type'] == 'HD'
-    assert my_creds[1]['credential']['civic_address'] == 'XZVDZOLRCFHDHGGRTSJTLNLFY, VMUMZPQJWJJJPBPHKHLVNFIED, 98178, '
+    assert my_creds[1]['cred_type'] == 'REG'
+    assert my_creds[1]['credential']['entity_status'] == 'HIS'
+    assert my_creds[1]['credential']['entity_type'] == 'A'
+    assert my_creds[1]['credential']['home_jurisdiction'] == 'US, WA'
+    assert my_creds[1]['credential']['registered_jurisdiction'] == 'BC'
     assert my_creds[1]['credential']['registration_id'] == 'A5462935'
+
+    assert my_creds[2]['cred_type'] == 'ADDR'
+    assert my_creds[2]['credential']['address_type'] == 'HD'
+    assert my_creds[2]['credential']['civic_address'] == 'XZVDZOLRCFHDHGGRTSJTLNLFY, VMUMZPQJWJJJPBPHKHLVNFIED, 98178, '
+    assert my_creds[2]['credential']['registration_id'] == 'A5462935'
     
 
 def test_scenario_jurisdiction_uk():
@@ -108,12 +108,12 @@ def test_scenario_jurisdiction_uk():
     print("# Home Jurisdiction Federal (can_jur_typ_cd ‘FD’)")
     assert len(my_creds) == 4
 
-    assert my_creds[0]['cred_type'] == 'REG'
-    assert my_creds[0]['credential']['entity_status'] == 'ACT'
-    assert my_creds[0]['credential']['entity_type'] == 'A'
-    assert my_creds[0]['credential']['home_jurisdiction'] == 'FD'
-    assert my_creds[0]['credential']['registered_jurisdiction'] == 'BC'
-    assert my_creds[0]['credential']['registration_id'] == 'A4993014'
+    assert my_creds[1]['cred_type'] == 'REG'
+    assert my_creds[1]['credential']['entity_status'] == 'ACT'
+    assert my_creds[1]['credential']['entity_type'] == 'A'
+    assert my_creds[1]['credential']['home_jurisdiction'] == 'FD'
+    assert my_creds[1]['credential']['registered_jurisdiction'] == 'BC'
+    assert my_creds[1]['credential']['registration_id'] == 'A4993014'
 
     assert my_creds[3]['cred_type'] == 'ADDR'
     assert my_creds[3]['credential']['address_type'] == 'HD'
@@ -147,19 +147,19 @@ def test_scenario_jurisdiction_federal():
     my_creds = generate_creds_for_corp(my_corp_dict)
 
     print("# Home Jurisdiction Manitoba (can_jur_typ_cd = ‘MB’)")
-    assert len(my_creds) == 2
+    assert len(my_creds) == 3
 
-    assert my_creds[0]['cred_type'] == 'REG'
-    assert my_creds[0]['credential']['entity_status'] == 'ACT'
-    assert my_creds[0]['credential']['entity_type'] == 'A'
-    assert my_creds[0]['credential']['home_jurisdiction'] == 'MB'
-    assert my_creds[0]['credential']['registered_jurisdiction'] == 'BC'
-    assert my_creds[0]['credential']['registration_id'] == 'A7164764'
-
-    assert my_creds[1]['cred_type'] == 'ADDR'
-    assert my_creds[1]['credential']['address_type'] == 'HD'
-    assert my_creds[1]['credential']['municipality'] == 'WINNIPEG'
+    assert my_creds[1]['cred_type'] == 'REG'
+    assert my_creds[1]['credential']['entity_status'] == 'ACT'
+    assert my_creds[1]['credential']['entity_type'] == 'A'
+    assert my_creds[1]['credential']['home_jurisdiction'] == 'MB'
+    assert my_creds[1]['credential']['registered_jurisdiction'] == 'BC'
     assert my_creds[1]['credential']['registration_id'] == 'A7164764'
+
+    assert my_creds[2]['cred_type'] == 'ADDR'
+    assert my_creds[2]['credential']['address_type'] == 'HD'
+    assert my_creds[2]['credential']['municipality'] == 'WINNIPEG'
+    assert my_creds[2]['credential']['registration_id'] == 'A7164764'
     
 
 # utility method to process the selected corp and generate credentails
