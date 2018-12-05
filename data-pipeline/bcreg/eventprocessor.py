@@ -583,10 +583,10 @@ class EventProcessor:
             addr_cred['postal_code'] = address['postal_cd']
         if 'country_typ_cd' in address:
             addr_cred['country'] = address['country_typ_cd']
-        addr_cred['address_effective_date'] = self.filter_min_date(office['effective_start_date'])
-        addr_cred['effective_date'] = addr_cred['address_effective_date']
+        addr_cred['address_effective'] = self.filter_min_date(office['effective_start_date'])
+        addr_cred['effective_date'] = addr_cred['address_effective']
         if office['end_event_id'] is not None and office['end_event']['effective_date'] <= corp_info['current_date']:
-            addr_cred['address_expiry_date'] = office['effective_end_date']
+            addr_cred['expiry_date'] = office['effective_end_date']
 
         return addr_cred
 
@@ -877,7 +877,7 @@ class EventProcessor:
                             dba_cred['effective_date'] = party['effective_start_date']
                             dba_cred['relationship_status_effective'] = self.filter_min_date(dba_cred['effective_date'])
                             if party['end_event_id'] is not None and party['end_event']['effective_date'] <= corp_info['current_date']:
-                                dba_cred['relationship_expiry_date'] = party['effective_end_date']
+                                dba_cred['expiry_date'] = party['effective_end_date']
                             reason_description = self.build_corp_reason_code(party['start_event'])
                             corp_creds.append(self.build_credential_dict(dba_credential, dba_schema, dba_version, dba_cred['registration_id'], dba_cred, reason_description, dba_cred['effective_date']))
 

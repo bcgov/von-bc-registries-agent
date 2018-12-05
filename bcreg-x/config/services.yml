@@ -163,7 +163,7 @@ issuers:
             input: effective_date
             from: claim
           revoked_date:
-            input: relationship_expiry_date
+            input: expiry_date
             from: claim
         topic:
           related_source_id:
@@ -233,7 +233,7 @@ issuers:
             input: effective_date
             from: claim
           revoked_date:
-            input: address_expiry_date
+            input: expiry_date
             from: claim
         topic:
           source_id:
