@@ -1,5 +1,5 @@
 - name: registration.registries.ca
-  version: '1.0.39'
+  version: '1.0.40'
   attributes:
     registration_id:
       description: Registration/Incorporation Number or Identifying Number
@@ -14,34 +14,34 @@
       description: Date the registration renewal became effective
       required: false
     entity_name:
-      description: Legal and principle name assigned to entity by registrar
+      description: The legal name of entity
       required: true
     entity_name_effective:
-      description: Date current name became/becomes effective
+      description: Date current name became effective
       required: true
     entity_name_assumed:
-      description: Name assumed by an extra-provincial entity
+      description: A legal name used by an extraprovincial company when the home jurisdiction name is not available
       required: false
     entity_name_assumed_effective:
-      description: Date assumed name became/becomes effective
+      description: Date assumed name became effective
       required: false
     entity_name_trans:
       description: Entity name translated into another language
       required: false
     entity_name_trans_effective:
-      description: Date translated name became/becomes effective
+      description: Date translated name became effective
       required: false
     entity_status:
-      description: Status of the organization in jurisdiction of registrar
+      description: Status of the entity (active or historical)
       required: true
     entity_status_effective:
-      description: Date status became/becomes effective
+      description: Date status became effective
       required: true
     entity_type:
-      description: Designator for the organiation's legal structure
+      description: Type of entity incorporated or registered
       required: true
     registered_jurisdiction:
-      description: Name of the jurisdiction that registered the organization
+      description: The jurisdiction an entity was created in
       required: false
     extra_jurisdictional_registration:
       description: Flag to indicate extra-jurisdictional registrations
@@ -60,7 +60,7 @@
       required: true
 
 - name: address.registries.ca
-  version: '1.0.39'
+  version: '1.0.40'
   attributes:
     registration_id:
       description: Unique identifer assigned to entity by registrar
@@ -92,7 +92,7 @@
     effective_date:
       description: Date Credential is effective
       required: true
-    address_expiry_date:
+    expiry_date:
       description: Date Credential expires
       required: false
     reason_description:
@@ -100,7 +100,7 @@
       required: false
 
 - name: relationship.registries.ca
-  version: '1.0.39'
+  version: '1.0.40'
   attributes:
     registration_id:
       description: Unique identifer assigned to entity by registrar
@@ -123,7 +123,7 @@
     effective_date:
       description: Date Credential is effective
       required: true
-    relationship_expiry_date:
+    expiry_date:
       description: Date Credential expires
       required: false
     reason_description:
