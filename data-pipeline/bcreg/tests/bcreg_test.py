@@ -52,8 +52,9 @@ def test_compare_corp_events():
     with BCRegistries(True) as bc_registries:
         prev_event_date = MIN_START_DATE
         prev_event_id = 0
-        max_event_date = bc_registries.get_max_event_date()
-        max_event_id = bc_registries.get_max_event(max_event_date)
+        # run these queries, but reuse the above "max" event so the calculations will all match
+        _foo_max_event_date = bc_registries.get_max_event_date()
+        _foo_max_event_id = bc_registries.get_max_event(max_event_date)
         corps = bc_registries.get_specific_corps(specific_corps)
         corps = bc_registries.get_unprocessed_corp_events(prev_event_id, prev_event_date, max_event_id, max_event_date, corps)
     
@@ -102,8 +103,9 @@ def test_compare_corp_infos():
     
     with BCRegistries(False) as bc_registries:
         prev_event_id = 0
-        max_event_date = bc_registries.get_max_event_date()
-        max_event_id = bc_registries.get_max_event(max_event_date)
+        # run these queries, but reuse the above "max" event so the calculations will all match
+        _foo_max_event_date = bc_registries.get_max_event_date()
+        _foo_max_event_id = bc_registries.get_max_event(max_event_date)
         baseline_corps = bc_registries.get_specific_corps(specific_corps)
         baseline_corps = bc_registries.get_unprocessed_corp_events(prev_event_id, prev_event_date, max_event_id, max_event_date, corps)
 
