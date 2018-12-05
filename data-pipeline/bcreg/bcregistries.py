@@ -1171,6 +1171,7 @@ class BCRegistries:
                 if corp_name['effective_start_date'] > corp_name['effective_end_date']:
                     #print(">>>Data Issue:Date:" + corp_num + ":Corp_Name:", corp_name)
                     if self.is_data_conversion_event(corp_name['start_event']) and registration_date is not None:
+                        corp_name['start_event']['effective_date'] = registration_date
                         corp_name['effective_start_date'] = registration_date
 
                 names.append(corp_name)
@@ -1179,7 +1180,8 @@ class BCRegistries:
             cur.close()
             cur = None
 
-            if len(names) == 1 and (names[0]['effective_start_date'] is None or names[0]['effective_start_date'] == ''):
+            if len(names) == 1 and registration_date is not None and (names[0]['effective_start_date'] is None or names[0]['effective_start_date'] == '' or self.is_data_conversion_event(corp_name['start_event'])):
+                names[0]['start_event']['effective_date'] = registration_date
                 names[0]['effective_start_date'] = registration_date
 
             #self.check_same_start_date(corp_num, 'corp_name', names, 'effective_start_date')
@@ -1382,6 +1384,7 @@ class BCRegistries:
                         prev_state = corp_state
                         prev_state['corp_state_effective_event'] = prev_state['start_event']
                         if use_registration_dt and corp['recognition_dts'] is not None:
+                            prev_state['start_event']['effective_date'] = corp['recognition_dts']
                             prev_state['effective_start_date'] = corp['recognition_dts']
                         else:
                             prev_state['effective_start_date'] = prev_state['event_date']
