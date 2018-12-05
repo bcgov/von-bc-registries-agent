@@ -13,15 +13,15 @@ from bcreg.bcregistries import BCRegistries, CustomJsonEncoder, event_dict
 
 corp_credential = 'REG'
 corp_schema = 'registration.registries.ca'
-corp_version = '1.0.39'
+corp_version = '1.0.40'
 
 addr_credential = 'ADDR'
 addr_schema = 'address.registries.ca'
-addr_version = '1.0.39'
+addr_version = '1.0.40'
 
 dba_credential = 'REL'
 dba_schema = 'relationship.registries.ca'
-dba_version = '1.0.39'
+dba_version = '1.0.40'
 
 CORP_BATCH_SIZE = 3000
 FALLBACK_CORP_BATCH_SIZE = 300

@@ -1,5 +1,5 @@
 - name: registration.registries.ca
-  version: '1.0.39'
+  version: '1.0.40'
   attributes:
     registration_id:
       description: Registration/Incorporation Number or Identifying Number
@@ -60,7 +60,7 @@
       required: true
 
 - name: address.registries.ca
-  version: '1.0.39'
+  version: '1.0.40'
   attributes:
     registration_id:
       description: Unique identifer assigned to entity by registrar
@@ -100,7 +100,7 @@
       required: false
 
 - name: relationship.registries.ca
-  version: '1.0.39'
+  version: '1.0.40'
   attributes:
     registration_id:
       description: Unique identifer assigned to entity by registrar
