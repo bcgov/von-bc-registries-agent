@@ -53,6 +53,9 @@ usage () {
         Runs the './run-step.sh bcreg/display_pipeline_status.py' pipeline script
         on an instance of a mara pod.
 
+    requeueFailedCreds
+      - Requeue any credentials that have failed posting.
+
     scaleUp
       - Scale up one or more pods.
         For example;
@@ -260,10 +263,22 @@ getPipelineStatus() {
   fi
 
   echo
-
   runInContainer \
     ${_maraPodName} \
     'cd scripts && ./run-step.sh bcreg/display_pipeline_status.py'
+}
+
+requeueFailedCreds() {
+  _databasePodName=${1}
+  if [ -z "${_databasePodName}" ]; then
+    echo -e \\n"requeueFailedCreds; Missing parameter!"\\n
+    exit 1
+  fi
+
+  echo
+  runInContainer -v \
+  ${_databasePodName} \
+  'psql -d ${POSTGRESQL_DATABASE} -ac "update credential_log set process_success = null, process_date = null, process_msg = null where process_success = '"'"'N'"'"';"'
 }
 # =================================================================================================================
 
@@ -282,6 +297,10 @@ case "${_cmd}" in
     # Allow all of the other parameters to be overridden ...
     dbPodName=${1:-mara-db}
     resetDatabase "${dbPodName}"
+    ;;
+  requeuefailedcreds)
+    dbPodName=${1:-event-db}
+    requeueFailedCreds "${dbPodName}"
     ;;
   deletedatabase)
     dbPodName=${1}
