@@ -13,15 +13,15 @@ from bcreg.bcregistries import BCRegistries, CustomJsonEncoder, event_dict
 
 corp_credential = 'REG'
 corp_schema = 'registration.registries.ca'
-corp_version = '1.0.38'
+corp_version = '1.0.40'
 
 addr_credential = 'ADDR'
 addr_schema = 'address.registries.ca'
-addr_version = '1.0.38'
+addr_version = '1.0.40'
 
 dba_credential = 'REL'
 dba_schema = 'relationship.registries.ca'
-dba_version = '1.0.38'
+dba_version = '1.0.40'
 
 CORP_BATCH_SIZE = 3000
 FALLBACK_CORP_BATCH_SIZE = 300
@@ -552,7 +552,7 @@ class EventProcessor:
             print(msg, "first date is None")
         if second_date is None:
             print(msg, "second date is None")
-        if op == "==":
+        if op == "==" or op == '=':
             return first_date == second_date
         elif op == "<=":
             return first_date <= second_date
@@ -583,10 +583,10 @@ class EventProcessor:
             addr_cred['postal_code'] = address['postal_cd']
         if 'country_typ_cd' in address:
             addr_cred['country'] = address['country_typ_cd']
-        addr_cred['address_effective_date'] = self.filter_min_date(office['effective_start_date'])
-        addr_cred['effective_date'] = addr_cred['address_effective_date']
+        addr_cred['address_effective'] = self.filter_min_date(office['effective_start_date'])
+        addr_cred['effective_date'] = addr_cred['address_effective']
         if office['end_event_id'] is not None and office['end_event']['effective_date'] <= corp_info['current_date']:
-            addr_cred['address_expiry_date'] = office['effective_end_date']
+            addr_cred['expiry_date'] = office['effective_end_date']
 
         return addr_cred
 
@@ -615,11 +615,29 @@ class EventProcessor:
         effective_date = None
         if corp_cred['entity_status_effective'] is not None and corp_cred['entity_status_effective'] != '':
             effective_date = corp_cred['entity_status_effective']
-        if effective_date is None or ('entity_name_effective' in corp_cred and corp_cred['entity_name_effective'] != '' and effective_date < corp_cred['entity_name_effective']):
+        if effective_date is None or ('entity_name_effective' in corp_cred and corp_cred['entity_name_effective'] != '' and self.compare_dates(effective_date, "<", corp_cred['entity_name_effective'], 'cred:' + str(corp_cred))):
             effective_date = corp_cred['entity_name_effective']
-        if effective_date is None or ('entity_name_assumed_effective' in corp_cred and effective_date < corp_cred['entity_name_assumed_effective']):
+        if effective_date is None or ('entity_name_assumed_effective' in corp_cred and self.compare_dates(effective_date, "<", corp_cred['entity_name_assumed_effective'], 'cred:' + str(corp_cred))):
             effective_date = corp_cred['entity_name_assumed_effective']
         return effective_date
+
+    def unique_effective_recs(self, rec_type, rec_attr, corp_records, effective_recs):
+        for corp_record in corp_records:
+            rec_summary = {}
+            rec_summary['corp_num'] = corp_record['corp_num']
+            rec_summary['rec_type'] = rec_type
+            rec_summary['effective_start_date'] = corp_record['effective_start_date']
+            rec_summary['effective_end_date']   = corp_record['effective_end_date']
+            rec_summary['desc']     = corp_record[rec_attr]
+            effective_recs.append(rec_summary)
+
+        # sort to get in date order, and determine ACT/HIS transition dates
+        #print('>>>>>>>>>> unique_effective_recs start', rec_type)
+        effective_recs = sorted(effective_recs, key=lambda k: k['effective_end_date'])
+        effective_recs = sorted(effective_recs, key=lambda k: k['effective_start_date'])
+        #print('<<<<<<<<<< unique_effective_recs end', rec_type)
+
+        return effective_recs
 
     # build a list of unique effective/expiry dates
     def unique_effective_events(self, corp_records, effective_events):
@@ -629,7 +647,7 @@ class EventProcessor:
                 effective_events.append(corp_record['end_event'])
 
         # sort to get in date order, and determine ACT/HIS transition dates
-        effective_events = sorted(effective_events, key=lambda k: int(k['event_id']))
+        effective_events = sorted(effective_events, key=lambda k: k['event_timestmp'])
         effective_events = sorted(effective_events, key=lambda k: k['effective_date'])
         # eliminate duplicates
         ret_effective_events = []
@@ -651,19 +669,23 @@ class EventProcessor:
         for corp_rec in corp_recs:
             # ignore the record if start_date > end_date
             if self.compare_dates(corp_rec['effective_start_date'], "<=", corp_rec['effective_end_date'], str(corp_rec)):
-                if corp_rec['start_event_id'] == loop_start_id:
-                    # if the start event id matches then we have a match
-                    return corp_rec
-                elif 'end_event_id' not in corp_rec or corp_rec['start_event_id'] is None:
-                    # if we hit the active record, use it (ignore anything dated after the start date of the currently active record)
-                    return corp_rec
-                elif self.compare_dates(corp_rec['effective_start_date'], "<=", loop_start_date, str(corp_rec)):
+                #if corp_rec['start_event_id'] == loop_start_id:
+                #    # if the start event id matches then we have a match
+                #    return corp_rec
+                if self.compare_dates(corp_rec['effective_start_date'], "<=", loop_start_date, str(corp_rec)):
                     # if the record date is earlier than the event effective date, it is potential match
-                    if ret_corp_rec is None:
+                    if 'end_event_id' not in corp_rec or corp_rec['end_event_id'] is None:
+                        # if we hit the active record, use it (ignore anything dated after the start date of the currently active record)
+                        return corp_rec
+                    elif ret_corp_rec is None:
                         ret_corp_rec = corp_rec
                     elif self.compare_dates(corp_rec['effective_start_date'], ">", ret_corp_rec['effective_start_date'], str(corp_rec)):
                         # pick the latest record based on effective date
                         ret_corp_rec = corp_rec
+                    elif self.compare_dates(corp_rec['effective_start_date'], "==", ret_corp_rec['effective_start_date'], str(corp_rec)):
+                        if self.compare_dates(corp_rec['effective_end_date'], ">", ret_corp_rec['effective_end_date'], str(corp_rec)):
+                            # if the start dates are the same, select the latest end date
+                            ret_corp_rec = corp_rec
 
         return ret_corp_rec
 
@@ -678,6 +700,17 @@ class EventProcessor:
             elif corp_state['effective_start_date'] > ret_corp_state['effective_start_date']:
                 ret_corp_state = corp_state
         return ret_corp_state
+
+    def corp_unique_record_list(self, corp_num, corp_info):
+        # generate a list of (sorted) effective dates for our corp registration credentials
+        effective_recs = self.unique_effective_recs('corp_state', 'state_typ_cd', corp_info['corp_state'], [])
+        effective_recs = self.unique_effective_recs('jurisdiction', 'can_jur_typ_cd', corp_info['jurisdiction'], effective_recs)
+        effective_recs = self.unique_effective_recs('org_names', 'corp_nme', corp_info['org_names'], effective_recs)
+        effective_recs = self.unique_effective_recs('org_name_assumed', 'corp_nme', corp_info['org_name_assumed'], effective_recs)
+        #effective_recs = self.unique_effective_recs('office', '', corp_info['office'], effective_recs)
+        #effective_recs = self.unique_effective_recs('parties', '', corp_info['parties'], effective_recs)
+
+        return effective_recs
 
     # determine the unique event list for the current corp
     def corp_unique_event_list(self, corp_num, corp_info):
@@ -723,19 +756,21 @@ class EventProcessor:
         (effective_events, future_events) = self.current_and_future_corp_events(corp_num, corp_info)
 
         if 0 < len(effective_events):
+            #print('effective_events', effective_events)
             prev_effective_event = event_dict(effective_events[0]['event_id'], effective_events[0]['event_timestmp'])
             last_effective_event = event_dict(effective_events[len(effective_events)-1]['event_id'], effective_events[len(effective_events)-1]['event_timestmp'])
-            if prev_effective_event['event_date'] > prev_event['event_date']:
+            if self.compare_dates(prev_effective_event['event_date'], ">", prev_event['event_date'], 'Events'):
                 use_prev_event = prev_effective_event
             else:
                 use_prev_event = prev_event
-            if last_effective_event['event_date'] < last_event['event_date']:
+            if self.compare_dates(last_effective_event['event_date'], "<", last_event['event_date'], 'Events'):
                 use_last_event = last_effective_event
             else:
                 use_last_event = last_event
 
             # loop based on start/end events
             for i in range(len(effective_events)):
+                #print('effective_event', effective_events[i])
                 loop_start_event = effective_events[i]
                 if use_prev_event['event_date'] <= loop_start_event['event_timestmp'] and loop_start_event['event_timestmp'] <= use_last_event['event_date']:
                     # generate corp credential
@@ -746,6 +781,7 @@ class EventProcessor:
                     # org_names active at effective date
                     org_name = self.corp_rec_at_effective_date(corp_info['org_names'], loop_start_event)
                     if org_name is not None:
+                        #print('org_name', org_name)
                         corp_cred['entity_name'] = org_name['corp_nme']
                         corp_cred['entity_name_effective'] = self.filter_min_date(org_name['effective_start_date'])
                     else:
@@ -755,19 +791,14 @@ class EventProcessor:
                     # org_name_assumed active at effective date
                     org_name_assumed = self.corp_rec_at_effective_date(corp_info['org_name_assumed'], loop_start_event)
                     if org_name_assumed is not None:
+                        #print('org_name_assumed', org_name_assumed)
                         corp_cred['entity_name_assumed'] = org_name_assumed['corp_nme'] 
                         corp_cred['entity_name_assumed_effective'] = self.filter_min_date(org_name_assumed['effective_start_date'])
 
                     # corp_state active at effective date
                     corp_state = self.corp_rec_at_effective_date(corp_info['corp_state'], loop_start_event)
-                    #if corp_state is None:
-                    #    # no corp state found - take either the first or last in the list
-                    #    if len(corp_info['corp_state']) > 0:
-                    #        if loop_start_event['effective_date'] <= corp_info['corp_state'][0]['effective_start_date']:
-                    #            corp_state = corp_info['corp_state'][0]
-                    #        else:
-                    #            corp_state = corp_info['corp_state'][len(corp_info['corp_state'])-1]
                     if corp_state is not None:
+                        #print('corp_state', corp_state)
                         corp_cred['entity_status'] = corp_state['op_state_typ_cd']
                         corp_cred['entity_status_effective'] = self.filter_min_date(corp_state['effective_start_date'])
                     else:
@@ -802,6 +833,7 @@ class EventProcessor:
 
                     # these will be sorted by date, but we need to make sure we are not submitting duplicates
                     # checking against the previously generated credential is sufficient
+                    #print('credential', corp_cred['credential'])
                     if (len(corp_creds) == 0) or (len(corp_creds) > 0 and corp_cred['credential'] != corp_creds[len(corp_creds)-1]['credential']):
                         corp_creds.append(corp_cred)
 
@@ -845,7 +877,7 @@ class EventProcessor:
                             dba_cred['effective_date'] = party['effective_start_date']
                             dba_cred['relationship_status_effective'] = self.filter_min_date(dba_cred['effective_date'])
                             if party['end_event_id'] is not None and party['end_event']['effective_date'] <= corp_info['current_date']:
-                                dba_cred['relationship_expiry_date'] = party['effective_end_date']
+                                dba_cred['expiry_date'] = party['effective_end_date']
                             reason_description = self.build_corp_reason_code(party['start_event'])
                             corp_creds.append(self.build_credential_dict(dba_credential, dba_schema, dba_version, dba_cred['registration_id'], dba_cred, reason_description, dba_cred['effective_date']))
 
@@ -996,6 +1028,11 @@ class EventProcessor:
                             try:
                                 # fetch corp info from bc_registries
                                 corp_info = bc_registries.get_bc_reg_corp_info(corp['CORP_NUM'])
+
+                                # get event summary
+                                effective_recs = self.corp_unique_record_list(corp['CORP_NUM'], corp_info)
+                                corp_info['reg_summary'] = effective_recs
+
                                 corp_info_json = bc_registries.to_json(corp_info)
                                 prev_event_json = event_json(corp['PREV_EVENT'])
                                 last_event_json = event_json(corp['LAST_EVENT'])

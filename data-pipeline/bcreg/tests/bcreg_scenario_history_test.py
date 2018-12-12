@@ -57,18 +57,18 @@ def test_scenario_history_1():
     my_info = generate_info_for_corp(my_corp_dict)
     my_creds = generate_all_creds_for_corp(my_info)
 
-    assert len(my_creds) == 28
+    assert len(my_creds) == 4
 
-    assert my_creds[25]['cred_type'] == 'REG'
-    assert my_creds[25]['credential']['entity_status'] == 'ACT'
-    assert my_creds[25]['credential']['entity_type'] == 'Extraprovincial Company'
-    assert my_creds[25]['credential']['home_jurisdiction'] == 'ON'
-    assert my_creds[25]['credential']['registered_jurisdiction'] == 'BC'
-    assert my_creds[25]['credential']['registration_id'] == 'A0212812'
+    assert my_creds[1]['cred_type'] == 'REG'
+    assert my_creds[1]['credential']['entity_status'] == 'ACT'
+    assert my_creds[1]['credential']['entity_type'] == 'A'
+    assert my_creds[1]['credential']['home_jurisdiction'] == 'ON'
+    assert my_creds[1]['credential']['registered_jurisdiction'] == 'BC'
+    assert my_creds[1]['credential']['registration_id'] == 'A0212812'
 
-    assert my_creds[26]['cred_type'] == 'ADDR'
-    assert my_creds[26]['credential']['address_type'] == 'Head Office'
-    assert my_creds[26]['credential']['registration_id'] == 'A0212812'
+    assert my_creds[3]['cred_type'] == 'ADDR'
+    assert my_creds[3]['credential']['address_type'] == 'HD'
+    assert my_creds[3]['credential']['registration_id'] == 'A0212812'
 
 def test_scenario_history_2():
     my_corp_num = '5993202'
@@ -80,13 +80,13 @@ def test_scenario_history_2():
 
     assert my_creds[0]['cred_type'] == 'REG'
     assert my_creds[0]['credential']['entity_status'] == 'ACT'
-    assert my_creds[0]['credential']['entity_type'] == 'BC Company'
+    assert my_creds[0]['credential']['entity_type'] == 'BC'
     assert my_creds[0]['credential']['home_jurisdiction'] == 'BC'
     assert my_creds[0]['credential']['registered_jurisdiction'] == ''
     assert my_creds[0]['credential']['registration_id'] == 'BC5993202'
 
     assert my_creds[3]['cred_type'] == 'ADDR'
-    assert my_creds[3]['credential']['address_type'] == 'Registered Office'
+    assert my_creds[3]['credential']['address_type'] == 'RG'
     assert my_creds[3]['credential']['registration_id'] == 'BC5993202'
 
 def test_scenario_history_future_date():
@@ -97,13 +97,13 @@ def test_scenario_history_future_date():
 
     assert my_creds[1]['cred_type'] == 'REG'
     assert my_creds[1]['credential']['entity_status'] == 'ACT'
-    assert my_creds[1]['credential']['entity_type'] == 'BC Company'
+    assert my_creds[1]['credential']['entity_type'] == 'BC'
     assert my_creds[1]['credential']['home_jurisdiction'] == 'BC'
     assert my_creds[1]['credential']['registered_jurisdiction'] == ''
     assert my_creds[1]['credential']['registration_id'] == 'BC6217522'
 
     assert my_creds[3]['cred_type'] == 'ADDR'
-    assert my_creds[3]['credential']['address_type'] == 'Registered Office'
+    assert my_creds[3]['credential']['address_type'] == 'RG'
     assert my_creds[3]['credential']['registration_id'] == 'BC6217522'
 
 

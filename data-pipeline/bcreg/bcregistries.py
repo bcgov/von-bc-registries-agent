@@ -1039,6 +1039,17 @@ class BCRegistries:
         if active_id is not None and active_id != len(sorted_records):
             print(">>>Data Issue:Active Record:" + corp_num + ":" + record_type + ":", records)
 
+    def flag_start_events_which_are_not_also_end_events(self, corp_num, corp_recs):
+        end_events = []
+        for rec in corp_recs:
+            end_events.append(rec['end_event_id'])
+        for rec in corp_recs:
+            flag = False
+            for i in range(end_events):
+                if rec['start_event_id'] == end_events[i]:
+                    flag = True
+            rec['start_event']['appears_as_end_event'] = flag
+
     def get_offices(self, corp_num):
         sql_office = """SELECT * from """ + self.get_table_prefix() + """office
                         WHERE corp_num = """ + self.get_db_sql_param() + """ and office_typ_cd in ('RG','HD','FO')"""
@@ -1157,8 +1168,11 @@ class BCRegistries:
                 corp_name['corp_nme'] = row[6]
                 corp_name['dd_corp_num'] = row[7]
 
-                #if corp_name['effective_start_date'] > corp_name['effective_end_date']:
-                #    print(">>>Data Issue:Date:" + corp_num + ":Corp_Name:", corp_name)
+                if corp_name['effective_start_date'] > corp_name['effective_end_date']:
+                    #print(">>>Data Issue:Date:" + corp_num + ":Corp_Name:", corp_name)
+                    if self.is_data_conversion_event(corp_name['start_event']) and registration_date is not None:
+                        corp_name['start_event']['effective_date'] = registration_date
+                        corp_name['effective_start_date'] = registration_date
 
                 names.append(corp_name)
                 row = cur.fetchone()
@@ -1166,7 +1180,8 @@ class BCRegistries:
             cur.close()
             cur = None
 
-            if len(names) == 1 and (names[0]['effective_start_date'] is None or names[0]['effective_start_date'] == ''):
+            if len(names) == 1 and registration_date is not None and (names[0]['effective_start_date'] is None or names[0]['effective_start_date'] == '' or self.is_data_conversion_event(corp_name['start_event'])):
+                names[0]['start_event']['effective_date'] = registration_date
                 names[0]['effective_start_date'] = registration_date
 
             #self.check_same_start_date(corp_num, 'corp_name', names, 'effective_start_date')
@@ -1331,7 +1346,9 @@ class BCRegistries:
             if deep_copy:
                 # get corp names
                 corp['org_names'] = self.get_names(corp_num, ['CO','NB'], corp['recognition_dts'])
+                #self.flag_start_events_which_are_not_also_end_events(corp_num, corp['org_names'])
                 corp['org_name_assumed'] = self.get_names(corp_num, ['AS'], corp['recognition_dts'])
+                #self.flag_start_events_which_are_not_also_end_events(corp_num, corp['org_name_assumed'])
                 #corp['org_name_trans'] = self.get_names(corp_num, ['TR', 'NO'], corp['recognition_dts'])
                 corp['office'] = self.get_offices(corp_num)
 
@@ -1348,6 +1365,7 @@ class BCRegistries:
 
                     #if corp_state['event_date'] > corp_state['effective_end_date']:
                     #    print(">>>Data Issue:Date:" + corp_num + ":Corp_State:", corp_state)
+                #self.flag_start_events_which_are_not_also_end_events(corp_num, corp_states)
 
                 #self.check_same_start_date(corp_num, 'corp_state', corp_states, 'event_date')
 
@@ -1356,20 +1374,22 @@ class BCRegistries:
                 corp_states = sorted(corp_states, key=lambda k: int(k['start_event_id']))
                 corp['corp_state'] = sorted(corp_states, key=lambda k: k['event_date'])
                 prev_state = None
-                prev_state_effective_event = None
                 for corp_state in corp['corp_state']:
                     # check if state has changed
                     use_registration_dt = False
                     if prev_state is None and corp_state['op_state_typ_cd'] == 'ACT':
                         use_registration_dt = True
-                    if prev_state is None or prev_state != corp_state['op_state_typ_cd']:
+                    if prev_state is None or prev_state['op_state_typ_cd'] != corp_state['op_state_typ_cd']:
                         # state has changed
-                        prev_state = corp_state['op_state_typ_cd']
-                        prev_state_effective_event = corp_state['start_event']
-                    corp_state['corp_state_effective_event'] = prev_state_effective_event
-                    corp_state['effective_start_date'] = prev_state_effective_event['effective_date']
-                    if use_registration_dt and corp['recognition_dts'] is not None:
-                        corp_state['effective_start_date'] = corp['recognition_dts']
+                        prev_state = corp_state
+                        prev_state['corp_state_effective_event'] = prev_state['start_event']
+                        if use_registration_dt and corp['recognition_dts'] is not None:
+                            prev_state['start_event']['effective_date'] = corp['recognition_dts']
+                            prev_state['effective_start_date'] = corp['recognition_dts']
+                        else:
+                            prev_state['effective_start_date'] = prev_state['event_date']
+                    corp_state['corp_state_effective_event'] = prev_state['corp_state_effective_event']
+                    corp_state['effective_start_date'] = prev_state['effective_start_date']
 
             return corp
         except (Exception, psycopg2.DatabaseError) as error:

@@ -22,7 +22,7 @@ def dumpfile(path, filename, data):
 
 
 def dump_corp_history_queue(path):
-    sql = """SELECT RECORD_ID, SYSTEM_TYPE_CD, PREV_EVENT_ID, LAST_EVENT_ID, CORP_NUM, CORP_JSON, ENTRY_DATE
+    sql = """SELECT RECORD_ID, SYSTEM_TYPE_CD, PREV_EVENT, LAST_EVENT, CORP_NUM, CORP_JSON, ENTRY_DATE
              FROM CORP_HISTORY_LOG"""
 
     """ Connect to the PostgreSQL database server """
@@ -51,7 +51,7 @@ def dump_corp_history_queue(path):
         cur = None
 
         for i,corp in enumerate(corps): 
-            print(corp)
+            #print(corp)
             filename = corp['CORP_NUM'] + '.json'
             dumpfile(path, filename, corp['CORP_JSON'])
 
@@ -67,7 +67,7 @@ def dump_corp_history_queue(path):
 
 
 def dump_corp_credential_queue(path):
-    sql = """SELECT RECORD_ID, SYSTEM_TYPE_CD, PREV_EVENT_ID, LAST_EVENT_ID, CORP_NUM, CREDENTIAL_TYPE_CD, 
+    sql = """SELECT RECORD_ID, SYSTEM_TYPE_CD, PREV_EVENT, LAST_EVENT, CORP_NUM, CREDENTIAL_TYPE_CD, 
                 SCHEMA_NAME, SCHEMA_VERSION, CREDENTIAL_JSON, ENTRY_DATE
               FROM CREDENTIAL_LOG"""
 
