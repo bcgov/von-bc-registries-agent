@@ -1,13 +1,14 @@
 issuers:
   bcreg:
-    name: BC Corporate Registry
-    abbreviation: BCReg
-    url: https://www2.gov.bc.ca/gov/content/governments/organizational-structure/ministries-organizations/ministries/citizens-services/bc-registries-online-services
-    email: bcregistries@gov.bc.ca
-    logo_path: ../assets/img/bcreg-logo-square.jpg
+    details:
+      label_en: BC Corporate Registry
+      abbreviation_en: BCReg
+      url_en: https://www2.gov.bc.ca/gov/content/governments/organizational-structure/ministries-organizations/ministries/citizens-services/bc-registries-online-services
+      email: bcregistries@gov.bc.ca
+      logo_path: ../assets/img/bcreg-logo-square.jpg
 
     connection:
-      type: TheOrgBook
+      type: OrgBook
       api_url: $TOB_API_URL
       sign_target: false
 
@@ -28,9 +29,10 @@ issuers:
         key_derivation_method: ARGON2I_MOD
 
     credential_types:
-      - description: Registration
-        schema: registration.registries.ca
-        issuer_url: $APPLICATION_URL_INCORP
+      - schema: registration.registries.ca
+        details:
+          label_en: Registration
+          url_en: $APPLICATION_URL_INCORP
         credential:
           effective_date:
             input: effective_date
@@ -40,7 +42,11 @@ issuers:
             from: claim
             processor:
               - bcgov.entity_status.is_historical
+          revoked_date:
+            input: expiry_date
+            from: claim
         topic:
+          label_en: Registration
           source_id:
             input: registration_id
             from: claim
@@ -97,10 +103,13 @@ issuers:
               value:
                 input: entity_name_assumed_effective
                 from: claim
-          - model: category
+          - model: attribute
             fields:
               type:
                 input: entity_status
+                from: value
+              format:
+                input: category
                 from: value
               value:
                 input: entity_status
@@ -116,10 +125,13 @@ issuers:
               value:
                 input: entity_status_effective
                 from: claim
-          - model: category
+          - model: attribute
             fields:
               type:
                 input: entity_type
+                from: value
+              format:
+                input: category
                 from: value
               value:
                 input: entity_type
@@ -146,18 +158,22 @@ issuers:
               value:
                 input: home_jurisdiction
                 from: claim
-          - model: category
+          - model: attribute
             fields:
               type:
                 input: reason_description
+                from: value
+              format:
+                input: category
                 from: value
               value:
                 input: reason_description
                 from: claim
 
-      - description: Relationship
-        schema: relationship.registries.ca
-        issuer_url: $APPLICATION_URL_DBA
+      - schema: relationship.registries.ca
+        details:
+          label_en: Relationship
+          url_en: $APPLICATION_URL_DBA
         credential:
           effective_date:
             input: effective_date
@@ -181,10 +197,13 @@ issuers:
         cardinality_fields:
           - associated_registration_id
         mapping:
-          - model: category
+          - model: attribute
             fields:
               type:
                 input: relationship
+                from: value
+              format:
+                input: category
                 from: value
               value:
                 input: relationship
@@ -197,10 +216,13 @@ issuers:
               value:
                 input: relationship_description
                 from: claim
-          - model: category
+          - model: attribute
             fields:
               type:
                 input: relationship_status
+                from: value
+              format:
+                input: category
                 from: value
               value:
                 input: relationship_status
@@ -216,18 +238,22 @@ issuers:
               value:
                 input: relationship_status_effective
                 from: claim
-          - model: category
+          - model: attribute
             fields:
               type:
                 input: reason_description
+                from: value
+              format:
+                input: category
                 from: value
               value:
                 input: reason_description
                 from: claim
 
-      - description: Corporate Address
-        schema: address.registries.ca
-        issuer_url: $APPLICATION_URL_ADDRESS
+      - schema: address.registries.ca
+        details:
+          label_en: Corporate Address
+          url_en: $APPLICATION_URL_ADDRESS
         credential:
           effective_date:
             input: effective_date
@@ -268,10 +294,13 @@ issuers:
               type:
                 input: address_type
                 from: claim
-          - model: category
+          - model: attribute
             fields:
               type:
                 input: reason_description
+                from: value
+              format:
+                input: category
                 from: value
               value:
                 input: reason_description
