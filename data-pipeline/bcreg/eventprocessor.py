@@ -864,6 +864,17 @@ class EventProcessor:
                 # ensure relationship history is generated correctly
                 corp_parties = sorted(corp_info['parties'], key=lambda k: int(k['start_event_id']))
                 corp_parties = sorted(corp_info['parties'], key=lambda k: k['effective_start_date'])
+                # first check if party records are for unique firms
+                party_count = {}
+                for party in corp_parties:
+                    if ((prev_event['event_date'] <= party['start_event']['event_timestmp'] and party['start_event']['event_timestmp'] <= last_event['event_date']) or
+                        (party['end_event_id'] is not None and prev_event['event_date'] <= party['end_event']['event_timestmp'] and party['end_event']['event_timestmp'] <= last_event['event_date'])):
+                        if party['corp_info']['corp_typ_cd'] == 'SP' or party['corp_info']['corp_typ_cd'] == 'MF':
+                            if party['corp_info']['corp_num'] in party_count:
+                                party_count[party['corp_info']['corp_num']] = party_count[party['corp_info']['corp_num']] + 1
+                            else:
+                                party_count[party['corp_info']['corp_num']] = 1
+
                 for party in corp_parties:
                     if ((prev_event['event_date'] <= party['start_event']['event_timestmp'] and party['start_event']['event_timestmp'] <= last_event['event_date']) or
                         (party['end_event_id'] is not None and prev_event['event_date'] <= party['end_event']['event_timestmp'] and party['end_event']['event_timestmp'] <= last_event['event_date'])):
@@ -875,6 +886,11 @@ class EventProcessor:
                             dba_cred['relationship_description'] = 'Does Business As'
                             dba_cred['relationship_status'] = 'ACT'
                             dba_cred['effective_date'] = party['effective_start_date']
+
+                            # if the start event is 'ADMIN' type and there is only one party record, use the firm effective date
+                            if party['start_event']['event_typ_cd'] == 'ADMIN' and party_count[party['corp_info']['corp_num']] == 1:
+                                dba_cred['effective_date'] = party['corp_info']['recognition_dts']
+
                             dba_cred['relationship_status_effective'] = self.filter_min_date(dba_cred['effective_date'])
                             if party['end_event_id'] is not None and party['end_event']['effective_date'] <= corp_info['current_date']:
                                 dba_cred['expiry_date'] = party['effective_end_date']
