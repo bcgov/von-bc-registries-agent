@@ -653,7 +653,7 @@ class EventProcessor:
         ret_effective_events = []
         prev_effective_event = None
         for effective_event in effective_events:
-            if prev_effective_event is None or effective_event['event_id'] != prev_effective_event['event_id']:
+            if prev_effective_event is None or effective_event['effective_date'] != prev_effective_event['effective_date']:
                 ret_effective_events.append(effective_event)
             prev_effective_event = effective_event
         return ret_effective_events
