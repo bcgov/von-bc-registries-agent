@@ -2,130 +2,170 @@
   version: '1.0.40'
   attributes:
     registration_id:
-      description: Registration/Incorporation Number or Identifying Number
+      label_en: Registration ID
+      description_en: Registration/Incorporation Number or Identifying Number
       required: true
     registration_date:
-      description: Date of Registration, Incorporation, Continuation or Amalgamation
+      label_en: Registration Date
+      description_en: Date of Registration, Incorporation, Continuation or Amalgamation
       required: false
     registration_expiry_date:
-      description: Date the registration will expire (unless extended)
+      label_en: Registration Expiry Date
+      description_en: Date the registration will expire (unless extended)
       required: false
     registration_renewal_effective:
-      description: Date the registration renewal became effective
+      label_en: Registration Renewal Effective
+      description_en: Date the registration renewal became effective
       required: false
     entity_name:
-      description: The legal name of entity
+      label_en: Name
+      description_en: The legal name of entity
       required: true
     entity_name_effective:
-      description: Date current name became effective
+      label_en: Name Effective Date
+      description_en: Date current name became effective
       required: true
     entity_name_assumed:
-      description: A legal name used by an extraprovincial company when the home jurisdiction name is not available
+      label_en: Assumed Name
+      description_en: A legal name used by an extraprovincial company when the home jurisdiction name is not available
       required: false
     entity_name_assumed_effective:
-      description: Date assumed name became effective
+      label_en: Assumed Name Effective Date
+      description_en: Date assumed name became effective
       required: false
     entity_name_trans:
-      description: Entity name translated into another language
+      label_en: Translated Name
+      description_en: Entity name translated into another language
       required: false
     entity_name_trans_effective:
-      description: Date translated name became effective
+      label_en: Translated Name Effective Date
+      description_en: Date translated name became effective
       required: false
     entity_status:
-      description: Status of the entity (active or historical)
+      label_en: Registration Status
+      description_en: Status of the entity (active or historical)
       required: true
     entity_status_effective:
-      description: Date status became effective
+      label_en: Status Effective Date
+      description_en: Date status became effective
       required: true
     entity_type:
-      description: Type of entity incorporated or registered
+      label_en: Registration Type
+      description_en: Type of entity incorporated or registered
       required: true
     registered_jurisdiction:
-      description: The jurisdiction an entity was created in
+      label_en: Registered Jurisdiction
+      description_en: The jurisdiction an entity was created in
       required: false
     extra_jurisdictional_registration:
-      description: Flag to indicate extra-jurisdictional registrations
+      label_en: Extra-Jurisdictional Registration
+      description_en: Flag to indicate extra-jurisdictional registrations
       required: false
     home_jurisdiction:
-      description: Name of home jurisdiction where org is registered
+      label_en: Home Jurisdiction
+      description_en: Name of home jurisdiction where org is registered
       required: true
     effective_date:
-      description: Date Credential is effective
+      label_en: Credential Effective Date
+      description_en: Date Credential is effective
       required: true
     reason_description:
-      description: Reason for credential issue/update
+      label_en: Credential Issue Reason
+      description_en: Reason for credential issue/update
       required: false
     expiry_date:
-      description: Date Credential expired
+      label_en: Credential Expiry Date
+      description_en: Date Credential expired
       required: true
 
 - name: address.registries.ca
   version: '1.0.40'
   attributes:
     registration_id:
-      description: Unique identifer assigned to entity by registrar
+      label_en: Registration ID
+      description_en: Unique identifer assigned to entity by registrar
       required: true
     addressee:
-      description: Legal and principle name assigned to entity by registrar
+      label_en: Addressee
+      description_en: Legal and principle name assigned to entity by registrar
       required: true
     address_type:
-      description: Type designator for this address
+      label_en: Address Type
+      description_en: Type designator for this address
       required: true
     civic_address:
-      description: Street number, name, direction, suite, etc.
+      label_en: Civic Address
+      description_en: Street number, name, direction, suite, etc.
       required: true
     municipality:
-      description: Name of a recognized municipality
+      label_en: Municipality
+      description_en: Name of a recognized municipality
       required: true
     province:
-      description: Name of recognized sub-national territory
+      label_en: Province
+      description_en: Name of recognized sub-national territory
       required: true
     postal_code:
-      description: Identifier issued by postal agency
+      label_en: Postal Code
+      description_en: Identifier issued by postal agency
       required: true
     country:
-      description: Name of a recognized national territory
+      label_en: Country
+      description_en: Name of a recognized national territory
       required: true
     address_effective_date:
-      description: Date current address became/becomes effective
+      label_en: Address Effective Date
+      description_en: Date current address became/becomes effective
       required: false
     effective_date:
-      description: Date Credential is effective
+      label_en: Credential Effective Date
+      description_en: Date Credential is effective
       required: true
     expiry_date:
-      description: Date Credential expires
+      label_en: Credential Expiry Date
+      description_en: Date Credential expires
       required: false
     reason_description:
-      description: Reason for credential issue/update
+      label_en: Credential Issue Reason
+      description_en: Reason for credential issue/update
       required: false
 
 - name: relationship.registries.ca
   version: '1.0.40'
   attributes:
     registration_id:
-      description: Unique identifer assigned to entity by registrar
+      label_en: Registration ID
+      description_en: Unique identifer assigned to entity by registrar
       required: true
     associated_registration_id:
-      description: Registry id(s) of associated organizations/individuals
+      label_en: Associated Registration ID
+      description_en: Registry id(s) of associated organizations/individuals
       required: true
     relationship:
-      description: Name of the relationship
+      label_en: Relationship
+      description_en: Name of the relationship
       required: true
     relationship_description:
-      description: Description of the relationship
+      label_en: Relationship Description
+      description_en: Description of the relationship
       required: true
     relationship_status:
-      description: Status of the relationship
+      label_en: Relationship Status
+      description_en: Status of the relationship
       required: true
     relationship_status_effective:
-      description: Date the relationship became/becomes effective
+      label_en: Relationship Status Effective
+      description_en: Date the relationship became/becomes effective
       required: false
     effective_date:
-      description: Date Credential is effective
+      label_en: Registration ID
+      description_en: Date Credential is effective
       required: true
     expiry_date:
-      description: Date Credential expires
+      label_en: Credential Expiry Date
+      description_en: Date Credential expires
       required: false
     reason_description:
-      description: Reason for credential issue/update
+      label_en: Credential Issue Reason
+      description_en: Reason for credential issue/update
       required: false
