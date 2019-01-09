@@ -1,4 +1,4 @@
-FROM bcgovimages/von-image:py36-1.6-ew-14
+FROM bcgovimages/von-image:py36-1.7-ew-0
 
 WORKDIR $HOME
 
