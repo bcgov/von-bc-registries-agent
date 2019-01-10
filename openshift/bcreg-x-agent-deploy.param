@@ -21,7 +21,7 @@ LOG_LEVEL=
 PYTHON_ENV=development
 TOB_API_URL=https://dev-api.orgbook.gov.bc.ca/api/v2
 TOB_APP_URL=https://dev.orgbook.gov.bc.ca
-WALLET_TYPE=postgres
+WALLET_TYPE=postgres_storage
 POSTGRESQL_WALLET_HOST=wallet-db
 POSTGRESQL_WALLET_PORT=5432
 WALLET_ENCRYPTION_KEY=[a-zA-Z0-9_~!@#$%^&*()-=<>,.?;:|]{16}
