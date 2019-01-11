@@ -370,7 +370,7 @@
       "displayName": "Indy Ledger URL",
       "description": "URL for a running instance of the von-network.  Used when connecting to the BCovrin Ledger.",
       "required": false,
-      "value": "http://159.89.115.24"
+      "value": "http://dev.bcovrin.vonx.io"
     },
     {
       "name": "LEDGER_PROTOCOL_VERSION",
