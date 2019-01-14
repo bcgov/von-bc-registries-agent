@@ -56,6 +56,9 @@ usage () {
     requeueFailedCreds
       - Requeue any credentials that have failed posting.
 
+    requeueProcessedCreds
+      - Use with caution.  Requeue any credentials that have already been posted.
+
     scaleUp
       - Scale up one or more pods.
         For example;
@@ -280,6 +283,19 @@ requeueFailedCreds() {
   ${_databasePodName} \
   'psql -d ${POSTGRESQL_DATABASE} -ac "update credential_log set process_success = null, process_date = null, process_msg = null where process_success = '"'"'N'"'"';"'
 }
+
+requeueProcessedCreds() {
+  _databasePodName=${1}
+  if [ -z "${_databasePodName}" ]; then
+    echo -e \\n"requeueProcessedCreds; Missing parameter!"\\n
+    exit 1
+  fi
+
+  echo
+  runInContainer -v \
+  ${_databasePodName} \
+  'psql -d ${POSTGRESQL_DATABASE} -ac "update credential_log set process_success = null, process_date = null, process_msg = null where process_success = '"'"'Y'"'"';"'
+}
 # =================================================================================================================
 
 pushd ${SCRIPT_HOME} >/dev/null
@@ -301,6 +317,10 @@ case "${_cmd}" in
   requeuefailedcreds)
     dbPodName=${1:-event-db}
     requeueFailedCreds "${dbPodName}"
+    ;;
+  requeueprocessedcreds)
+    dbPodName=${1:-event-db}
+    requeueProcessedCreds "${dbPodName}"
     ;;
   deletedatabase)
     dbPodName=${1}
