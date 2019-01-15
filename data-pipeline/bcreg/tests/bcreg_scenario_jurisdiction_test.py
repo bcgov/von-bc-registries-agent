@@ -64,19 +64,19 @@ def test_scenario_jurisdiction_man():
     my_creds = generate_creds_for_corp(my_corp_dict)
 
     print("# Home Jurisdiction United Kingdom (can_jur_typ_cd = ‘OT’ and othr_juris_desc = ‘GB’)")
-    assert len(my_creds) == 4
+    assert len(my_creds) == 3
 
-    assert my_creds[1]['cred_type'] == 'REG'
-    assert my_creds[1]['credential']['entity_status'] == 'ACT'
-    assert my_creds[1]['credential']['entity_type'] == 'A'
-    assert my_creds[1]['credential']['home_jurisdiction'] == 'GB'
-    assert my_creds[1]['credential']['registered_jurisdiction'] == 'BC'
-    assert my_creds[1]['credential']['registration_id'] == 'A5215485'
+    assert my_creds[0]['cred_type'] == 'REG'
+    assert my_creds[0]['credential']['entity_status'] == 'ACT'
+    assert my_creds[0]['credential']['entity_type'] == 'A'
+    assert my_creds[0]['credential']['home_jurisdiction'] == 'GB'
+    assert my_creds[0]['credential']['registered_jurisdiction'] == 'BC'
+    assert my_creds[0]['credential']['registration_id'] == 'A5215485'
 
-    assert my_creds[3]['cred_type'] == 'ADDR'
-    assert my_creds[3]['credential']['address_type'] == 'HD'
-    assert my_creds[3]['credential']['civic_address'] == 'GQACSKQWJZDWYJK D ITLV WW, UZNLSWYTMYQLUAJGDKDZWQZUV, ENGLAND  CW8 2YA, '
-    assert my_creds[3]['credential']['registration_id'] == 'A5215485'
+    assert my_creds[2]['cred_type'] == 'ADDR'
+    assert my_creds[2]['credential']['address_type'] == 'HD'
+    assert my_creds[2]['credential']['civic_address'] == 'GQACSKQWJZDWYJK D ITLV WW, UZNLSWYTMYQLUAJGDKDZWQZUV, ENGLAND  CW8 2YA, '
+    assert my_creds[2]['credential']['registration_id'] == 'A5215485'
 
 
 def test_scenario_jurisdiction_washington():
@@ -85,19 +85,19 @@ def test_scenario_jurisdiction_washington():
     my_creds = generate_creds_for_corp(my_corp_dict)
 
     print("# Home Jurisdiction Washington (can_jur_typ_cd = ‘OT’ and othr_juris_desc = ‘US, WA’)")
-    assert len(my_creds) == 3
+    assert len(my_creds) == 2
 
-    assert my_creds[1]['cred_type'] == 'REG'
-    assert my_creds[1]['credential']['entity_status'] == 'HIS'
-    assert my_creds[1]['credential']['entity_type'] == 'A'
-    assert my_creds[1]['credential']['home_jurisdiction'] == 'US, WA'
-    assert my_creds[1]['credential']['registered_jurisdiction'] == 'BC'
+    assert my_creds[0]['cred_type'] == 'REG'
+    assert my_creds[0]['credential']['entity_status'] == 'HIS'
+    assert my_creds[0]['credential']['entity_type'] == 'A'
+    assert my_creds[0]['credential']['home_jurisdiction'] == 'US, WA'
+    assert my_creds[0]['credential']['registered_jurisdiction'] == 'BC'
+    assert my_creds[0]['credential']['registration_id'] == 'A5462935'
+
+    assert my_creds[1]['cred_type'] == 'ADDR'
+    assert my_creds[1]['credential']['address_type'] == 'HD'
+    assert my_creds[1]['credential']['civic_address'] == 'XZVDZOLRCFHDHGGRTSJTLNLFY, VMUMZPQJWJJJPBPHKHLVNFIED, 98178, '
     assert my_creds[1]['credential']['registration_id'] == 'A5462935'
-
-    assert my_creds[2]['cred_type'] == 'ADDR'
-    assert my_creds[2]['credential']['address_type'] == 'HD'
-    assert my_creds[2]['credential']['civic_address'] == 'XZVDZOLRCFHDHGGRTSJTLNLFY, VMUMZPQJWJJJPBPHKHLVNFIED, 98178, '
-    assert my_creds[2]['credential']['registration_id'] == 'A5462935'
     
 
 def test_scenario_jurisdiction_uk():
@@ -106,19 +106,19 @@ def test_scenario_jurisdiction_uk():
     my_creds = generate_creds_for_corp(my_corp_dict)
 
     print("# Home Jurisdiction Federal (can_jur_typ_cd ‘FD’)")
-    assert len(my_creds) == 4
+    assert len(my_creds) == 3
 
-    assert my_creds[1]['cred_type'] == 'REG'
-    assert my_creds[1]['credential']['entity_status'] == 'ACT'
-    assert my_creds[1]['credential']['entity_type'] == 'A'
-    assert my_creds[1]['credential']['home_jurisdiction'] == 'FD'
-    assert my_creds[1]['credential']['registered_jurisdiction'] == 'BC'
-    assert my_creds[1]['credential']['registration_id'] == 'A4993014'
+    assert my_creds[0]['cred_type'] == 'REG'
+    assert my_creds[0]['credential']['entity_status'] == 'ACT'
+    assert my_creds[0]['credential']['entity_type'] == 'A'
+    assert my_creds[0]['credential']['home_jurisdiction'] == 'FD'
+    assert my_creds[0]['credential']['registered_jurisdiction'] == 'BC'
+    assert my_creds[0]['credential']['registration_id'] == 'A4993014'
 
-    assert my_creds[3]['cred_type'] == 'ADDR'
-    assert my_creds[3]['credential']['address_type'] == 'HD'
-    assert my_creds[3]['credential']['municipality'] == 'VANCOUVER'
-    assert my_creds[3]['credential']['registration_id'] == 'A4993014'
+    assert my_creds[2]['cred_type'] == 'ADDR'
+    assert my_creds[2]['credential']['address_type'] == 'HD'
+    assert my_creds[2]['credential']['municipality'] == 'VANCOUVER'
+    assert my_creds[2]['credential']['registration_id'] == 'A4993014'
     
 
 def test_scenario_jurisdiction_notonfile():
@@ -127,18 +127,18 @@ def test_scenario_jurisdiction_notonfile():
     my_creds = generate_creds_for_corp(my_corp_dict)
 
     print("# Home Jurisdiction Not on File (can_jur_typ_cd ‘OT’ and othr_juris_desc = null)")
-    assert len(my_creds) == 3
+    assert len(my_creds) == 2
 
-    assert my_creds[1]['cred_type'] == 'REG'
-    assert my_creds[1]['credential']['entity_status'] == 'HIS'
-    assert my_creds[1]['credential']['entity_type'] == 'A'
-    assert my_creds[1]['credential']['home_jurisdiction'] == 'OT'
-    assert my_creds[1]['credential']['registered_jurisdiction'] == 'BC'
+    assert my_creds[0]['cred_type'] == 'REG'
+    assert my_creds[0]['credential']['entity_status'] == 'HIS'
+    assert my_creds[0]['credential']['entity_type'] == 'A'
+    assert my_creds[0]['credential']['home_jurisdiction'] == 'OT'
+    assert my_creds[0]['credential']['registered_jurisdiction'] == 'BC'
+    assert my_creds[0]['credential']['registration_id'] == 'A9168630'
+
+    assert my_creds[1]['cred_type'] == 'ADDR'
+    assert my_creds[1]['credential']['address_type'] == 'HD'
     assert my_creds[1]['credential']['registration_id'] == 'A9168630'
-
-    assert my_creds[2]['cred_type'] == 'ADDR'
-    assert my_creds[2]['credential']['address_type'] == 'HD'
-    assert my_creds[2]['credential']['registration_id'] == 'A9168630'
     
 
 def test_scenario_jurisdiction_federal():

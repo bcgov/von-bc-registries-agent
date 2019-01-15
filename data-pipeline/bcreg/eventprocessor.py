@@ -8,7 +8,7 @@ import time
 import hashlib
 import traceback
 from bcreg.config import config
-from bcreg.bcregistries import BCRegistries, CustomJsonEncoder, event_dict
+from bcreg.bcregistries import BCRegistries, CustomJsonEncoder, event_dict, is_data_conversion_event
 
 
 corp_credential = 'REG'
@@ -594,9 +594,12 @@ class EventProcessor:
     def store_credentials(self, cur, system_typ_cd, prev_event, last_event, corp_num, corp_state, corp_info, corp_creds):
         cred_count = 0
         for corp_cred in corp_creds:
-            cred_count = cred_count + self.insert_json_credential(cur, system_typ_cd, prev_event, last_event, corp_num, corp_state, 
-                                                            corp_cred['cred_type'], corp_cred['id'], corp_cred['schema'], corp_cred['version'], 
-                                                            corp_cred['credential'], corp_cred['credential_reason'])
+            if corp_cred['credential']['effective_date'] is not None and corp_cred['credential']['effective_date'] != '':
+                cred_count = cred_count + self.insert_json_credential(cur, system_typ_cd, prev_event, last_event, corp_num, corp_state, 
+                                                                corp_cred['cred_type'], corp_cred['id'], corp_cred['schema'], corp_cred['version'], 
+                                                                corp_cred['credential'], corp_cred['credential_reason'])
+            else:
+                print("Error can't issue a credential with no effective date!")
         return cred_count
 
     def build_credential_dict(self, cred_type, schema, version, cred_id, credential, credential_reason, effective_date):
@@ -676,7 +679,8 @@ class EventProcessor:
                     # if the record date is earlier than the event effective date, it is potential match
                     if 'end_event_id' not in corp_rec or corp_rec['end_event_id'] is None:
                         # if we hit the active record, use it (ignore anything dated after the start date of the currently active record)
-                        return corp_rec
+                        ret_corp_rec = corp_rec
+                        break
                     elif ret_corp_rec is None:
                         ret_corp_rec = corp_rec
                     elif self.compare_dates(corp_rec['effective_start_date'], ">", ret_corp_rec['effective_start_date'], str(corp_rec)):
@@ -686,6 +690,11 @@ class EventProcessor:
                         if self.compare_dates(corp_rec['effective_end_date'], ">", ret_corp_rec['effective_end_date'], str(corp_rec)):
                             # if the start dates are the same, select the latest end date
                             ret_corp_rec = corp_rec
+
+        if ret_corp_rec is None and len(corp_recs) > 0:
+            if 'start_event' in corp_recs[0] and is_data_conversion_event(corp_recs[0]['start_event']):
+                if corp_recs[0]['effective_start_date'] == corp_recs[0]['start_event']['effective_date']:
+                    ret_corp_rec = corp_recs[0]
 
         return ret_corp_rec
 
@@ -772,7 +781,7 @@ class EventProcessor:
             for i in range(len(effective_events)):
                 #print('effective_event', effective_events[i])
                 loop_start_event = effective_events[i]
-                if use_prev_event['event_date'] <= loop_start_event['event_timestmp'] and loop_start_event['event_timestmp'] <= use_last_event['event_date']:
+                if (not (is_data_conversion_event(loop_start_event) and loop_start_event['event_timestmp'] == loop_start_event['effective_date'])) and use_prev_event['event_date'] <= loop_start_event['event_timestmp'] and loop_start_event['event_timestmp'] <= use_last_event['event_date']:
                     # generate corp credential
                     corp_cred = {}
                     corp_cred['registration_id'] = self.corp_num_with_prefix(corp_info['corp_typ_cd'], corp_info['corp_num'])
@@ -783,7 +792,10 @@ class EventProcessor:
                     if org_name is not None:
                         #print('org_name', org_name)
                         corp_cred['entity_name'] = org_name['corp_nme']
-                        corp_cred['entity_name_effective'] = self.filter_min_date(org_name['effective_start_date'])
+                        if is_data_conversion_event(org_name['start_event']) and org_name['effective_start_date'] == org_name['start_event']['effective_date']:
+                            corp_cred['entity_name_effective'] = ''
+                        else:
+                            corp_cred['entity_name_effective'] = self.filter_min_date(org_name['effective_start_date'])
                     else:
                         corp_cred['entity_name'] = ''
                         corp_cred['entity_name_effective'] = ''
@@ -793,14 +805,20 @@ class EventProcessor:
                     if org_name_assumed is not None:
                         #print('org_name_assumed', org_name_assumed)
                         corp_cred['entity_name_assumed'] = org_name_assumed['corp_nme'] 
-                        corp_cred['entity_name_assumed_effective'] = self.filter_min_date(org_name_assumed['effective_start_date'])
+                        if is_data_conversion_event(org_name_assumed['start_event']) and org_name_assumed['effective_start_date'] == org_name_assumed['start_event']['entity_name_assumed_effective']:
+                            corp_cred['entity_name_assumed_effective'] = ''
+                        else:
+                            corp_cred['entity_name_assumed_effective'] = self.filter_min_date(org_name_assumed['effective_start_date'])
 
                     # corp_state active at effective date
                     corp_state = self.corp_rec_at_effective_date(corp_info['corp_state'], loop_start_event)
                     if corp_state is not None:
                         #print('corp_state', corp_state)
                         corp_cred['entity_status'] = corp_state['op_state_typ_cd']
-                        corp_cred['entity_status_effective'] = self.filter_min_date(corp_state['effective_start_date'])
+                        if is_data_conversion_event(corp_state['start_event']) and corp_state['effective_start_date'] == corp_state['start_event']['effective_date']:
+                            corp_cred['entity_status_effective'] = ''
+                        else:
+                            corp_cred['entity_status_effective'] = self.filter_min_date(corp_state['effective_start_date'])
                     else:
                         corp_cred['entity_status'] = ''
                         corp_cred['entity_status_effective'] = ''
