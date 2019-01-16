@@ -70,6 +70,12 @@ class CustomJsonEncoder(json.JSONEncoder):
         return json.JSONEncoder.default(self, o)
 
 
+def is_data_conversion_event(event):
+    if event['event_timestmp'].year == DATA_CONVERSION_DATE.year and event['event_timestmp'].month == DATA_CONVERSION_DATE.month and event['event_timestmp'].day == DATA_CONVERSION_DATE.day:
+        return True
+    return False
+
+
 # interface to BC Registries database
 # data is returned as dictionaries, using the sql column name as identifier
 class BCRegistries:
@@ -904,11 +910,6 @@ class BCRegistries:
         #filing = self.get_filing_event('0', event_id, event['event_typ_cd'])
         return self.get_event_filing_effective_date(event)
 
-    def is_data_conversion_event(self, event):
-        if event['event_timestmp'].year == DATA_CONVERSION_DATE.year and event['event_timestmp'].month == DATA_CONVERSION_DATE.month and event['event_timestmp'].day == DATA_CONVERSION_DATE.day:
-            return True
-        return False
-
     # find a specific event, 
     # return None if not found
     def get_event(self, corp_num, event_id, force_query_remote=False):
@@ -939,7 +940,7 @@ class BCRegistries:
                 return {}
 
             # don't use data conversion date as a timestamp
-            #if self.is_data_conversion_event(ret_event):
+            #if is_data_conversion_event(ret_event):
             #    ret_event['event_timestmp'] = ''
 
             # fill in filing and conv_event
@@ -1172,7 +1173,7 @@ class BCRegistries:
 
                 if corp_name['effective_start_date'] > corp_name['effective_end_date']:
                     #print(">>>Data Issue:Date:" + corp_num + ":Corp_Name:", corp_name)
-                    if self.is_data_conversion_event(corp_name['start_event']) and registration_date is not None:
+                    if is_data_conversion_event(corp_name['start_event']) and registration_date is not None:
                         corp_name['start_event']['effective_date'] = registration_date
                         corp_name['effective_start_date'] = registration_date
 
@@ -1182,7 +1183,7 @@ class BCRegistries:
             cur.close()
             cur = None
 
-            if len(names) == 1 and registration_date is not None and (names[0]['effective_start_date'] is None or names[0]['effective_start_date'] == '' or self.is_data_conversion_event(corp_name['start_event'])):
+            if len(names) == 1 and registration_date is not None and (names[0]['effective_start_date'] is None or names[0]['effective_start_date'] == '' or is_data_conversion_event(corp_name['start_event'])):
                 names[0]['start_event']['effective_date'] = registration_date
                 names[0]['effective_start_date'] = registration_date
 
@@ -1350,13 +1351,13 @@ class BCRegistries:
                 corp['org_names'] = self.get_names(corp_num, ['CO','NB'], corp['recognition_dts'])
                 self.flag_start_events_which_are_not_also_end_events(corp_num, corp['org_names'])
                 for corp_name in corp['org_names']:
-                    if self.is_data_conversion_event(corp_name['start_event']) and not corp_name['start_event']['appears_as_end_event'] and corp['recognition_dts'] is not None:
+                    if is_data_conversion_event(corp_name['start_event']) and not corp_name['start_event']['appears_as_end_event'] and corp['recognition_dts'] is not None:
                         corp_name['start_event']['effective_date'] = corp['recognition_dts']
                         corp_name['effective_start_date'] = corp['recognition_dts']
                 corp['org_name_assumed'] = self.get_names(corp_num, ['AS'], corp['recognition_dts'])
                 self.flag_start_events_which_are_not_also_end_events(corp_num, corp['org_name_assumed'])
                 for corp_name in corp['org_name_assumed']:
-                    if self.is_data_conversion_event(corp_name['start_event']) and not corp_name['start_event']['appears_as_end_event'] and corp['recognition_dts'] is not None:
+                    if is_data_conversion_event(corp_name['start_event']) and not corp_name['start_event']['appears_as_end_event'] and corp['recognition_dts'] is not None:
                         corp_name['start_event']['effective_date'] = corp['recognition_dts']
                         corp_name['effective_start_date'] = corp['recognition_dts']
                 #corp['org_name_trans'] = self.get_names(corp_num, ['TR', 'NO'], corp['recognition_dts'])
@@ -1389,7 +1390,7 @@ class BCRegistries:
                     use_registration_dt = False
                     if prev_state is None and corp_state['op_state_typ_cd'] == 'ACT':
                         use_registration_dt = True
-                    elif prev_state is None and self.is_data_conversion_event(corp_state['start_event']) and not corp_state['start_event']['appears_as_end_event']:
+                    elif prev_state is None and is_data_conversion_event(corp_state['start_event']) and not corp_state['start_event']['appears_as_end_event']:
                         use_registration_dt = True
                     if prev_state is None or prev_state['op_state_typ_cd'] != corp_state['op_state_typ_cd']:
                         # state has changed

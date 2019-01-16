@@ -137,11 +137,11 @@ def test_scenario_single_dba():
     my_creds = generate_creds_for_corp(my_corp_dict)
 
     print("# basic corp with 1 DBA (no DBA address)")
-    assert len(my_creds) == 6
+    assert len(my_creds) == 5
 
-    assert my_creds[1]['cred_type'] == 'REG'
-    assert my_creds[4]['cred_type'] == 'ADDR'
-    assert my_creds[5]['cred_type'] == 'REL'
+    assert my_creds[0]['cred_type'] == 'REG'
+    assert my_creds[3]['cred_type'] == 'ADDR'
+    assert my_creds[4]['cred_type'] == 'REL'
 
     my_dba_num = 'FM3035075'
     my_corp_dict['corp_num'] = my_dba_num
@@ -231,10 +231,10 @@ def test_scenario_empty_dates():
     my_creds = generate_creds_for_corp(my_corp_dict)
 
     print("# basic corp with empty dates")
-    assert len(my_creds) == 3
+    assert len(my_creds) == 2
 
-    assert my_creds[1]['cred_type'] == 'REG'
-    assert my_creds[2]['cred_type'] == 'ADDR'
+    assert my_creds[0]['cred_type'] == 'REG'
+    assert my_creds[1]['cred_type'] == 'ADDR'
 
 
 # utility method to process the selected corp and generate credentails

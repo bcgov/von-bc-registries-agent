@@ -128,6 +128,7 @@ specific_corps = [
                     'A0053723',
                     'A0082657',
                     '0319629',
+                    '0747962',
                     ]
 
 with BCRegistries() as bc_registries:
