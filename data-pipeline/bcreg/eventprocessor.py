@@ -792,7 +792,7 @@ class EventProcessor:
                     if org_name is not None:
                         #print('org_name', org_name)
                         corp_cred['entity_name'] = org_name['corp_nme']
-                        if is_data_conversion_event(org_name['start_event']) and org_name['effective_start_date'] == org_name['start_event']['effective_date']:
+                        if is_data_conversion_event(org_name['start_event']) and org_name['effective_start_date'] == org_name['start_event']['event_timestmp']:
                             corp_cred['entity_name_effective'] = ''
                         else:
                             corp_cred['entity_name_effective'] = self.filter_min_date(org_name['effective_start_date'])
@@ -805,7 +805,7 @@ class EventProcessor:
                     if org_name_assumed is not None:
                         #print('org_name_assumed', org_name_assumed)
                         corp_cred['entity_name_assumed'] = org_name_assumed['corp_nme'] 
-                        if is_data_conversion_event(org_name_assumed['start_event']) and org_name_assumed['effective_start_date'] == org_name_assumed['start_event']['entity_name_assumed_effective']:
+                        if is_data_conversion_event(org_name_assumed['start_event']) and org_name_assumed['effective_start_date'] == org_name_assumed['event_timestmp']['entity_name_assumed_effective']:
                             corp_cred['entity_name_assumed_effective'] = ''
                         else:
                             corp_cred['entity_name_assumed_effective'] = self.filter_min_date(org_name_assumed['effective_start_date'])
@@ -815,7 +815,7 @@ class EventProcessor:
                     if corp_state is not None:
                         #print('corp_state', corp_state)
                         corp_cred['entity_status'] = corp_state['op_state_typ_cd']
-                        if is_data_conversion_event(corp_state['start_event']) and corp_state['effective_start_date'] == corp_state['start_event']['effective_date']:
+                        if is_data_conversion_event(corp_state['start_event']) and corp_state['effective_start_date'] == corp_state['start_event']['event_timestmp']:
                             corp_cred['entity_status_effective'] = ''
                         else:
                             corp_cred['entity_status_effective'] = self.filter_min_date(corp_state['effective_start_date'])
@@ -833,9 +833,19 @@ class EventProcessor:
                     else:
                         corp_cred['registered_jurisdiction'] = '' 
                     corp_cred['extra_jurisdictional_registration'] = ''
+                    # determine the date to use for jurisdiction effective
+                    if jurisdiction is not None:
+                        if is_data_conversion_event(jurisdiction['start_event']) and jurisdiction['effective_start_date'] == jurisdiction['start_event']['event_timestmp']:
+                            jurisdiction_effective_date = None
+                        else:
+                            jurisdiction_effective_date = self.filter_min_date(jurisdiction['effective_start_date'])
+                    else:
+                        jurisdiction_effective_date = None
 
                     # make sure we set an effective date for the credential!
                     corp_cred['effective_date'] = self.credential_effective_date(corp_cred)
+                    if corp_cred['effective_date'] is None or (jurisdiction_effective_date is not None and self.compare_dates(jurisdiction_effective_date, ">", corp_cred['effective_date'], "jurisdiction_effective")):
+                        corp_cred['effective_date'] = jurisdiction_effective_date
                     if corp_cred['effective_date'] is None or corp_cred['effective_date'] == '':
                         corp_cred['effective_date'] = loop_start_event['effective_date']
                     if corp_cred['effective_date'] is None or corp_cred['effective_date'] == '':

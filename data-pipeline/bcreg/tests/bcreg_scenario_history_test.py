@@ -57,7 +57,7 @@ def test_scenario_history_1():
     my_info = generate_info_for_corp(my_corp_dict)
     my_creds = generate_all_creds_for_corp(my_info)
 
-    assert len(my_creds) == 3
+    assert len(my_creds) == 5
 
     assert my_creds[0]['cred_type'] == 'REG'
     assert my_creds[0]['credential']['entity_status'] == 'ACT'
@@ -66,9 +66,9 @@ def test_scenario_history_1():
     assert my_creds[0]['credential']['registered_jurisdiction'] == 'BC'
     assert my_creds[0]['credential']['registration_id'] == 'A0212812'
 
-    assert my_creds[2]['cred_type'] == 'ADDR'
-    assert my_creds[2]['credential']['address_type'] == 'HD'
-    assert my_creds[2]['credential']['registration_id'] == 'A0212812'
+    assert my_creds[4]['cred_type'] == 'ADDR'
+    assert my_creds[4]['credential']['address_type'] == 'HD'
+    assert my_creds[4]['credential']['registration_id'] == 'A0212812'
 
 def test_scenario_history_2():
     my_corp_num = '5993202'
