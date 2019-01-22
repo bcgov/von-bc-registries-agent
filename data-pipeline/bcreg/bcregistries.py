@@ -876,6 +876,27 @@ class BCRegistries:
     #  or against bc registries database directly)
     ###########################################################################
 
+    # get the corporation's current state
+    def get_adhoc_query(self, sql):
+        cursor = None
+        try:
+            cursor = self.get_db_connection().cursor()
+            cursor.execute(sql)
+            desc = cursor.description
+            column_names = [col[0] for col in desc]
+            recs = [dict(zip(column_names, row))  
+                for row in cursor]
+            cursor.close()
+            cursor = None
+            return recs
+        except (Exception, psycopg2.DatabaseError) as error:
+            print(error)
+            print(traceback.print_exc())
+            raise 
+        finally:
+            if cursor is not None:
+                cursor.close()
+
     # return the "effective date" given an event and filing
     def get_event_filing_effective_date(self, event):
         ret_date = None
