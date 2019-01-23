@@ -757,6 +757,15 @@ class EventProcessor:
         #        return ?TBD?
         return cred_date
 
+    # check if the org name is a notice of alteration
+    def is_notice_of_alteration_event(self, org_name):
+        if org_name is not None:
+            if 'start_event' in org_name and 'event_typ_cd' in org_name['start_event']:
+                if org_name['start_event']['event_typ_cd'] == 'FILE':
+                    if 'filing' in org_name['start_event'] and org_name['start_event']['filing']['filing_typ_cd'] == 'NOALB' or org_name['start_event']['filing']['filing_typ_cd'] == 'NOALC' or  org_name['start_event']['filing']['filing_typ_cd'] == 'NOALU':
+                        return True
+        return False
+
     # generate credentials for the provided corp
     def generate_credentials(self, system_typ_cd, prev_event, last_event, corp_num, corp_info):
         corp_creds = []
@@ -786,6 +795,7 @@ class EventProcessor:
                     corp_cred = {}
                     corp_cred['registration_id'] = self.corp_num_with_prefix(corp_info['corp_typ_cd'], corp_info['corp_num'])
                     corp_cred['registration_date'] = self.filter_min_date(corp_info['recognition_dts'])
+                    corp_cred['entity_type'] = corp_info['corp_type']['corp_typ_cd']
 
                     # org_names active at effective date
                     org_name = self.corp_rec_at_effective_date(corp_info['org_names'], loop_start_event)
@@ -799,6 +809,13 @@ class EventProcessor:
                     else:
                         corp_cred['entity_name'] = ''
                         corp_cred['entity_name_effective'] = ''
+
+                    # check for NOALU/NOALB/NOALC filing type on the org_name end event
+                    if self.is_notice_of_alteration_event(org_name):
+                        # erase the corp_type in previously created/expired credentials
+                        print("Cleaning corp type history for 'notice of alteration'", corp_num)
+                        for corp_cred in corp_creds:
+                            corp_cred['credential']['entity_type'] = ''
 
                     # org_name_assumed active at effective date
                     org_name_assumed = self.corp_rec_at_effective_date(corp_info['org_name_assumed'], loop_start_event)
@@ -822,8 +839,6 @@ class EventProcessor:
                     else:
                         corp_cred['entity_status'] = ''
                         corp_cred['entity_status_effective'] = ''
-
-                    corp_cred['entity_type'] = corp_info['corp_type']['corp_typ_cd']
 
                     # jurisdiction active at effective date
                     jurisdiction = self.corp_rec_at_effective_date(corp_info['jurisdiction'], loop_start_event)
