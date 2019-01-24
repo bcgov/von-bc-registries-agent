@@ -814,8 +814,8 @@ class EventProcessor:
                     if self.is_notice_of_alteration_event(org_name):
                         # erase the corp_type in previously created/expired credentials
                         print("Cleaning corp type history for 'notice of alteration'", corp_num)
-                        for corp_cred in corp_creds:
-                            corp_cred['credential']['entity_type'] = ''
+                        for cred in corp_creds:
+                            cred['credential']['entity_type'] = ''
 
                     # org_name_assumed active at effective date
                     org_name_assumed = self.corp_rec_at_effective_date(corp_info['org_name_assumed'], loop_start_event)
