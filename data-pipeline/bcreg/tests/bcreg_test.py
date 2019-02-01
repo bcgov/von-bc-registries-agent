@@ -157,11 +157,11 @@ def test_compare_corp_infos():
     for corp in corps:
         if corp_creds[corp['CORP_NUM']] != corp_creds_baseline[corp['CORP_NUM']]:
             diffs.append(corp['CORP_NUM'])
-            #print("==================================")
-            #print(corp_creds[corp['CORP_NUM']])
-            #print("----------------------------------")
-            #print(corp_creds_baseline[corp['CORP_NUM']])
-            #print("==================================")
+            print("==================================")
+            print(corp_creds[corp['CORP_NUM']])
+            print("----------------------------------")
+            print(corp_creds_baseline[corp['CORP_NUM']])
+            print("==================================")
     if 0 < len(diffs):
         print(diffs)
 

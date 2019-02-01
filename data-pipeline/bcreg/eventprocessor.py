@@ -13,15 +13,15 @@ from bcreg.bcregistries import BCRegistries, CustomJsonEncoder, event_dict, is_d
 
 corp_credential = 'REG'
 corp_schema = 'registration.registries.ca'
-corp_version = '1.0.41'
+corp_version = '1.0.42'
 
 addr_credential = 'ADDR'
 addr_schema = 'address.registries.ca'
-addr_version = '1.0.41'
+addr_version = '1.0.42'
 
 dba_credential = 'REL'
 dba_schema = 'relationship.registries.ca'
-dba_version = '1.0.41'
+dba_version = '1.0.42'
 
 CORP_BATCH_SIZE = 3000
 FALLBACK_CORP_BATCH_SIZE = 300
@@ -489,7 +489,7 @@ class EventProcessor:
             if "duplicate key value violates unique constraint" in stre and "cl_hash_index" in stre:
                 print("Hash exception, skipping duplicate credential for corp:", corp_num, cred_type, cred_id, e)
                 cur.execute("rollback to savepoint save_" + cred_type)
-                print(cred_json)
+                #print(cred_json)
                 return 0
             else:
                 print(traceback.print_exc())
@@ -902,43 +902,49 @@ class EventProcessor:
             is_parent = True
 
         # generate relationship credential(s) (only for parent right now):
-        if is_parent:
-            if 'parties' in corp_info:
-                # ensure relationship history is generated correctly
-                corp_parties = sorted(corp_info['parties'], key=lambda k: int(k['start_event_id']))
-                corp_parties = sorted(corp_info['parties'], key=lambda k: k['effective_start_date'])
-                # first check if party records are for unique firms
-                party_count = {}
-                for party in corp_parties:
-                    if ((prev_event['event_date'] <= party['start_event']['event_timestmp'] and party['start_event']['event_timestmp'] <= last_event['event_date']) or
-                        (party['end_event_id'] is not None and prev_event['event_date'] <= party['end_event']['event_timestmp'] and party['end_event']['event_timestmp'] <= last_event['event_date'])):
-                        if party['corp_info']['corp_typ_cd'] == 'SP' or party['corp_info']['corp_typ_cd'] == 'MF':
-                            if party['corp_info']['corp_num'] in party_count:
-                                party_count[party['corp_info']['corp_num']] = party_count[party['corp_info']['corp_num']] + 1
-                            else:
-                                party_count[party['corp_info']['corp_num']] = 1
+        #if is_parent:
+        if 'parties' in corp_info:
+            # ensure relationship history is generated correctly
+            corp_parties = sorted(corp_info['parties'], key=lambda k: int(k['start_event_id']))
+            corp_parties = sorted(corp_parties, key=lambda k: k['effective_start_date'])
+            # first check if party records are for unique firms
+            party_count = {}
+            for party in corp_parties:
+                if ((prev_event['event_date'] <= party['start_event']['event_timestmp'] and party['start_event']['event_timestmp'] <= last_event['event_date']) or
+                    (party['end_event_id'] is not None and prev_event['event_date'] <= party['end_event']['event_timestmp'] and party['end_event']['event_timestmp'] <= last_event['event_date'])):
+                    if (is_parent and 'corp_info' in party and (party['corp_info']['corp_typ_cd'] == 'SP' or party['corp_info']['corp_typ_cd'] == 'MF')) or ((not is_parent) and party['bus_company_num'] is not None and 'corp_info' in party and 0 < len(party['corp_info']['corp_num'])):
+                        if party['corp_info']['corp_num'] in party_count:
+                            party_count[party['corp_info']['corp_num']] = party_count[party['corp_info']['corp_num']] + 1
+                        else:
+                            party_count[party['corp_info']['corp_num']] = 1
 
-                for party in corp_parties:
-                    if ((prev_event['event_date'] <= party['start_event']['event_timestmp'] and party['start_event']['event_timestmp'] <= last_event['event_date']) or
-                        (party['end_event_id'] is not None and prev_event['event_date'] <= party['end_event']['event_timestmp'] and party['end_event']['event_timestmp'] <= last_event['event_date'])):
-                        if party['corp_info']['corp_typ_cd'] == 'SP' or party['corp_info']['corp_typ_cd'] == 'MF':
-                            dba_cred = {}
-                            dba_cred['registration_id'] = self.corp_num_with_prefix(corp_info['corp_typ_cd'], corp_info['corp_num'])
-                            dba_cred['associated_registration_id'] = self.corp_num_with_prefix(party['corp_info']['corp_typ_cd'], party['corp_info']['corp_num'])
+            for party in corp_parties:
+                if ((prev_event['event_date'] <= party['start_event']['event_timestmp'] and party['start_event']['event_timestmp'] <= last_event['event_date']) or
+                    (party['end_event_id'] is not None and prev_event['event_date'] <= party['end_event']['event_timestmp'] and party['end_event']['event_timestmp'] <= last_event['event_date'])):
+                    if (is_parent and 'corp_info' in party and (party['corp_info']['corp_typ_cd'] == 'SP' or party['corp_info']['corp_typ_cd'] == 'MF')) or ((not is_parent) and party['bus_company_num'] is not None and 'corp_info' in party and 0 < len(party['corp_info']['corp_num'])):
+                        dba_cred = {}
+                        dba_cred['registration_id'] = self.corp_num_with_prefix(corp_info['corp_typ_cd'], corp_info['corp_num'])
+                        dba_cred['associated_registration_id'] = self.corp_num_with_prefix(party['corp_info']['corp_typ_cd'], party['corp_info']['corp_num'])
+                        if is_parent:
                             dba_cred['relationship'] = 'Owns'
                             dba_cred['relationship_description'] = 'Does Business As'
-                            dba_cred['relationship_status'] = 'ACT'
-                            dba_cred['effective_date'] = party['effective_start_date']
+                        else:
+                            dba_cred['relationship'] = 'IsOwned'
+                            dba_cred['relationship_description'] = 'Is Owned By'
+                            if 'business_nme' in party and 0 < len(party['business_nme']):
+                                dba_cred['associated_registration_name'] = party['business_nme']
+                        dba_cred['relationship_status'] = 'ACT'
+                        dba_cred['effective_date'] = party['effective_start_date']
 
-                            # if the start event is 'ADMIN' type and there is only one party record, use the firm effective date
-                            if party['start_event']['event_typ_cd'] == 'ADMIN' and party_count[party['corp_info']['corp_num']] == 1:
-                                dba_cred['effective_date'] = party['corp_info']['recognition_dts']
+                        # if the start event is 'ADMIN' type and there is only one party record, use the firm effective date
+                        if party['start_event']['event_typ_cd'] == 'ADMIN' and party_count[party['corp_info']['corp_num']] == 1:
+                            dba_cred['effective_date'] = party['corp_info']['recognition_dts']
 
-                            dba_cred['relationship_status_effective'] = self.filter_min_date(dba_cred['effective_date'])
-                            if party['end_event_id'] is not None and party['end_event']['effective_date'] <= corp_info['current_date']:
-                                dba_cred['expiry_date'] = party['effective_end_date']
-                            reason_description = self.build_corp_reason_code(party['start_event'])
-                            corp_creds.append(self.build_credential_dict(dba_credential, dba_schema, dba_version, dba_cred['registration_id'], dba_cred, reason_description, dba_cred['effective_date']))
+                        dba_cred['relationship_status_effective'] = self.filter_min_date(dba_cred['effective_date'])
+                        if party['end_event_id'] is not None and party['end_event']['effective_date'] <= corp_info['current_date']:
+                            dba_cred['expiry_date'] = party['effective_end_date']
+                        reason_description = self.build_corp_reason_code(party['start_event'])
+                        corp_creds.append(self.build_credential_dict(dba_credential, dba_schema, dba_version, dba_cred['registration_id'], dba_cred, reason_description, dba_cred['effective_date']))
 
         return corp_creds
 

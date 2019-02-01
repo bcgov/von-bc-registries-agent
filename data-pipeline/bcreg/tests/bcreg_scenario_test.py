@@ -146,7 +146,7 @@ def test_scenario_single_dba():
     my_dba_num = 'FM3035075'
     my_corp_dict['corp_num'] = my_dba_num
     dba_creds = generate_creds_for_corp(my_corp_dict)
-    assert len(dba_creds) == 1
+    assert len(dba_creds) == 2
     
     assert dba_creds[0]['cred_type'] == 'REG'
 
@@ -163,7 +163,7 @@ def test_scenario_dba_with_address():
     my_dba_num = 'FM9129945'
     my_corp_dict['corp_num'] = my_dba_num
     dba_creds = generate_creds_for_corp(my_corp_dict)
-    assert len(dba_creds) == 2
+    assert len(dba_creds) == 5
     
     assert my_creds[0]['cred_type'] == 'REG'
     assert my_creds[0]['credential']['entity_status'] == 'ACT'
@@ -213,15 +213,13 @@ def test_scenario_multi_dbas():
     assert my_creds[5]['cred_type'] == 'REL'
 
     my_dba_nums = ['FM3834099','FM8823648','FM9877026']
-    my_dba_ct = [1,1,2]
+    my_dba_ct = [2,2,3]
     i = 0
     for my_dba_num in my_dba_nums:
         my_corp_dict['corp_num'] = my_dba_num
         dba_creds = generate_creds_for_corp(my_corp_dict)
         assert len(dba_creds) == my_dba_ct[i]
         assert dba_creds[0]['cred_type'] == 'REG'
-        if len(dba_creds) == 2:
-            assert dba_creds[1]['cred_type'] == 'ADDR'
         i = i + 1
 
 # basic corp with empty date(s)
