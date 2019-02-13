@@ -220,6 +220,14 @@ issuers:
           - model: attribute
             fields:
               type:
+                input: associated_registration_name
+                from: value
+              value:
+                input: associated_registration_name
+                from: claim
+          - model: attribute
+            fields:
+              type:
                 input: relationship_status
                 from: value
               format:
