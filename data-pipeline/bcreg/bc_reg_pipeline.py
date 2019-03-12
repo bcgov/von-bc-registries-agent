@@ -8,6 +8,7 @@ import data_integration
 import data_integration.config
 from mara_app.monkey_patch import patch
 from bcreg.bcreg_pipelines import bc_reg_root_pipeline
+from bcreg.rocketchat_hooks import log_error, log_warning, log_info
 
 
 patch(data_integration.config.system_statistics_collection_period)(lambda: 15)
@@ -22,11 +23,18 @@ mara_port = os.environ.get('MARA_DB_PORT', '5432')
 mara_user = os.environ.get('MARA_DB_USER', 'mara_db')
 mara_password = os.environ.get('MARA_DB_PASSWORD')
 
-mara_db.config.databases \
-    = lambda: {'mara': mara_db.dbs.PostgreSQLDB(user=mara_user, password=mara_password, host=mara_host, database=mara_database, port=mara_port)}
+try:
+    mara_db.config.databases \
+        = lambda: {'mara': mara_db.dbs.PostgreSQLDB(user=mara_user, password=mara_password, host=mara_host, database=mara_database, port=mara_port)}
 
-(child_pipeline, success) = data_integration.pipelines.find_node(['bc_reg_event_processor']) 
-if success:
-	run_pipeline(child_pipeline)
-else:
-	print("Pipeline not found")
+    (child_pipeline, success) = data_integration.pipelines.find_node(['bc_reg_event_processor']) 
+    if success:
+        run_pipeline(child_pipeline)
+        log_info("Ran bc_reg_event_processor")
+    else:
+        print("Pipeline not found")
+        log_error("Pipeline not found for:" + "bc_reg_event_processor")
+except Exception as e:
+    print("Exception", e)
+    log_error("bc_reg_event_processor processing exception: " + str(e))
+    raise

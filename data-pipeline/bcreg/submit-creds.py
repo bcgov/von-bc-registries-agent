@@ -18,9 +18,15 @@
 
 import asyncio
 from bcreg.credssubmitter import CredsSubmitter
+from bcreg.rocketchat_hooks import log_error, log_warning, log_info
 
 
-loop = asyncio.get_event_loop()
-with CredsSubmitter() as creds_submitter:
-    loop.run_until_complete(creds_submitter.process_credential_queue(False))
+try:
+    loop = asyncio.get_event_loop()
+    with CredsSubmitter() as creds_submitter:
+        loop.run_until_complete(creds_submitter.process_credential_queue(False))
+except Exception as e:
+    print("Exception", e)
+    log_error("submit_creds processing exception: " + str(e))
+    raise
 
