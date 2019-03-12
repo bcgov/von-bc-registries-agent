@@ -90,7 +90,6 @@ configureEnvironment () {
   export APPLICATION_URL=${APPLICATION_URL-http://localhost:${WEB_HTTP_PORT:-5000}}
   export ENDPOINT_URL=http://${ENDPOINT_HOST-$DOCKERHOST:${WEB_HTTP_PORT:-5001}}
 
-
   # wallet-db
   export POSTGRESQL_DATABASE="THE_ORG_BOOK"
   export POSTGRESQL_USER="DB_USER"
