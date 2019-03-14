@@ -14,7 +14,7 @@ genesis
 
 # Local config
 .env
-
+venv/
 
 # Ignore local Gradle files and folders
 .settings
