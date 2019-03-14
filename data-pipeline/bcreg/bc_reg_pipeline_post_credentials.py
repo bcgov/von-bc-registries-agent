@@ -37,7 +37,7 @@ try:
             run_pipeline(post_credential_pipeline)
             with EventProcessor() as eventprocessor:
                 creds_ct = eventprocessor.get_outstanding_creds_record_count()
-            log_info("Ran bc_reg_credential_poster for " + str(corps_ct) + " corps")
+            log_info("Ran bc_reg_credential_poster for " + str(creds_ct) + " corps")
     else:
         print("Pipeline not found")
         log_error("Pipeline not found for:" + "bc_reg_credential_poster")
