@@ -551,6 +551,8 @@ class BCRegistries:
                 # include all corp_num from the parties just returned (dba related companies)
                 for party in party_rows:
                     specific_corps.append(party['corp_num'])
+                    if 'bus_company_num' in party and party['bus_company_num'] is not None and 0 < len(party['bus_company_num']):
+                        specific_corps.append(party['bus_company_num'])
 
             # ensure we have a unique list
             specific_corps = list({s_corp for s_corp in specific_corps})
@@ -778,17 +780,23 @@ class BCRegistries:
     # use for initial data load
     def get_unprocessed_corps_data_load(self, last_event_id, last_event_dt, max_event_id, max_event_dt):
         sqls = []
-        sqls.append("""SELECT distinct(corp.corp_num) from """ + BC_REGISTRIES_TABLE_PREFIX + """corporation corp,
-                            """ + BC_REGISTRIES_TABLE_PREFIX + """corp_party party
-                         where corp.corp_typ_cd in ('SP','MF')
-                          and corp.corp_num = party.corp_num
-                          and party.party_typ_cd in ('FBO')
-                          and party.bus_company_num is not null
-                          and party.bus_company_num in 
-                          (SELECT corp_num from """ + BC_REGISTRIES_TABLE_PREFIX + """corporation corp, """ + BC_REGISTRIES_TABLE_PREFIX + """corp_type typ
-                          where corp.corp_typ_cd = typ.corp_typ_cd and typ.corp_class in ('BC','XPRO'))""")
-        sqls.append("""SELECT distinct(corp.corp_num) from """ + BC_REGISTRIES_TABLE_PREFIX + """corporation corp, """ + BC_REGISTRIES_TABLE_PREFIX + """corp_type typ
-                          where corp.corp_typ_cd = typ.corp_typ_cd and typ.corp_class in ('BC','XPRO')""")
+        # select all company types, not just corps and dba's
+        # keep the old sql's for historical curiosity
+        #sqls.append("""SELECT distinct(corp.corp_num) from """ + BC_REGISTRIES_TABLE_PREFIX + """corporation corp,
+        #                    """ + BC_REGISTRIES_TABLE_PREFIX + """corp_party party
+        #                 where corp.corp_typ_cd in ('SP','MF')
+        #                  and corp.corp_num = party.corp_num
+        #                  and party.party_typ_cd in ('FBO')
+        #                  and party.bus_company_num is not null
+        #                  and party.bus_company_num in 
+        #                  (SELECT corp_num from """ + BC_REGISTRIES_TABLE_PREFIX + """corporation corp, """ + BC_REGISTRIES_TABLE_PREFIX + """corp_type typ
+        #                  where corp.corp_typ_cd = typ.corp_typ_cd and typ.corp_class in ('BC','XPRO'))""")
+        #sqls.append("""SELECT distinct(corp.corp_num) from """ + BC_REGISTRIES_TABLE_PREFIX + """corporation corp, """ + BC_REGISTRIES_TABLE_PREFIX + """corp_type typ
+        #                  where corp.corp_typ_cd = typ.corp_typ_cd and typ.corp_class in ('BC','XPRO')""")
+        
+        # select *all* corps - we will filter in the next stage
+        sqls.append("""SELECT distinct(corp.corp_num) from """ + BC_REGISTRIES_TABLE_PREFIX + """corporation corp """)
+
         corps = []
         for sql in sqls:
             cur = None
@@ -817,23 +825,30 @@ class BCRegistries:
     # return unprocessed corporations, based on an event range
     def get_unprocessed_corps(self, last_event_id, last_event_dt, max_event_id, max_event_dt):
         sqls = []
+        # select all company types, not just corps and dba's
+        # keep the old sql's for historical curiosity
+        #sqls.append("""SELECT distinct(corp_num) from """ + BC_REGISTRIES_TABLE_PREFIX + """event
+        #                where event_timestmp > %s and event_timestmp <= %s
+        #                and corp_num in
+        #                (SELECT corp.corp_num from """ + BC_REGISTRIES_TABLE_PREFIX + """corporation corp,
+        #                    """ + BC_REGISTRIES_TABLE_PREFIX + """corp_party party
+        #                 where corp.corp_typ_cd in ('SP','MF')
+        #                  and corp.corp_num = party.corp_num
+        #                  and party.party_typ_cd in ('FBO')
+        #                  and bus_company_num is not null
+        #                  and bus_company_num in 
+        #                  (SELECT corp_num from """ + BC_REGISTRIES_TABLE_PREFIX + """corporation corp, """ + BC_REGISTRIES_TABLE_PREFIX + """corp_type typ
+        #                  where corp.corp_typ_cd = typ.corp_typ_cd and typ.corp_class in ('BC','XPRO')))""")
+        #sqls.append("""SELECT distinct(corp_num) from """ + BC_REGISTRIES_TABLE_PREFIX + """event
+        #                where event_timestmp > %s and event_timestmp <= %s
+        #                and corp_num in
+        #                (SELECT corp.corp_num from """ + BC_REGISTRIES_TABLE_PREFIX + """corporation corp, """ + BC_REGISTRIES_TABLE_PREFIX + """corp_type typ
+        #                  where corp.corp_typ_cd = typ.corp_typ_cd and typ.corp_class in ('BC','XPRO'))""")
+
+        # select *all* corps - we will filter in the next stage
         sqls.append("""SELECT distinct(corp_num) from """ + BC_REGISTRIES_TABLE_PREFIX + """event
-                        where event_timestmp > %s and event_timestmp <= %s
-                        and corp_num in
-                        (SELECT corp.corp_num from """ + BC_REGISTRIES_TABLE_PREFIX + """corporation corp,
-                            """ + BC_REGISTRIES_TABLE_PREFIX + """corp_party party
-                         where corp.corp_typ_cd in ('SP','MF')
-                          and corp.corp_num = party.corp_num
-                          and party.party_typ_cd in ('FBO')
-                          and bus_company_num is not null
-                          and bus_company_num in 
-                          (SELECT corp_num from """ + BC_REGISTRIES_TABLE_PREFIX + """corporation corp, """ + BC_REGISTRIES_TABLE_PREFIX + """corp_type typ
-                          where corp.corp_typ_cd = typ.corp_typ_cd and typ.corp_class in ('BC','XPRO')))""")
-        sqls.append("""SELECT distinct(corp_num) from """ + BC_REGISTRIES_TABLE_PREFIX + """event
-                        where event_timestmp > %s and event_timestmp <= %s
-                        and corp_num in
-                        (SELECT corp.corp_num from """ + BC_REGISTRIES_TABLE_PREFIX + """corporation corp, """ + BC_REGISTRIES_TABLE_PREFIX + """corp_type typ
-                          where corp.corp_typ_cd = typ.corp_typ_cd and typ.corp_class in ('BC','XPRO'))""")
+                        where event_timestmp > %s and event_timestmp <= %s""")
+
         corps = []
         for sql in sqls:
             cur = None
@@ -1446,30 +1461,22 @@ class BCRegistries:
     ###########################################################################
 
     def get_bc_reg_corp_info(self, corp_num):
-        sql_party_template = """SELECT corp_num, corp_party_id, mailing_addr_id, delivery_addr_id, party_typ_cd, start_event_id, end_event_id, cessation_dt,
+        sql_party = """SELECT corp_num, corp_party_id, mailing_addr_id, delivery_addr_id, party_typ_cd, start_event_id, end_event_id, cessation_dt,
                          last_nme, middle_nme, first_nme, business_nme, bus_company_num, email_address, corp_party_seq_num, office_notification_dt,
                          phone, reason_typ_cd
-                  FROM """ + self.get_table_prefix() + """corp_party
-                  WHERE $company_num_field$ = """ + self.get_db_sql_param() + """ 
-                    AND party_typ_cd = 'FBO'"""
+                      FROM """ + self.get_table_prefix() + """corp_party
+                      WHERE (corp_num = """ + self.get_db_sql_param() + """ OR bus_company_num = """ + self.get_db_sql_param() + """)
+                        AND party_typ_cd = 'FBO'"""
 
         cur = None
         try:
             corp = self.get_basic_corp_info(corp_num)
             corp_type = corp['corp_typ_cd']
-            if corp_type == 'SP' or corp_type == 'MF':
-                is_parent = False
-            else:
-                is_parent = True
-            if is_parent:
-                sql_party = sql_party_template.replace('$company_num_field$', 'bus_company_num')
-            else:
-                sql_party = sql_party_template.replace('$company_num_field$', 'corp_num')
 
             # get parties
             corp['parties'] = []
             cur = self.get_db_connection().cursor()
-            cur.execute(sql_party, (corp_num,))
+            cur.execute(sql_party, (corp_num, corp_num,))
             row = cur.fetchone()
             while row is not None:
                 corp_party = {}
@@ -1501,16 +1508,13 @@ class BCRegistries:
                 corp_party['phone'] = row[16]
                 corp_party['reason_typ_cd'] = row[17]
 
-                #if corp_party['effective_start_date'] > corp_party['effective_end_date']:
-                #    print(">>>Data Issue:Date:" + corp_num + ":Corp_Party:", corp_party)
-
-                # note we need to pull corporate info for DBA companies
-                # actually no since we are only issuing a relationship credential (with the two corp_nums)
-                if is_parent:
-                    corp_party['corp_info'] = self.get_basic_corp_info(corp_party['corp_num'], False)
-                else:
+                # note we are only issuing a relationship credential (with the two corp_nums) 
+                # ... so just get basic info for the "other" corp in the relationship
+                if corp_num == corp_party['corp_num']:
                     if corp_party['bus_company_num'] is not None:
                         corp_party['corp_info'] = self.get_basic_corp_info(corp_party['bus_company_num'], False)
+                else:
+                    corp_party['corp_info'] = self.get_basic_corp_info(corp_party['corp_num'], False)
 
                 corp['parties'].append(corp_party)
                 row = cur.fetchone()
