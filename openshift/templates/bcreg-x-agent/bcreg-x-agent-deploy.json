@@ -239,6 +239,10 @@
                         "key": "did"
                       }
                     }
+                  },
+                  {
+                    "name": "ENDPOINT_URL",
+                    "value": "${ENDPOINT_URL}"
                   }
                 ],
                 "readinessProbe": {
@@ -479,6 +483,13 @@
       "description": "The name of the wallet credential store (aka The name of the secret that contains the wallet credentials).",
       "required": true,
       "value": "wallet-credentials"
+    },
+    {
+      "name": "ENDPOINT_URL",
+      "displayName": "Endpoint URL",
+      "description": "The agent's API endpoint.  This URL is registered on the ledger to allow other agents to perform dependency resolution.",
+      "required": true,
+      "value": ""
     },
     {
       "name": "MOUNT_PATH",
