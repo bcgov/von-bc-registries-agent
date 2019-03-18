@@ -209,8 +209,8 @@
                     "value": "${PROJECT_NAME}"
                   },
                   {
-                    "name": "PROJECT_FRIENDLY_NAME",
-                    "value": "${PROJECT_FRIENDLY_NAME}"
+                    "name": "FRIENDLY_PROJECT_NAME",
+                    "value": "${FRIENDLY_PROJECT_NAME}"
                   }
                 ],
                 "readinessProbe": {
@@ -381,7 +381,7 @@
       "value": ""
     },
     {
-      "name": "PROJECT_FRIENDLY_NAME",
+      "name": "FRIENDLY_PROJECT_NAME",
       "displayName": "Friendly Project Name",
       "description": "The human readable name of the Project.  This variable is used by the webhook integration to identify the project in which the backup notifications originate.",
       "required": false,
