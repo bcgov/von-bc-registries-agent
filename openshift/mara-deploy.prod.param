@@ -24,6 +24,6 @@ TAG_NAME=prod
 PROJECT_NAME=devex-von-bc-registries-agent-prod
 FRIENDLY_PROJECT_NAME=BC Registries Agent (prod)
 # CPU_REQUEST=10m
-# CPU_LIMIT=750m
+# CPU_LIMIT=1000m
 # MEMORY_REQUEST=10Mi
 # MEMORY_LIMIT=512Mi
