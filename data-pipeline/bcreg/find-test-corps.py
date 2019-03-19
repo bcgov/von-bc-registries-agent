@@ -2,7 +2,7 @@
 import psycopg2
 import datetime
 from bcreg.config import config
-from bcreg.eventprocessor import EventProcessor
+from bcreg.eventprocessor import EventProcessor, CORP_TYPES_IN_SCOPE
 from bcreg.bcregistries import BCRegistries, system_type
 
 
@@ -139,6 +139,20 @@ specific_corps = [
                     ]
 
 with BCRegistries() as bc_registries:
+    # get 5 corps for each type in scope (in addition to the above list)
+    for corp_type in CORP_TYPES_IN_SCOPE:
+        print(corp_type)
+        sql = """
+                select corp_num
+                from bc_registries.corporation
+                where corp_typ_cd = '""" + corp_type + """'
+                order by corp_num desc
+               """
+        corps = bc_registries.get_bcreg_sql("corps_by_type", sql, cache=False)
+        n_corps = min(len(corps), 5)
+        for i in range(n_corps):
+            specific_corps.append(corps[i]['corp_num'])
+
     with EventProcessor() as event_processor:
         print("Get last processed event")
         prev_event_id = 0

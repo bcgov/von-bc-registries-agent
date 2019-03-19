@@ -27,6 +27,7 @@ import aiohttp
 import time
 import traceback
 from bcreg.config import config
+from bcreg.rocketchat_hooks import log_error, log_warning, log_info
 
 AGENT_URL = os.environ.get('VONX_API_URL', 'http://localhost:5000/bcreg')
 

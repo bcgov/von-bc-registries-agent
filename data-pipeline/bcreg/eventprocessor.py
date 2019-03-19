@@ -9,6 +9,7 @@ import hashlib
 import traceback
 from bcreg.config import config
 from bcreg.bcregistries import BCRegistries, CustomJsonEncoder, event_dict, is_data_conversion_event
+from bcreg.rocketchat_hooks import log_error, log_warning, log_info
 
 
 corp_credential = 'REG'
@@ -24,7 +25,7 @@ dba_schema = 'relationship.registries.ca'
 dba_version = '1.0.42'
 
 CORP_BATCH_SIZE = 3000
-FALLBACK_CORP_BATCH_SIZE = 300
+FALLBACK_CORP_BATCH_SIZE = 100
 
 MIN_START_DATE = datetime.datetime(datetime.MINYEAR+1, 1, 1)
 MAX_END_DATE   = datetime.datetime(datetime.MAXYEAR-1, 12, 31)
@@ -100,6 +101,7 @@ class EventProcessor:
             print(error)
             print(traceback.print_exc())
             self.conn = None
+            log_error("EventProcessor exception connecting to DB: " + str(error))
             raise
 
     def __del__(self):
@@ -338,6 +340,7 @@ class EventProcessor:
         except (Exception, psycopg2.DatabaseError) as error:
             print(error)
             print(traceback.print_exc())
+            log_error("EventProcessor exception initializing DB: " + str(error))
             raise
         finally:
             if cur is not None:
@@ -359,6 +362,7 @@ class EventProcessor:
         except (Exception, psycopg2.DatabaseError) as error:
             print(error)
             print(traceback.print_exc())
+            log_error("EventProcessor exception writing to DB: " + str(error))
             raise
         finally:
             if cur is not None:
@@ -380,6 +384,7 @@ class EventProcessor:
         except (Exception, psycopg2.DatabaseError) as error:
             print(error)
             print(traceback.print_exc())
+            log_error("EventProcessor exception reading DB: " + str(error))
             raise
         finally:
             if cur is not None:
@@ -399,6 +404,7 @@ class EventProcessor:
         except (Exception, psycopg2.DatabaseError) as error:
             print(error)
             print(traceback.print_exc())
+            log_error("EventProcessor exception reading DB: " + str(error))
             raise
         finally:
             if cur is not None:
@@ -421,6 +427,7 @@ class EventProcessor:
         except (Exception, psycopg2.DatabaseError) as error:
             print(error)
             print(traceback.print_exc())
+            log_error("EventProcessor exception updating DB: " + str(error))
             raise
         finally:
             if cur is not None:
@@ -441,6 +448,7 @@ class EventProcessor:
         except (Exception, psycopg2.DatabaseError) as error:
             print(error)
             print(traceback.print_exc())
+            log_error("EventProcessor exception updating DB: " + str(error))
             raise
         finally:
             if cur is not None:
@@ -467,6 +475,7 @@ class EventProcessor:
         except (Exception, psycopg2.DatabaseError) as error:
             print(error)
             print(traceback.print_exc())
+            log_error("EventProcessor exception updating DB: " + str(error))
             raise
         finally:
             if cur is not None:
@@ -488,6 +497,7 @@ class EventProcessor:
         except (Exception, psycopg2.DatabaseError) as error:
             print(error)
             print(traceback.print_exc())
+            log_error("EventProcessor exception updating DB: " + str(error))
             raise
         finally:
             if cur is not None:
@@ -525,6 +535,7 @@ class EventProcessor:
                 return 0
             else:
                 print(traceback.print_exc())
+                log_error("EventProcessor exception updating DB: " + str(error))
                 raise
 
     # determine jurisdiction for corp
@@ -1039,7 +1050,7 @@ class EventProcessor:
         return corp_creds
 
     # process corps that have been queued - update data from bc_registries
-    def process_corp_event_queue_internal(self, load_regs=True, generate_creds=False, use_cache=False):
+    def process_corp_event_queue_internal(self, load_regs=True, generate_creds=False, use_cache=False, corp_types=CORP_TYPES_IN_SCOPE):
         sql1 = """SELECT RECORD_ID, 
                          SYSTEM_TYPE_CD, 
                          PREV_EVENT_ID, 
@@ -1121,6 +1132,7 @@ class EventProcessor:
                 except (Exception, psycopg2.DatabaseError) as error:
                     print(error)
                     print(traceback.print_exc())
+                    log_error("EventProcessor exception updating DB: " + str(error))
                     raise
                 finally:
                     if cur is not None:
@@ -1142,6 +1154,7 @@ class EventProcessor:
                 except (Exception, psycopg2.DatabaseError) as error:
                     print(error)
                     print(traceback.print_exc())
+                    log_error("EventProcessor exception updating DB: " + str(error))
                     raise
                 finally:
                     if cur is not None:
@@ -1185,7 +1198,7 @@ class EventProcessor:
                                 # fetch corp info from bc_registries
                                 corp_info = bc_registries.get_bc_reg_corp_info(corp['CORP_NUM'])
 
-                                if corp_info['corp_typ_cd'] in CORP_TYPES_IN_SCOPE:
+                                if corp_info['corp_typ_cd'] in corp_types:
                                     # get event summary
                                     effective_recs = self.corp_unique_record_list(corp['CORP_NUM'], corp_info)
                                     corp_info['reg_summary'] = effective_recs
@@ -1200,7 +1213,7 @@ class EventProcessor:
                                 print(traceback.print_exc())
                                 process_success = False
                                 process_msg = str(error)
-                                #raise
+                                raise
                         else:
                             # json blob is cached in event processor database
                             corp_info = corp['CORP_JSON']
@@ -1238,7 +1251,7 @@ class EventProcessor:
                                         print(traceback.print_exc())
                                         process_success = False
                                         process_msg = str(error)
-                                        #raise
+                                        raise
                                     finally:
                                         if cur is not None:
                                             cur.close()
@@ -1260,7 +1273,10 @@ class EventProcessor:
                                     cur = self.conn.cursor()
                                     if 0 < len(corp_creds) or 0 == len(future_events):
                                         cur.execute(sql2a, (corp['SYSTEM_TYPE_CD'], prev_event_json, last_event_json, corp['CORP_NUM'], 
-                                                            corp_active_state['op_state_typ_cd'], corp_info_json, datetime.datetime.now(), datetime.datetime.now(), flag, res,))
+                                                            corp_active_state['op_state_typ_cd'], corp_info_json, datetime.datetime.now(), datetime.datetime.now(), 
+                                                            flag, res,))
+                                        if flag == 'N':
+                                            log_warning('Event processing error:' + res)
                                     cur.close()
                                     cur = None
                                 else:
@@ -1268,6 +1284,8 @@ class EventProcessor:
                                     cur = self.conn.cursor()
                                     if 0 < len(corp_creds) or 0 == len(future_events):
                                         cur.execute(sql3a, (datetime.datetime.now(), flag, res, corp['RECORD_ID'], ))
+                                        if flag == 'N':
+                                            log_warning('Event processing error:' + res)
                                     cur.close()
                                     cur = None
                                 if (0 < len(future_events)) and (0 < len(corp_creds) or load_regs):
@@ -1293,6 +1311,7 @@ class EventProcessor:
                                     print(traceback.print_exc())
                                     process_success = False
                                     process_msg = str(error)
+                                    log_error("EventProcessor exception updating DB: " + str(error))
                                     raise
                                 finally:
                                     if cur is not None:
@@ -1338,7 +1357,7 @@ class EventProcessor:
         self.process_corp_event_queue_internal(False, True)
 
     # process corps that have been queued - update data from bc_registries - and generate credentials
-    def process_corp_event_queue_and_generate_creds(self, use_cache=False):
+    def process_corp_event_queue_and_generate_creds(self, use_cache=False, corp_types=CORP_TYPES_IN_SCOPE):
         self.process_corp_event_queue_internal(True, True, use_cache)
 
     # insert a transform into the transform table

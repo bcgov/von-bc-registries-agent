@@ -13,8 +13,8 @@ class Script {
     }
 
     let friendlyProjectName=``;
-    if(data.projectFriendlyName) {
-      friendlyProjectName = data.projectFriendlyName
+    if(data.friendlyProjectName) {
+      friendlyProjectName = data.friendlyProjectName
     }
 
     let projectName=``;

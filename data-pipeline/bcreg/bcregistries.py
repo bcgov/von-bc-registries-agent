@@ -11,6 +11,7 @@ import types
 import traceback
 
 from bcreg.config import config
+from bcreg.rocketchat_hooks import log_error, log_warning, log_info
 
 system_type = 'BC_REG'
 
@@ -101,6 +102,7 @@ class BCRegistries:
             print(traceback.print_exc())
             self.conn = None
             self.cache = None
+            log_error("BCRegistries exception connecting to DB: " + str(error))
             raise
 
     def __del__(self):
@@ -202,6 +204,7 @@ class BCRegistries:
         except (Exception, psycopg2.DatabaseError) as error:
             print(error)
             print(traceback.print_exc())
+            log_error("BCRegistries exception reading DB: " + str(error))
             raise 
         finally:
             if cursor is not None:
@@ -272,6 +275,7 @@ class BCRegistries:
         except (Exception) as error:
             print(error)
             print(traceback.print_exc())
+            log_error("BCRegistries exception reading DB: " + str(error))
             raise 
         finally:
             if cache_cursor is not None:
@@ -416,6 +420,7 @@ class BCRegistries:
             except (Exception) as error:
                 print(error)
                 print(traceback.print_exc())
+                log_error("BCRegistries exception reading DB: " + str(error))
                 raise 
             finally:
                 if cache_cursor is not None:
@@ -437,6 +442,7 @@ class BCRegistries:
         except (Exception) as error:
             print(error)
             print(traceback.print_exc())
+            log_error("BCRegistries exception reading DB: " + str(error))
             raise 
         finally:
             if cursor is not None:
@@ -463,6 +469,7 @@ class BCRegistries:
         except (Exception) as error:
             print(error)
             print(traceback.print_exc())
+            log_error("BCRegistries exception reading DB: " + str(error))
             raise 
         finally:
             if cursor is not None:
@@ -644,6 +651,7 @@ class BCRegistries:
         except (Exception, psycopg2.DatabaseError) as error:
             print(error)
             print(traceback.print_exc())
+            log_error("BCRegistries exception reading DB: " + str(error))
             raise 
         finally:
             if cursor is not None:
@@ -689,6 +697,7 @@ class BCRegistries:
         except (Exception, psycopg2.DatabaseError) as error:
             print(error)
             print(traceback.print_exc())
+            log_error("BCRegistries exception reading DB: " + str(error))
             raise
         finally:
             if cur is not None:
@@ -708,6 +717,7 @@ class BCRegistries:
         except (Exception, psycopg2.DatabaseError) as error:
             print(error)
             print(traceback.print_exc())
+            log_error("BCRegistries exception reading DB: " + str(error))
             raise
         finally:
             if cur is not None:
@@ -727,6 +737,7 @@ class BCRegistries:
         except (Exception, psycopg2.DatabaseError) as error:
             print(error)
             print(traceback.print_exc())
+            log_error("BCRegistries exception reading DB: " + str(error))
             raise
         finally:
             if cur is not None:
@@ -771,6 +782,7 @@ class BCRegistries:
         except (Exception, psycopg2.DatabaseError) as error:
             print(error)
             print(traceback.print_exc())
+            log_error("BCRegistries exception reading DB: " + str(error))
             raise
         finally:
             if cur is not None:
@@ -816,6 +828,7 @@ class BCRegistries:
             except (Exception, psycopg2.DatabaseError) as error:
                 print(error)
                 print(traceback.print_exc())
+                log_error("BCRegistries exception reading DB: " + str(error))
                 raise
             finally:
                 if cur is not None:
@@ -867,6 +880,7 @@ class BCRegistries:
             except (Exception, psycopg2.DatabaseError) as error:
                 print(error)
                 print(traceback.print_exc())
+                log_error("BCRegistries exception reading DB: " + str(error))
                 raise
             finally:
                 if cur is not None:
@@ -907,6 +921,7 @@ class BCRegistries:
         except (Exception, psycopg2.DatabaseError) as error:
             print(error)
             print(traceback.print_exc())
+            log_error("BCRegistries exception reading DB: " + str(error))
             raise 
         finally:
             if cursor is not None:
@@ -989,6 +1004,7 @@ class BCRegistries:
         except (Exception, psycopg2.DatabaseError) as error:
             print(error)
             print(traceback.print_exc())
+            log_error("BCRegistries exception reading DB: " + str(error))
             raise 
         finally:
             if cursor is not None:
@@ -1021,6 +1037,7 @@ class BCRegistries:
         except (Exception, psycopg2.DatabaseError) as error:
             print(error)
             print(traceback.print_exc())
+            log_error("BCRegistries exception reading DB: " + str(error))
             raise 
         finally:
             if cursor is not None:
@@ -1053,6 +1070,7 @@ class BCRegistries:
         except (Exception, psycopg2.DatabaseError) as error:
             print(error)
             print(traceback.print_exc())
+            log_error("BCRegistries exception reading DB: " + str(error))
             raise 
         finally:
             if cursor is not None:
@@ -1124,6 +1142,7 @@ class BCRegistries:
         except (Exception, psycopg2.DatabaseError) as error:
             print(error)
             print(traceback.print_exc())
+            log_error("BCRegistries exception reading DB: " + str(error))
             raise 
         finally:
             if cursor is not None:
@@ -1171,6 +1190,7 @@ class BCRegistries:
         except (Exception, psycopg2.DatabaseError) as error:
             print(error)
             print(traceback.print_exc())
+            log_error("BCRegistries exception reading DB: " + str(error))
             raise 
         finally:
             if cursor is not None:
@@ -1229,6 +1249,7 @@ class BCRegistries:
         except (Exception, psycopg2.DatabaseError) as error:
             print(error)
             print(traceback.print_exc())
+            log_error("BCRegistries exception reading DB: " + str(error))
             raise 
         finally:
             if cur is not None:
@@ -1255,6 +1276,7 @@ class BCRegistries:
         except (Exception, psycopg2.DatabaseError) as error:
             print(error)
             print(traceback.print_exc())
+            log_error("BCRegistries exception reading DB: " + str(error))
             raise 
         finally:
             if cursor is not None:
@@ -1289,11 +1311,15 @@ class BCRegistries:
                     #if jurisdiction['effective_start_date'] > jurisdiction['effective_end_date']:
                     #    print(">>>Data Issue:Date:" + corp_num + ":Jurisdiction:", jurisdiction)
                 #self.check_same_start_date(corp_num, 'jurisdiction', jurisdictions, 'effective_start_date')
+                jurisdictions = sorted(jurisdictions, key=lambda k: k['effective_end_date'])
+                jurisdictions = sorted(jurisdictions, key=lambda k: int(k['start_event_id']))
+                jurisdictions = sorted(jurisdictions, key=lambda k: k['effective_start_date'])
                 return jurisdictions
             return []
         except (Exception, psycopg2.DatabaseError) as error:
             print(error)
             print(traceback.print_exc())
+            log_error("BCRegistries exception reading DB: " + str(error))
             raise 
         finally:
             if cursor is not None:
@@ -1319,6 +1345,7 @@ class BCRegistries:
         except (Exception, psycopg2.DatabaseError) as error:
             print(error)
             print(traceback.print_exc())
+            log_error("BCRegistries exception reading DB: " + str(error))
             raise 
         finally:
             if cursor is not None:
@@ -1344,6 +1371,7 @@ class BCRegistries:
         except (Exception, psycopg2.DatabaseError) as error:
             print(error)
             print(traceback.print_exc())
+            log_error("BCRegistries exception reading DB: " + str(error))
             raise 
         finally:
             if cursor is not None:
@@ -1450,6 +1478,7 @@ class BCRegistries:
         except (Exception, psycopg2.DatabaseError) as error:
             print(error)
             print(traceback.print_exc())
+            log_error("BCRegistries exception reading corp info from DB: " + str(error))
             raise 
         finally:
             if cur is not None:
@@ -1525,6 +1554,7 @@ class BCRegistries:
         except (Exception, psycopg2.DatabaseError) as error:
             print(error)
             print(traceback.print_exc())
+            log_error("BCRegistries exception reading corp party info from DB: " + str(error))
             raise 
         finally:
             if cur is not None:
