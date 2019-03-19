@@ -195,6 +195,22 @@
                   {
                     "name": "START_CRON",
                     "value": "${START_CRON}"
+                  },
+                  {
+                    "name": "WEBHOOK_URL",
+                    "value": "${WEBHOOK_URL}"
+                  },
+                  {
+                    "name": "WEBHOOK_LEVEL",
+                    "value": "${WEBHOOK_LEVEL}"
+                  },
+                  {
+                    "name": "PROJECT_NAME",
+                    "value": "${PROJECT_NAME}"
+                  },
+                  {
+                    "name": "FRIENDLY_PROJECT_NAME",
+                    "value": "${FRIENDLY_PROJECT_NAME}"
                   }
                 ],
                 "readinessProbe": {
@@ -344,32 +360,60 @@
       "value": "1"
     },
     {
-      "name": "CPU_LIMIT",
-      "displayName": "Resources CPU Limit",
-      "description": "The resources CPU limit (in cores) for this build.",
-      "required": true,
-      "value": "0"
+      "name": "WEBHOOK_URL",
+      "displayName": "Webhook URL",
+      "description": "The URL of the webhook to use for notifications.  If not specified, the webhook integration feature is disabled.",
+      "required": false,
+      "value": ""
     },
     {
-      "name": "MEMORY_LIMIT",
-      "displayName": "Resources Memory Limit",
-      "description": "The resources Memory limit (in Mi, Gi, etc) for this build.",
-      "required": true,
-      "value": "0Mi"
+      "name": "WEBHOOK_LEVEL",
+      "displayName": "Webhook Log Level",
+      "description": "The webhook log level filter; 0=Error, 1=Warning, 2=Info",
+      "required": false,
+      "value": "2"
+    },
+    {
+      "name": "PROJECT_NAME",
+      "displayName": "Project Name (Environment Id)",
+      "description": "The name or Id of the project.  This variable is used by the webhook integration to identify the project in which the backup notifications originate.",
+      "required": false,
+      "value": ""
+    },
+    {
+      "name": "FRIENDLY_PROJECT_NAME",
+      "displayName": "Friendly Project Name",
+      "description": "The human readable name of the Project.  This variable is used by the webhook integration to identify the project in which the backup notifications originate.",
+      "required": false,
+      "value": ""
     },
     {
       "name": "CPU_REQUEST",
       "displayName": "Resources CPU Request",
       "description": "The resources CPU request (in cores) for this build.",
       "required": true,
-      "value": "0"
+      "value": "10m"
+    },
+    {
+      "name": "CPU_LIMIT",
+      "displayName": "Resources CPU Limit",
+      "description": "The resources CPU limit (in cores) for this build.",
+      "required": true,
+      "value": "1000m"
     },
     {
       "name": "MEMORY_REQUEST",
       "displayName": "Resources Memory Request",
       "description": "The resources Memory request (in Mi, Gi, etc) for this build.",
       "required": true,
-      "value": "0Mi"
+      "value": "10Mi"
+    },
+    {
+      "name": "MEMORY_LIMIT",
+      "displayName": "Resources Memory Limit",
+      "description": "The resources Memory limit (in Mi, Gi, etc) for this build.",
+      "required": true,
+      "value": "512Mi"
     }
   ]
 }
