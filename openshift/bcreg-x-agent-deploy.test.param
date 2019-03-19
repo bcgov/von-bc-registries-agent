@@ -29,7 +29,7 @@ TOB_APP_URL=https://test.orgbook.gov.bc.ca
 # INDY_WALLET_DID=[a-zA-Z0-9_~!@#$%^&*()-=<>,.?;:|]{16}
 # WALLET_CREDENTIAL_STORE_NAME=wallet-credentials
 # ENDPOINT_URL=
-# CPU_REQUEST=0m
+# CPU_REQUEST=10m
 # CPU_LIMIT=1000m
-# MEMORY_REQUEST=0Mi
+# MEMORY_REQUEST=10Mi
 # MEMORY_LIMIT=512Mi
