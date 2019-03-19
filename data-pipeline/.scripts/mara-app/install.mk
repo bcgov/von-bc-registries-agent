@@ -37,7 +37,7 @@ update-packages:
 	# go into the new dir and build it there as venv doesn't work if the target is a symlink
 	cd .venv && $(.PYTHON36) -m venv --copies --prompt='[$(shell basename `pwd`)/.venv]' .
 	# set environment variables
-	echo export FLASK_DEBUG=1 >> .venv/bin/activate
+	#echo export FLASK_DEBUG=1 >> .venv/bin/activate
 	echo export FLASK_APP=$(shell pwd)/app/app.py >> .venv/bin/activate
 	# add the project directory to path
 	echo $(shell pwd) > `echo .venv/lib/*/site-packages`/mara-path.pth
