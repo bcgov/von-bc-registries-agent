@@ -106,7 +106,7 @@ def test_scenario_jurisdiction_uk():
     my_creds = generate_creds_for_corp(my_corp_dict)
 
     print("# Home Jurisdiction Federal (can_jur_typ_cd ‘FD’)")
-    assert len(my_creds) == 3
+    assert len(my_creds) == 5
 
     assert my_creds[0]['cred_type'] == 'REG'
     assert my_creds[0]['credential']['entity_status'] == 'ACT'
@@ -115,10 +115,10 @@ def test_scenario_jurisdiction_uk():
     assert my_creds[0]['credential']['registered_jurisdiction'] == 'BC'
     assert my_creds[0]['credential']['registration_id'] == 'A4993014'
 
-    assert my_creds[2]['cred_type'] == 'ADDR'
-    assert my_creds[2]['credential']['address_type'] == 'HD'
-    assert my_creds[2]['credential']['municipality'] == 'VANCOUVER'
-    assert my_creds[2]['credential']['registration_id'] == 'A4993014'
+    assert my_creds[4]['cred_type'] == 'ADDR'
+    assert my_creds[4]['credential']['address_type'] == 'HD'
+    assert my_creds[4]['credential']['municipality'] == 'VANCOUVER'
+    assert my_creds[4]['credential']['registration_id'] == 'A4993014'
     
 
 def test_scenario_jurisdiction_notonfile():

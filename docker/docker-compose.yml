@@ -69,8 +69,8 @@ services:
       - ENVIRONMENT=${ENVIRONMENT:-default}
       - WEBHOOK_URL=${WEBHOOK_URL}
       - WEBHOOK_LEVEL=${WEBHOOK_LEVEL:-0}  # 0=Error, 1=Warning, 2=Info
-      - PROJECT_NAME=${PROJECT_NAME:-von-bc-registries-agent}
-      - FRIENDLY_PROJECT_NAME=${FRIENDLY_PROJECT_NAME:-BC Registries Data Pipeline}
+      - PROJECT_NAME=${PROJECT_NAME:-von-local-developer-agent}
+      - FRIENDLY_PROJECT_NAME=${FRIENDLY_PROJECT_NAME:-Local Developer Data Pipeline}
       - VONX_API_URL=${VONX_API_URL:-http://bcreg-agent:8000/bcreg}
       # [bc_registries]
       - BC_REG_DB_HOST=${BC_REG_DB_HOST:-host.docker.internal}

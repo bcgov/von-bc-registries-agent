@@ -220,8 +220,6 @@ def test_scenario_multi_dbas():
         dba_creds = generate_creds_for_corp(my_corp_dict)
         assert len(dba_creds) == my_dba_ct[i]
         assert dba_creds[0]['cred_type'] == 'REG'
-        if len(dba_creds) == 2:
-            assert dba_creds[1]['cred_type'] == 'ADDR'
         i = i + 1
 
 # basic corp with empty date(s)
