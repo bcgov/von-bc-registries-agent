@@ -1,7 +1,8 @@
 
 import time
+import json
 
-from bcreg.bcregistries import BCRegistries, system_type, MIN_START_DATE, MAX_END_DATE
+from bcreg.bcregistries import BCRegistries, system_type, MIN_START_DATE, MAX_END_DATE, CustomJsonEncoder
 from bcreg.eventprocessor import EventProcessor
 
 
@@ -132,14 +133,11 @@ def test_compare_corp_infos():
         print('Run baseline')
         start_time = time.perf_counter()
         for corp in corps:
-            print(corp)
+            #print(corp)
             corp_info_baseline[corp['CORP_NUM']] = bc_registries.get_bc_reg_corp_info(corp['CORP_NUM'])
         bcreg_loading_time_baseline = bcreg_loading_time_baseline + (time.perf_counter() - start_time)
 
     print('baseline:', bcreg_loading_time_baseline, 'new load:', bcreg_loading_time)
-
-    #for corp in corps:
-    #    assert corp_info[corp['CORP_NUM']] == corp_info_baseline[corp['CORP_NUM']]
 
     corp_creds = {}
     with EventProcessor() as event_processor:
@@ -158,10 +156,21 @@ def test_compare_corp_infos():
         if corp_creds[corp['CORP_NUM']] != corp_creds_baseline[corp['CORP_NUM']]:
             diffs.append(corp['CORP_NUM'])
             #print("==================================")
-            #print(corp_creds[corp['CORP_NUM']])
-            #print("----------------------------------")
-            #print(corp_creds_baseline[corp['CORP_NUM']])
             #print("==================================")
+            #print("CORP INFO:")
+            #print("==================================")
+            #print(json.dumps(corp_info[corp['CORP_NUM']], cls=CustomJsonEncoder, sort_keys=True))
+            #print("----------------------------------")
+            #print(json.dumps(corp_info_baseline[corp['CORP_NUM']], cls=CustomJsonEncoder, sort_keys=True))
+            #print("==================================")
+            #print("CORP CREDS:")
+            print("==================================")
+            print(json.dumps(corp_creds[corp['CORP_NUM']], cls=CustomJsonEncoder, sort_keys=True))
+            print("----------------------------------")
+            print(json.dumps(corp_creds_baseline[corp['CORP_NUM']], cls=CustomJsonEncoder, sort_keys=True))
+            print("==================================")
+            #print("==================================")
+
     if 0 < len(diffs):
         print(diffs)
 

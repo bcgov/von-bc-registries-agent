@@ -1,5 +1,5 @@
 - name: registration.registries.ca
-  version: '1.0.41'
+  version: '1.0.42'
   attributes:
     registration_id:
       label_en: Registration ID
@@ -79,7 +79,7 @@
       required: true
 
 - name: address.registries.ca
-  version: '1.0.41'
+  version: '1.0.42'
   attributes:
     registration_id:
       label_en: Registration ID
@@ -131,7 +131,7 @@
       required: false
 
 - name: relationship.registries.ca
-  version: '1.0.41'
+  version: '1.0.42'
   attributes:
     registration_id:
       label_en: Registration ID
@@ -141,6 +141,10 @@
       label_en: Associated Registration ID
       description_en: Registry id(s) of associated organizations/individuals
       required: true
+    associated_registration_name:
+      label_en: Associated Registration Namwe
+      description_en: Registered name of associated organizations/individuals
+      required: false
     relationship:
       label_en: Relationship
       description_en: Name of the relationship
