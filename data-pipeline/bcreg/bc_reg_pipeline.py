@@ -24,13 +24,14 @@ mara_user = os.environ.get('MARA_DB_USER', 'mara_db')
 mara_password = os.environ.get('MARA_DB_PASSWORD')
 
 try:
+    log_info("Starting bc_reg_event_processor ...")
     mara_db.config.databases \
         = lambda: {'mara': mara_db.dbs.PostgreSQLDB(user=mara_user, password=mara_password, host=mara_host, database=mara_database, port=mara_port)}
 
     (child_pipeline, success) = data_integration.pipelines.find_node(['bc_reg_event_processor']) 
     if success:
         run_pipeline(child_pipeline)
-        log_info("Ran bc_reg_event_processor")
+        log_info("Ran bc_reg_event_processor - complete.")
     else:
         print("Pipeline not found")
         log_error("Pipeline not found for:" + "bc_reg_event_processor")
