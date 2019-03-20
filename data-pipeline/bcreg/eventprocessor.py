@@ -1228,7 +1228,7 @@ class EventProcessor:
                             corp_active_state = self.get_corp_active_state(corp_info)
 
                             # if corporation is "withdrawn" then don't create any events
-                            withdrawn_corp = corp_active_state['state_typ_cd'] == 'HWT'
+                            withdrawn_corp = (corp_active_state is not None) and ('state_typ_cd' in corp_active_state) and (corp_active_state['state_typ_cd'] == 'HWT')
                             if withdrawn_corp:
                                 # setting these to empty arrays will force a status update with no creds generated
                                 effective_events = []
@@ -1243,8 +1243,12 @@ class EventProcessor:
                                         corp_creds = self.generate_credentials(corp['SYSTEM_TYPE_CD'], corp['PREV_EVENT'], corp['LAST_EVENT'], corp['CORP_NUM'], corp_info)
                                         if len(corp_creds) > 0:
                                             cur = self.conn.cursor()
+                                            if corp_active_state and 'op_state_typ_cd' in corp_active_state:
+                                                op_state_typ_cd = corp_active_state['op_state_typ_cd']
+                                            else:
+                                                op_state_typ_cd = 'N/A'
                                             saved_creds = saved_creds + self.store_credentials(cur, corp['SYSTEM_TYPE_CD'], corp['PREV_EVENT'], corp['LAST_EVENT'], 
-                                                                    corp['CORP_NUM'], corp_active_state['op_state_typ_cd'], corp_info, corp_creds)
+                                                                    corp['CORP_NUM'], op_state_typ_cd, corp_info, corp_creds)
                                             cur.close()
                                             cur = None
                                     except (Exception, psycopg2.DatabaseError) as error:
@@ -1273,8 +1277,12 @@ class EventProcessor:
                                 if load_regs:
                                     cur = self.conn.cursor()
                                     if 0 < len(corp_creds) or 0 == len(future_events):
+                                        if corp_active_state and 'op_state_typ_cd' in corp_active_state:
+                                            op_state_typ_cd = corp_active_state['op_state_typ_cd']
+                                        else:
+                                            op_state_typ_cd = 'N/A'
                                         cur.execute(sql2a, (corp['SYSTEM_TYPE_CD'], prev_event_json, last_event_json, corp['CORP_NUM'], 
-                                                            corp_active_state['op_state_typ_cd'], corp_info_json, datetime.datetime.now(), datetime.datetime.now(), 
+                                                            op_state_typ_cd, corp_info_json, datetime.datetime.now(), datetime.datetime.now(), 
                                                             flag, res,))
                                         if flag == 'N':
                                             log_warning('Event processing error:' + res)
