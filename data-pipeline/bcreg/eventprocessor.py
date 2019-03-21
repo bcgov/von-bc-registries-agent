@@ -591,10 +591,17 @@ class EventProcessor:
             print(">>>Data Issue:Credential:" + corp_num + ":" + cred_attr + ":", corp_cred)
 
     def compare_dates(self, first_date, op, second_date, msg):
-        if first_date is None:
-            print(msg, "first date is None")
-        if second_date is None:
-            print(msg, "second date is None")
+        # check for empty or null strings
+        if first_date is None or (isinstance(first_date, str) and 0 == len(first_date)):
+            print(msg, "first date is None or empty string")
+        if second_date is None or (isinstance(second_date, str) and 0 == len(second_date)):
+            print(msg, "second date is None or empty string")
+        # make sure the two variables are the same data type
+        if isinstance(first_date, str) and not isinstance(second_date, str):
+            second_date = str(second_date)
+        elif isinstance(second_date, str) and not isinstance(first_date, str):
+            first_date = str(first_date)
+        # now do the comparison
         if op == "==" or op == '=':
             return first_date == second_date
         elif op == "<=":
@@ -1213,7 +1220,7 @@ class EventProcessor:
                                 print(traceback.print_exc())
                                 process_success = False
                                 process_msg = str(error)
-                                raise
+                                #raise
                         else:
                             # json blob is cached in event processor database
                             corp_info = corp['CORP_JSON']
@@ -1255,7 +1262,7 @@ class EventProcessor:
                                         print(traceback.print_exc())
                                         process_success = False
                                         process_msg = str(error)
-                                        raise
+                                        #raise
                                     finally:
                                         if cur is not None:
                                             cur.close()
