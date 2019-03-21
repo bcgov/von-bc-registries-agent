@@ -899,7 +899,6 @@ class EventProcessor:
             for i in range(len(effective_events)):
                 #print('effective_event', effective_events[i])
                 loop_start_event = effective_events[i]
-                print("loop_start_event", loop_start_event)
                 if (not (is_data_conversion_event(loop_start_event) and loop_start_event['event_timestmp'] == loop_start_event['effective_date'])) and use_prev_event['event_date'] <= loop_start_event['event_timestmp'] and loop_start_event['event_timestmp'] <= use_last_event['event_date']:
                     # generate corp credential
                     corp_cred = {}
@@ -968,10 +967,7 @@ class EventProcessor:
                         jurisdiction_effective_date = None
 
                     # make sure we set an effective date for the credential!
-                    print('corp_cred', corp_cred)
                     corp_cred['effective_date'] = self.credential_effective_date(corp_cred)
-                    print("jurisdiction_effective_date", jurisdiction_effective_date)
-                    print("corp_cred['effective_date']", corp_cred['effective_date'])
                     if corp_cred['effective_date'] is None or (jurisdiction_effective_date is not None and self.compare_dates(jurisdiction_effective_date, ">", corp_cred['effective_date'], "jurisdiction_effective")):
                         corp_cred['effective_date'] = jurisdiction_effective_date
                     if corp_cred['effective_date'] is None or corp_cred['effective_date'] == '':
