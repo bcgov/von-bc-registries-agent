@@ -43,11 +43,6 @@ usage () {
       - Delete the persistent indy wallet information.
       - Drop and recreate the event database.
 
-    deleteWallets
-      - Delete the local wallets from one or more pods.
-        For example;
-          $0 -e dev deleteWallets bcreg-x-agent
-
     getPipelineStatus
       - Get the pipeline status for the given environment.
         Runs the './run-step.sh bcreg/display_pipeline_status.py' pipeline script
@@ -219,9 +214,6 @@ hardReset() {
   switchProject
   exitOnError
 
-  # Delete any sqlite wallets from the agent Pod ...
-  deleteWallets ${_agentPodName}
-
   # Scale down the agent pod ...
   scaleDown ${_agentPodName}
   exitOnError
@@ -352,10 +344,6 @@ case "${_cmd}" in
     dbPodName=${2:-event-db}
     walletDbPodName=${3:-wallet-db}
     hardReset "${agentPodName}" "${dbPodName}" "${walletDbPodName}"
-    ;;
-  deletewallets)
-    deleteWallets ${@}
-    recyclePods ${@}
     ;;
   getpipelinestatus)
     maraPodName=${1:-mara}
