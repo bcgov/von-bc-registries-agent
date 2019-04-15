@@ -543,7 +543,7 @@ class EventProcessor:
         registered_jurisdiction = ""
         if corp['corp_type']['corp_class'] == 'BC':
             registered_jurisdiction = "BC"
-        elif corp['corp_type']['corp_class'] == 'XPRO':
+        elif corp['corp_type']['corp_class'] == 'XPRO' or corp['corp_typ_cd'] == 'XP' or corp['corp_typ_cd'] == 'XL' or corp['corp_typ_cd'] == 'XCP' or corp['corp_typ_cd'] == 'XS':
             if jurisdiction is not None and 'can_jur_typ_cd' in jurisdiction:
                 if jurisdiction['can_jur_typ_cd'] == 'OT':
                     if 'othr_juris_desc' in jurisdiction and jurisdiction['othr_juris_desc'] is not None:
@@ -1239,6 +1239,7 @@ class EventProcessor:
                                 if 0 < len(effective_events):
                                     try:
                                         # generate and store credentials
+                                        #print(" >>> Generate credentials for corp", corp['CORP_NUM'])
                                         corp_creds = self.generate_credentials(corp['SYSTEM_TYPE_CD'], corp['PREV_EVENT'], corp['LAST_EVENT'], corp['CORP_NUM'], corp_info)
                                         if len(corp_creds) > 0:
                                             cur = self.conn.cursor()

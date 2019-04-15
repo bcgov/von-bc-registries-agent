@@ -136,6 +136,24 @@ specific_corps = [
                     'A0070194',
                     '0338518',
                     '1199242',
+                    '0072808',
+                    '0946908',
+                    '0730909',
+                    '1198849',
+                    '0149514',
+                    '0390058',
+                    # more test data from the additional company types
+                    'FM0472969', # for Dissolution effective date -> event.trigger_dts field for the dissolution filing event
+                    'FM0345136', # for Each section of the timeline should reference the name at that point in time
+                    'XP0068811', # for It is not accurate to say a firm is related to itself
+                    'FM0547930', # for A number of PROD entities I attempted to test with do not appear in VON
+                    'FM0027827', 'LP0043506', 'LP0004424', 'XP0646920', 'LL0000038', 'LL0000063', 'MF0000041', 'MF0000022',
+                    'LL0000145', # for All status changes (from active to historical and vice versa) should be displayed in the timeline
+                    'S0000009', 
+                    'S0000872', # for “0001-01-01” displays as “Dec 31, 1” on the Organization data.  Displays as “Dec 31, 1, 11:40 PM” on the Credential data
+                    'XS0054137', # forThey reinstated (became active) and then 10 minutes later changed jurisdiction.  The reinstatement is either missing or not visible on the timeline. Home Jurisdiction is British Columbia on the first credential and should be Ontario.  Home Jurisdiction is British Columbia on the second credential and should be Federal
+                    'XS0059885', # for Has 2 credentials because of a change of jurisdiction. Home Jurisdiction is British Columbia on the first credential and should be Ontario.  Home Jurisdiction is British Columbia on the second credential and should be Federal.
+                    '1047742', # for had a “Correction - Put Back On” on March 16 making it active.  It is currently active in COLIN.  However the Orgbook shows it as historical
                     ]
 
 with BCRegistries() as bc_registries:

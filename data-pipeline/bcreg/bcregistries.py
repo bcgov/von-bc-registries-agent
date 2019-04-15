@@ -964,7 +964,7 @@ class BCRegistries:
     # find a specific event, 
     # return None if not found
     def get_event(self, corp_num, event_id, force_query_remote=False):
-        sql = """SELECT event_id, corp_num, event.event_typ_cd, event_timestmp, event_class, short_desc, full_desc
+        sql = """SELECT event_id, corp_num, event.event_typ_cd, event_timestmp, trigger_dts, event_class, short_desc, full_desc
                     FROM """ + self.get_table_prefix(force_query_remote) + """event, """ + self.get_table_prefix(force_query_remote) + """event_type
                     WHERE event_id = """ + self.get_db_sql_param(force_query_remote) + """ and event.event_typ_cd = event_type.event_typ_cd"""
                     # WHERE corp_num = """ + self.get_db_sql_param(force_query_remote) + """ and event_id = """ + self.get_db_sql_param(force_query_remote)
