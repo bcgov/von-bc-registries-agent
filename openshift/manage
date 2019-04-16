@@ -350,13 +350,9 @@ case "${_cmd}" in
     getPipelineStatus "${maraPodName}"
     ;;
   scaleup)
-    switchProject
-    exitOnError
     scaleUp ${@}
     ;;
   scaledown)
-    switchProject
-    exitOnError
     scaleDown ${@}
     ;;
   recycle)
