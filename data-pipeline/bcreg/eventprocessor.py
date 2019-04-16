@@ -988,6 +988,13 @@ class EventProcessor:
                     #print('credential', corp_cred['credential'])
                     if (len(corp_creds) == 0) or (len(corp_creds) > 0 and corp_cred['credential'] != corp_creds[len(corp_creds)-1]['credential']):
                         corp_creds.append(corp_cred)
+                else:
+                    # skipping event because out of range of start/end period
+                    pass
+
+        else:
+            # skip due to no effective dates in range
+            pass
 
         # generate addr credential(s)
         corp_offices = sorted(corp_info['office'], key=lambda k: int(k['start_event_id']))

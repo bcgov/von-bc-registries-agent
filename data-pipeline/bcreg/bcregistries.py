@@ -956,7 +956,7 @@ class BCRegistries:
     def get_event_effective_date(self, event_id):
         # note that corp_num is ignored in the following queries
         if event_id == 0:
-            return MIN_START_DATE;
+            return datetime.datetime(datetime.MINYEAR, 1, 1) # MIN_START_DATE
         event = self.get_event('0', event_id)
         #filing = self.get_filing_event('0', event_id, event['event_typ_cd'])
         return self.get_event_filing_effective_date(event)

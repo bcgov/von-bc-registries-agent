@@ -5,7 +5,6 @@ from bcreg.config import config
 from bcreg.eventprocessor import EventProcessor, CORP_TYPES_IN_SCOPE
 from bcreg.bcregistries import BCRegistries, system_type
 
-
 specific_corps = [
                     '0641655',
                     '0820416',
