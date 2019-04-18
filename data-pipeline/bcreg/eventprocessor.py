@@ -820,7 +820,7 @@ class EventProcessor:
     def is_owned_sole_prop(self, party, corp_num, corp_info):
         # "parent" is defined as the corp in "bus_company_num" (as opposed to "corp_num")
         # ... assume it may be different for different party records
-        if corp_num == party['corp_info']['corp_num']:
+        if corp_num == party['corp_num']:
             is_parent = False
         else:
             is_parent = True
@@ -840,7 +840,7 @@ class EventProcessor:
 
         # "parent" is defined as the corp in "bus_company_num" (as opposed to "corp_num")
         # ... assume it may be different for different party records
-        if corp_num == party['corp_info']['corp_num']:
+        if corp_num == party['corp_num']:
             is_parent = False
         else:
             is_parent = True
