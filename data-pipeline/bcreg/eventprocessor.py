@@ -28,12 +28,14 @@ CORP_BATCH_SIZE = 3000
 FALLBACK_CORP_BATCH_SIZE = 100
 
 MIN_START_DATE = datetime.datetime(datetime.MINYEAR+1, 1, 1)
+MIN_VALID_DATE = datetime.datetime(datetime.MINYEAR+10, 1, 1)
 MAX_END_DATE   = datetime.datetime(datetime.MAXYEAR-1, 12, 31)
 
 # for now, we are in PST time
-timezone = pytz.timezone("America/Los_Angeles")
+timezone = pytz.timezone("PST8PDT")
 
 MIN_START_DATE_TZ = timezone.localize(MIN_START_DATE)
+MIN_VALID_DATE_TZ = timezone.localize(MIN_VALID_DATE)
 MAX_END_DATE_TZ   = timezone.localize(MAX_END_DATE)
 
 CORP_TYPES_IN_SCOPE = {
@@ -666,12 +668,14 @@ class EventProcessor:
     # credential effective date is the latest of the individual effective dates in the credential
     def credential_effective_date(self, corp_cred):
         effective_date = None
-        if corp_cred['entity_status_effective'] is not None and corp_cred['entity_status_effective'] != '':
+        if 'entity_status_effective' in corp_cred and str(corp_cred['entity_status_effective']) != '' and corp_cred['entity_status_effective'] is not None:
             effective_date = corp_cred['entity_status_effective']
-        if effective_date is None or ('entity_name_effective' in corp_cred and corp_cred['entity_name_effective'] != '' and self.compare_dates(effective_date, "<", corp_cred['entity_name_effective'], 'cred:' + str(corp_cred))):
-            effective_date = corp_cred['entity_name_effective']
-        if effective_date is None or ('entity_name_assumed_effective' in corp_cred and self.compare_dates(effective_date, "<", corp_cred['entity_name_assumed_effective'], 'cred:' + str(corp_cred))):
-            effective_date = corp_cred['entity_name_assumed_effective']
+        if 'entity_name_effective' in corp_cred and str(corp_cred['entity_name_effective']) != '' and corp_cred['entity_name_effective'] is not None:
+            if effective_date is None and self.compare_dates(effective_date, "<", corp_cred['entity_name_effective'], 'cred:' + str(corp_cred)):
+                effective_date = corp_cred['entity_name_effective']
+        if 'entity_name_assumed_effective' in corp_cred and str(corp_cred['entity_name_assumed_effective']) != '' and corp_cred['entity_name_assumed_effective'] is not None:
+            if effective_date is None and self.compare_dates(effective_date, "<", corp_cred['entity_name_assumed_effective'], 'cred:' + str(corp_cred)):
+                effective_date = corp_cred['entity_name_assumed_effective']
         return effective_date
 
     def unique_effective_recs(self, rec_type, rec_attr, corp_records, effective_recs):
@@ -799,12 +803,14 @@ class EventProcessor:
         return (past_events, future_events)
 
     def filter_min_date(self, cred_date):
+        if not cred_date:
+            return cred_date
         if isinstance(cred_date, str):
-            if cred_date == MIN_START_DATE_TZ:
+            if cred_date < MIN_VALID_DATE_TZ:
                 return ""
-        #elif isinstance(cred_date, datetime.date):
-        #    if cred_date == MIN_START_DATE:
-        #        return ?TBD?
+        elif isinstance(cred_date, datetime.date):
+            if cred_date < MIN_VALID_DATE:
+                return None
         return cred_date
 
     # check if the org name is a notice of alteration
@@ -928,10 +934,11 @@ class EventProcessor:
 
                     # org_name_assumed active at effective date
                     org_name_assumed = self.corp_rec_at_effective_date(corp_info['org_name_assumed'], loop_start_event)
+                    #print("org_name_assumed", org_name_assumed)
                     if org_name_assumed is not None:
                         #print('org_name_assumed', org_name_assumed)
                         corp_cred['entity_name_assumed'] = org_name_assumed['corp_nme'] 
-                        if is_data_conversion_event(org_name_assumed['start_event']) and org_name_assumed['effective_start_date'] == org_name_assumed['event_timestmp']['entity_name_assumed_effective']:
+                        if is_data_conversion_event(org_name_assumed['start_event']) and org_name_assumed['effective_start_date'] == org_name_assumed['start_event']['event_timestmp']:
                             corp_cred['entity_name_assumed_effective'] = ''
                         else:
                             corp_cred['entity_name_assumed_effective'] = self.filter_min_date(org_name_assumed['effective_start_date'])
@@ -952,7 +959,7 @@ class EventProcessor:
                     # jurisdiction active at effective date
                     jurisdiction = self.corp_rec_at_effective_date(corp_info['jurisdiction'], loop_start_event)
                     corp_cred['home_jurisdiction'] = self.get_corp_jurisdiction(corp_info, jurisdiction)
-                    if corp_cred['home_jurisdiction'] != 'BC':
+                    if corp_cred['home_jurisdiction'] and 0 < len(corp_cred['home_jurisdiction']) and corp_cred['home_jurisdiction'] != 'BC':
                         corp_cred['registered_jurisdiction'] = 'BC' 
                     else:
                         corp_cred['registered_jurisdiction'] = '' 
@@ -982,6 +989,7 @@ class EventProcessor:
                     #self.check_required_field(corp_num, corp_cred, 'entity_status')
 
                     corp_cred = self.build_credential_dict(corp_credential, corp_schema, corp_version, corp_num, corp_cred, reason_description, corp_cred['effective_date'])
+                    #print("corp_cred", corp_cred)
 
                     # these will be sorted by date, but we need to make sure we are not submitting duplicates
                     # checking against the previously generated credential is sufficient

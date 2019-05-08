@@ -12,4 +12,6 @@ database.ini
 /.project
 .DS_Store
 src
+test_data.csv
+test_data.py
 
