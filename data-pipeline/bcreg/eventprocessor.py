@@ -25,7 +25,7 @@ dba_schema = 'relationship.registries.ca'
 dba_version = '1.0.42'
 
 CORP_BATCH_SIZE = 3000
-FALLBACK_CORP_BATCH_SIZE = 100
+FALLBACK_CORP_BATCH_SIZE = 300
 
 MIN_START_DATE = datetime.datetime(datetime.MINYEAR+1, 1, 1)
 MIN_VALID_DATE = datetime.datetime(datetime.MINYEAR+10, 1, 1)
