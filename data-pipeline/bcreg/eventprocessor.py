@@ -673,10 +673,10 @@ class EventProcessor:
         if 'entity_status_effective' in corp_cred and str(corp_cred['entity_status_effective']) != '' and corp_cred['entity_status_effective'] is not None:
             effective_date = corp_cred['entity_status_effective']
         if 'entity_name_effective' in corp_cred and str(corp_cred['entity_name_effective']) != '' and corp_cred['entity_name_effective'] is not None:
-            if effective_date is None and self.compare_dates(effective_date, "<", corp_cred['entity_name_effective'], 'cred:' + str(corp_cred)):
+            if effective_date is None or self.compare_dates(effective_date, "<", corp_cred['entity_name_effective'], 'cred:' + str(corp_cred)):
                 effective_date = corp_cred['entity_name_effective']
         if 'entity_name_assumed_effective' in corp_cred and str(corp_cred['entity_name_assumed_effective']) != '' and corp_cred['entity_name_assumed_effective'] is not None:
-            if effective_date is None and self.compare_dates(effective_date, "<", corp_cred['entity_name_assumed_effective'], 'cred:' + str(corp_cred)):
+            if effective_date is None or self.compare_dates(effective_date, "<", corp_cred['entity_name_assumed_effective'], 'cred:' + str(corp_cred)):
                 effective_date = corp_cred['entity_name_assumed_effective']
         return effective_date
 
