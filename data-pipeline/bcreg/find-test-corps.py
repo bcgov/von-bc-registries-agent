@@ -5,8 +5,7 @@ from bcreg.config import config
 from bcreg.eventprocessor import EventProcessor, CORP_TYPES_IN_SCOPE
 from bcreg.bcregistries import BCRegistries, system_type
 
-
-specific_corps = [
+specific_corps = [ 
                     '0641655',
                     '0820416',
                     '0700450',
@@ -136,6 +135,36 @@ specific_corps = [
                     'A0070194',
                     '0338518',
                     '1199242',
+                    '0072808',
+                    '0946908',
+                    '0730909',
+                    '1198849',
+                    '0149514',
+                    '0390058',
+                    # more test data from the additional company types
+                    '1071287', # very short credential effective periods
+                    '1001845',
+                    'FM0472969', # for Dissolution effective date -> event.trigger_dts field for the dissolution filing event
+                    'FM0345136', # for Each section of the timeline should reference the name at that point in time
+                    'XP0068811', # for It is not accurate to say a firm is related to itself
+                    'FM0547930', # for A number of PROD entities I attempted to test with do not appear in VON
+                    'FM0027827', 'LP0043506', 'LP0004424', 'XP0646920', 'LL0000038', 'LL0000063', 'MF0000041', 'MF0000022',
+                    'LL0000145', # for All status changes (from active to historical and vice versa) should be displayed in the timeline
+                    'S0000009', 
+                    'S0000872', # for “0001-01-01” displays as “Dec 31, 1” on the Organization data.  Displays as “Dec 31, 1, 11:40 PM” on the Credential data
+                    'XS0054137', # forThey reinstated (became active) and then 10 minutes later changed jurisdiction.  The reinstatement is either missing or not visible on the timeline. Home Jurisdiction is British Columbia on the first credential and should be Ontario.  Home Jurisdiction is British Columbia on the second credential and should be Federal
+                    'XS0059885', # for Has 2 credentials because of a change of jurisdiction. Home Jurisdiction is British Columbia on the first credential and should be Ontario.  Home Jurisdiction is British Columbia on the second credential and should be Federal.
+                    '1047742', # for had a “Correction - Put Back On” on March 16 making it active.  It is currently active in COLIN.  However the Orgbook shows it as historical
+                    'FM0688355', # Relationships are not consistently showing. FM0688355 is a firm owned by CP0001939 ...
+                    'CP0001939', # 
+                    'FM0415725', # FM0415725, is also now only showing relationships on the corporate owner
+                    'A0101881', # owner of FM0415725
+                    'XS0015243', # Home jurisdiction is displaying as 'BC' when no record exists in CPRD.Jurisdiction. In these cases we are better off to have nothing display at all. E.g. XS0015243.
+                    'CP0000527', # Registration type shows as CO-OPS when looking up CO-OP records. For corp_typ_cd 'A' or 'BC' we use the corp_type.full_desc from the DB. CO-OPS should also use the full_desc (Cooperative). E.g. CP0000527.
+                    'CP0000527', # Credential reason is rendering with code for certain COOP records. E.g. for CP0000527
+                    'CP0000103', #
+                    'CP0000851', # In the DB the entity became historical due to amalgamation (HAM) as of event ID 102030389 which occurred on 1976-12-31 00:00:00. In VON we are seeing the status of HIS as a result of a System to D2 event on Feb 26, 2019.
+                    'CP0001048', # In the DB the date for the creation event which set the entity to active and listed the first name is 1899-12-31. In VON the main search shows the name effective date as a day earlier – 1899-12-30. Date issue also exists when you select the first section of the timeline and in that case both the date and the time are wrong.
                     ]
 
 with BCRegistries() as bc_registries:
