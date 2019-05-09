@@ -24,7 +24,7 @@ MAX_END_DATE   = datetime.datetime(datetime.MAXYEAR-1, 12, 31)
 DATA_CONVERSION_DATE = datetime.datetime(2004, 3, 26)
 
 # for now, we are in PST time
-timezone = pytz.timezone("America/Los_Angeles")
+timezone = pytz.timezone("PST8PDT")
 
 MIN_START_DATE_TZ = timezone.localize(MIN_START_DATE)
 MAX_END_DATE_TZ   = timezone.localize(MAX_END_DATE)
@@ -48,7 +48,8 @@ class CustomJsonEncoder(json.JSONEncoder):
         if isinstance(o, datetime.datetime):
             try:
                 tz_aware = timezone.localize(o)
-                return tz_aware.astimezone(pytz.utc).isoformat()
+                ret = tz_aware.astimezone(pytz.utc).isoformat()
+                return ret
             except (Exception) as error:
                 if o.year <= datetime.MINYEAR+1:
                     return MIN_START_DATE_TZ.astimezone(pytz.utc).isoformat()
@@ -928,12 +929,18 @@ class BCRegistries:
                 cursor.close()
 
     # return the "effective date" given an event and filing
-    def get_event_filing_effective_date(self, event):
+    def get_event_filing_effective_date(self, event, corp_type_cd=None):
         ret_date = None
 
-        # use the filing effective date if it is present
-        if 'filing' in event and 'effective_dt' in event['filing']:
-            ret_date = event['filing']['effective_dt']
+        # if corp type is Firm and it is a dissolusion event the effective date will be in event.trigger_dts
+        if corp_type_cd and corp_type_cd in ('SP','GP','LP','XP','LL','XL','MF'):
+            if 'trigger_dts' in event and event['trigger_dts'] is not None:
+                ret_date = event['trigger_dts']
+
+        if ret_date is None:
+            # use the filing effective date if it is present
+            if 'filing' in event and 'effective_dt' in event['filing']:
+                ret_date = event['filing']['effective_dt']
 
         # else use the conversion event if present
         if ret_date is None and 'conv_event' in event and 'effective_dt' in event['conv_event']:
@@ -956,15 +963,15 @@ class BCRegistries:
     def get_event_effective_date(self, event_id):
         # note that corp_num is ignored in the following queries
         if event_id == 0:
-            return MIN_START_DATE;
+            return datetime.datetime(datetime.MINYEAR, 1, 1) # MIN_START_DATE
         event = self.get_event('0', event_id)
         #filing = self.get_filing_event('0', event_id, event['event_typ_cd'])
         return self.get_event_filing_effective_date(event)
 
     # find a specific event, 
     # return None if not found
-    def get_event(self, corp_num, event_id, force_query_remote=False):
-        sql = """SELECT event_id, corp_num, event.event_typ_cd, event_timestmp, event_class, short_desc, full_desc
+    def get_event(self, corp_num, event_id, corp_type_cd=None, force_query_remote=False):
+        sql = """SELECT event_id, corp_num, event.event_typ_cd, event_timestmp, trigger_dts, event_class, short_desc, full_desc
                     FROM """ + self.get_table_prefix(force_query_remote) + """event, """ + self.get_table_prefix(force_query_remote) + """event_type
                     WHERE event_id = """ + self.get_db_sql_param(force_query_remote) + """ and event.event_typ_cd = event_type.event_typ_cd"""
                     # WHERE corp_num = """ + self.get_db_sql_param(force_query_remote) + """ and event_id = """ + self.get_db_sql_param(force_query_remote)
@@ -984,7 +991,7 @@ class BCRegistries:
             else:
                 # check for a cache miss
                 if self.use_local_cache() and (not force_query_remote):
-                    event = self.get_event(corp_num, event_id, True)
+                    event = self.get_event(corp_num, event_id, corp_type_cd=corp_type_cd, force_query_remote=True)
                     self.add_cache_miss('event', corp_num, event_id, event)
                     ret_event = event
             if ret_event is None:
@@ -999,7 +1006,7 @@ class BCRegistries:
                 ret_event['filing'] = self.get_filing_event(corp_num, event_id, ret_event['event_typ_cd'], force_query_remote)
             if 'conv_event' not in ret_event:
                 ret_event['conv_event'] = self.get_conv_event(corp_num, event_id, ret_event['event_typ_cd'], force_query_remote)
-            ret_event['effective_date'] = self.get_event_filing_effective_date(ret_event)
+            ret_event['effective_date'] = self.get_event_filing_effective_date(ret_event, corp_type_cd)
             return ret_event
         except (Exception, psycopg2.DatabaseError) as error:
             print(error)
@@ -1282,7 +1289,7 @@ class BCRegistries:
             if cursor is not None:
                 cursor.close()
 
-    def get_jurisdictons(self, corp_num):
+    def get_jurisdictions(self, corp_num):
         sql_juris = """SELECT corp_num, start_event_id, end_event_id, j.can_jur_typ_cd can_jur_typ_cd,
                                 home_recogn_dt, othr_juris_desc, home_juris_num, home_company_nme,
                                 short_desc, full_desc
@@ -1396,6 +1403,7 @@ class BCRegistries:
             cur.execute(sql_corp, (corp_num,))
             row = cur.fetchone()
             if row is None:
+                # TODO maybe check BC Reg database if the corp is not in the cache?
                 print("No corp rec found for ", corp_num)
                 corp['corp_num'] = ''
                 corp['corp_typ_cd'] = ''
@@ -1404,7 +1412,7 @@ class BCRegistries:
                 corp['current_date'] = datetime.datetime.now()
                 corp['corp_num'] = row[0]
                 if deep_copy:
-                    corp['jurisdiction'] = self.get_jurisdictons(row[0])
+                    corp['jurisdiction'] = self.get_jurisdictions(row[0])
                 corp['corp_typ_cd'] = row[1]
                 corp['corp_type'] = self.get_corp_type(row[1])
                 corp['recognition_dts'] = row[2]
@@ -1436,10 +1444,10 @@ class BCRegistries:
                     # get corp state (active, historical), and get the start/end date of each state change
                     corp_states = self.get_corp_states(corp_num)
                     for corp_state in corp_states:
-                        corp_state['start_event'] = self.get_event(corp['corp_num'], corp_state['start_event_id'])
+                        corp_state['start_event'] = self.get_event(corp['corp_num'], corp_state['start_event_id'], corp_type_cd=corp['corp_typ_cd'])
                         corp_state['event_date'] = corp_state['start_event']['effective_date']
                         if corp_state['end_event_id'] is not None:
-                            corp_state['end_event'] = self.get_event(corp['corp_num'], corp_state['end_event_id'])
+                            corp_state['end_event'] = self.get_event(corp['corp_num'], corp_state['end_event_id'], corp_type_cd=corp['corp_typ_cd'])
                             corp_state['effective_end_date'] = corp_state['end_event']['effective_date']
                         else:
                             corp_state['effective_end_date'] = MAX_END_DATE
@@ -1517,11 +1525,11 @@ class BCRegistries:
                 #corp_party['delivery_addr'] = self.get_address(corp_num, row[3])
                 corp_party['party_typ_cd'] = row[4]
                 corp_party['start_event_id'] = row[5]
-                corp_party['start_event'] = self.get_event(row[0], row[5])
+                corp_party['start_event'] = self.get_event(row[0], row[5], corp_type_cd=corp['corp_typ_cd'])
                 corp_party['effective_start_date'] = corp_party['start_event']['effective_date']
                 corp_party['end_event_id'] = row[6]
                 if corp_party['end_event_id'] is not None:
-                    corp_party['end_event'] = self.get_event(corp['corp_num'], corp_party['end_event_id'])
+                    corp_party['end_event'] = self.get_event(corp['corp_num'], corp_party['end_event_id'], corp_type_cd=corp['corp_typ_cd'])
                     corp_party['effective_end_date'] = corp_party['end_event']['effective_date']
                 else:
                     corp_party['effective_end_date'] = MAX_END_DATE
