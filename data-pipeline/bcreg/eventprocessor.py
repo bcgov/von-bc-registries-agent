@@ -868,6 +868,10 @@ class EventProcessor:
         if party['party_typ_cd'] != 'FBO':
             return False
 
+        # special case where the corp_num and bus_company_num are the same
+        if 'bus_company_num' in party and party['bus_company_num'] == corp_num:
+            return False
+
         # include if this record is within the desired event range ...
         if ((prev_event['event_date'] <= party['start_event']['event_timestmp'] and party['start_event']['event_timestmp'] <= last_event['event_date']) or
             (party['end_event_id'] is not None and prev_event['event_date'] <= party['end_event']['event_timestmp'] and party['end_event']['event_timestmp'] <= last_event['event_date'])):
