@@ -48,11 +48,14 @@ usage () {
         Runs the './run-step.sh bcreg/display_pipeline_status.py' pipeline script
         on an instance of a mara pod.
 
-    requeueFailedCreds
-      - Requeue any credentials that have failed posting.
-
     requeueFailedEvents
       - Requeue any events (event_by_corp_filing records) that have failed processing.
+
+    requeueFailedCorps
+      - Requeue any corporations (corp_history_log records) that have failed processing.
+
+    requeueFailedCreds
+      - Requeue any credentials (credential_log records) that have failed posting.
 
     requeueProcessedCreds
       - Use with caution.  Requeue any credentials that have already been posted.
@@ -304,6 +307,35 @@ requeueFailedEvents() {
   ${_databasePodName} \
   'psql -d ${POSTGRESQL_DATABASE} -ac "update event_by_corp_filing set process_success = null, process_date = null, process_msg = null where process_success = '"'"'N'"'"';"'
 }
+
+requeueFailedCorps() {
+  _databasePodName=${1}
+  if [ -z "${_databasePodName}" ]; then
+    echo -e \\n"requeueFailedEvents; Missing parameter!"\\n
+    exit 1
+  fi
+
+  # Get affected corp_nums
+  corp_nums=$(runInContainer \
+    ${_databasePodName} \
+    'psql -d ${POSTGRESQL_DATABASE} -t -c "select corp_num from corp_history_log where process_success = '"'"'N'"'"';"')
+  corp_nums=$(echo "${corp_nums}" | sed -e "s~[[:space:]]*\(.*\)~'\1'~" | awk -vORS=, '{ print $0 }' | sed 's~,$~\n~')
+
+  # Remove affected credential_log records
+  runInContainer -v \
+    ${_databasePodName} \
+    "psql -d "'${POSTGRESQL_DATABASE}'" -ac \"delete from credential_log where corp_num in (${corp_nums});\""
+
+  # Remove affected corp_history_log records
+  runInContainer -v \
+    ${_databasePodName} \
+    "psql -d "'${POSTGRESQL_DATABASE}'" -ac \"delete from corp_history_log where corp_num in (${corp_nums});\""
+
+  # Requeue affected event_by_corp_filing records
+  runInContainer -v \
+    ${_databasePodName} \
+    "psql -d "'${POSTGRESQL_DATABASE}'" -ac \"update event_by_corp_filing set process_success = null, process_date = null, process_msg = null where corp_num in (${corp_nums});\""
+}
 # =================================================================================================================
 
 pushd ${SCRIPT_HOME} >/dev/null
@@ -329,6 +361,10 @@ case "${_cmd}" in
   requeuefailedevents)
     dbPodName=${1:-event-db}
     requeueFailedEvents "${dbPodName}"
+    ;;
+  requeuefailedcorps)
+    dbPodName=${1:-event-db}
+    requeueFailedCorps "${dbPodName}"
     ;;
   requeueprocessedcreds)
     dbPodName=${1:-event-db}
