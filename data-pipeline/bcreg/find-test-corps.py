@@ -166,6 +166,16 @@ specific_corps = [
                     'CP0000851', # In the DB the entity became historical due to amalgamation (HAM) as of event ID 102030389 which occurred on 1976-12-31 00:00:00. In VON we are seeing the status of HIS as a result of a System to D2 event on Feb 26, 2019.
                     'CP0001048', # In the DB the date for the creation event which set the entity to active and listed the first name is 1899-12-31. In VON the main search shows the name effective date as a day earlier – 1899-12-30. Date issue also exists when you select the first section of the timeline and in that case both the date and the time are wrong.
                     'FM0745134', # Error'ed in Prod
+                    'FM0485314',
+                    'FM0616907',
+                    'FM0429408',
+                    'FM0415725',
+                    'FM0485314',
+                    'FM0616907',
+                    'FM0429408',
+                    '1204452',  # relationship issues between these next 3
+                    'FM0777306',
+                    'FM0776052',
                     ]
 
 with BCRegistries() as bc_registries:

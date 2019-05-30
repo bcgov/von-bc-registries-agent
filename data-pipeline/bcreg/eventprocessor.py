@@ -861,28 +861,36 @@ class EventProcessor:
 
     # check if we should build a relationship credential for the given party record
     def should_generate_relationship_credential(self, party, prev_event, last_event, corp_num, corp_info):
+        #print("should_generate_relationship_credential", party['corp_num'], party['bus_company_num'], party['party_typ_cd'])
         if not 'corp_info' in party:
+            #print("  --> no corp_info, return False")
             return False;
 
         # only look at FBO's (for now)
         if party['party_typ_cd'] != 'FBO':
+            #print("  --> party['party_typ_cd'] != 'FBO', return False")
             return False
 
         # special case where the corp_num and bus_company_num are the same
-        if 'bus_company_num' in party and party['bus_company_num'] == corp_num:
-            return False
+        #if 'bus_company_num' in party and party['bus_company_num'] == corp_num:
+        #    print("  --> party['bus_company_num'] == corp_num, return False")
+        #    return False
 
         # include if this record is within the desired event range ...
         if ((prev_event['event_date'] <= party['start_event']['event_timestmp'] and party['start_event']['event_timestmp'] <= last_event['event_date']) or
             (party['end_event_id'] is not None and prev_event['event_date'] <= party['end_event']['event_timestmp'] and party['end_event']['event_timestmp'] <= last_event['event_date'])):
+            #print("  ---> party record is in our window, check for ownership")
 
             # ... AND it belongs to the correct company type/party type logic
             if self.is_owned_sole_prop(party, corp_num, corp_info) or self.is_owner_of_sole_prop(party, corp_num, corp_info):
+                #print("  --->", self.is_owned_sole_prop(party, corp_num, corp_info), self.is_owner_of_sole_prop(party, corp_num, corp_info))
                 return True
 
             # TBD check for partnerships and amalgamations
             #if self.is_partnership() or self.is_amalgamation():
             #   return True
+
+        #print("  ---> fall-through, return False")
 
         return False
 
