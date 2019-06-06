@@ -176,6 +176,12 @@ specific_corps = [
                     '1204452',  # relationship issues between these next 3
                     'FM0777306',
                     'FM0776052',
+                    'FM0368694', # didn't show up in test
+                    'S0047404',
+                    'PA0000027', # last round of test corps
+                    'PA0000139',
+                    'PA0000159',
+                    'PA0000375',
                     ]
 
 with BCRegistries() as bc_registries:

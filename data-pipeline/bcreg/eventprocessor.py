@@ -524,6 +524,10 @@ class EventProcessor:
             if cred_type == addr_credential:
                 cur.execute(sql_addr, (system_cd, event_json(prev_event), event_json(last_event), corp_num, corp_state, cred_type, cred_id, 
                             schema_name, schema_version, cred_json, cred_hash, credential_reason, datetime.datetime.now(), datetime.datetime.now(), 'A',))
+            elif self.is_min_date(credential['effective_date']) or credential['effective_date'] is None or credential['effective_date'] == '':
+                # create and store credential but don't post it
+                cur.execute(sql_addr, (system_cd, event_json(prev_event), event_json(last_event), corp_num, corp_state, cred_type, cred_id, 
+                            schema_name, schema_version, cred_json, cred_hash, credential_reason, datetime.datetime.now(), datetime.datetime.now(), 'X',))
             else:
                 cur.execute(sql, (system_cd, event_json(prev_event), event_json(last_event), corp_num, corp_state, cred_type, cred_id, 
                             schema_name, schema_version, cred_json, cred_hash, credential_reason, datetime.datetime.now(),))
@@ -804,6 +808,19 @@ class EventProcessor:
 
         return (past_events, future_events)
 
+    def is_min_date(self, cred_date):
+        if not cred_date:
+            return True
+        if isinstance(cred_date, str):
+            if cred_date == "":
+                return True
+            if cred_date < MIN_VALID_DATE_TZ:
+                return True
+        elif isinstance(cred_date, datetime.date):
+            if cred_date < MIN_VALID_DATE:
+                return True
+        return False
+
     def filter_min_date(self, cred_date):
         if not cred_date:
             return cred_date
@@ -897,6 +914,7 @@ class EventProcessor:
 
     # generate credentials for the provided corp
     def generate_credentials(self, system_typ_cd, prev_event, last_event, corp_num, corp_info):
+        #print("Generate credentials for", corp_num)
         corp_creds = []
 
         # get events - only generate credentials for events in the past
@@ -918,8 +936,14 @@ class EventProcessor:
             # loop based on start/end events
             for i in range(len(effective_events)):
                 #print('effective_event', effective_events[i])
+
+                #{'event_id': 100103739, 'corp_num': 'FM0368694', 'event_typ_cd': 'CONVFMREGI', 
+                # 'event_timestmp': datetime.datetime(2004, 3, 26, 0, 0), 'trigger_dts': None, 'event_class': 'CONVFIRM', 
+                # 'short_desc': 'CONV FIRM REGI', 'full_desc': 'Conversion Firm Registration', 'filing': {}, 'conv_event': {}, 
+                # 'effective_date': datetime.datetime(2004, 3, 26, 0, 0), 'appears_as_end_event': False}
+
                 loop_start_event = effective_events[i]
-                if (not (is_data_conversion_event(loop_start_event) and loop_start_event['event_timestmp'] == loop_start_event['effective_date'])) and use_prev_event['event_date'] <= loop_start_event['event_timestmp'] and loop_start_event['event_timestmp'] <= use_last_event['event_date']:
+                if (not (is_data_conversion_event(loop_start_event) and loop_start_event['event_timestmp'] != loop_start_event['effective_date'])) and use_prev_event['event_date'] <= loop_start_event['event_timestmp'] and loop_start_event['event_timestmp'] <= use_last_event['event_date']:
                     # generate corp credential
                     corp_cred = {}
                     corp_cred['registration_id'] = self.corp_num_with_prefix(corp_info['corp_typ_cd'], corp_info['corp_num'])
@@ -1010,12 +1034,17 @@ class EventProcessor:
                     #print('credential', corp_cred['credential'])
                     if (len(corp_creds) == 0) or (len(corp_creds) > 0 and corp_cred['credential'] != corp_creds[len(corp_creds)-1]['credential']):
                         corp_creds.append(corp_cred)
+                    else:
+                        #print(" >>> Skip credential for whatever reason")
+                        pass
                 else:
                     # skipping event because out of range of start/end period
+                    #print(" >>> Skip event not in range", loop_start_event)
                     pass
 
         else:
             # skip due to no effective dates in range
+            #print(" >>> Skip no effective events in range")
             pass
 
         # generate addr credential(s)
@@ -1044,10 +1073,10 @@ class EventProcessor:
             party_count = {}
             for party in corp_parties:
                 if self.should_generate_relationship_credential(party, prev_event, last_event, corp_num, corp_info):
-                    if corp_num == party['corp_info']['corp_num']:
-                        count_corp_num = party['corp_info']['bus_company_num']
+                    if corp_num == party['corp_num']:
+                        count_corp_num = party['bus_company_num']
                     else:
-                        count_corp_num = party['corp_info']['corp_num']
+                        count_corp_num = party['corp_num']
                     if count_corp_num in party_count:
                         party_count[count_corp_num] = party_count[count_corp_num] + 1
                     else:
