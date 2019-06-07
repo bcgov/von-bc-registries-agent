@@ -524,11 +524,15 @@ class EventProcessor:
             if cred_type == addr_credential:
                 cur.execute(sql_addr, (system_cd, event_json(prev_event), event_json(last_event), corp_num, corp_state, cred_type, cred_id, 
                             schema_name, schema_version, cred_json, cred_hash, credential_reason, datetime.datetime.now(), datetime.datetime.now(), 'A',))
-            elif self.is_min_date(credential['effective_date']) or credential['effective_date'] is None or credential['effective_date'] == '':
-                # create and store credential but don't post it
-                cur.execute(sql_addr, (system_cd, event_json(prev_event), event_json(last_event), corp_num, corp_state, cred_type, cred_id, 
-                            schema_name, schema_version, cred_json, cred_hash, credential_reason, datetime.datetime.now(), datetime.datetime.now(), 'X',))
+                # release credentials with no effective date (for now)
+                #elif self.is_min_date(credential['effective_date']) or credential['effective_date'] is None or credential['effective_date'] == '':
+                #    # create and store credential but don't post it
+                #    cur.execute(sql_addr, (system_cd, event_json(prev_event), event_json(last_event), corp_num, corp_state, cred_type, cred_id, 
+                #                schema_name, schema_version, cred_json, cred_hash, credential_reason, datetime.datetime.now(), datetime.datetime.now(), 'X',))
             else:
+                # release credentials with no effective date (for now)
+                if self.is_min_date(credential['effective_date']) or credential['effective_date'] is None or credential['effective_date'] == '':
+                    credential['effective_date'] = ''
                 cur.execute(sql, (system_cd, event_json(prev_event), event_json(last_event), corp_num, corp_state, cred_type, cred_id, 
                             schema_name, schema_version, cred_json, cred_hash, credential_reason, datetime.datetime.now(),))
             return 1
