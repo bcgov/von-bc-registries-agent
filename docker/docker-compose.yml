@@ -57,7 +57,7 @@ services:
     entrypoint: >
       /bin/bash -c "
         echo sleeping ...;
-        sleep 5;
+        sleep 15;
         ../docker-entrypoint.sh;"
 
   bcregmara:

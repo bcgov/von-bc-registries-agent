@@ -63,6 +63,7 @@ ENV APP_ROOT=$HOME \
 
 # Copy source code
 ADD . $APP_ROOT
+ADD ./.scripts $APP_ROOT
 ADD ./docker/mara-app/docker-entrypoint.sh $APP_ROOT
 ARG entrypoint=$APP_ROOT/docker-entrypoint.sh
 
