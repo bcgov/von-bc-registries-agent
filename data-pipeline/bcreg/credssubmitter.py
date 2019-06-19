@@ -30,10 +30,19 @@ from bcreg.config import config
 from bcreg.rocketchat_hooks import log_error, log_warning, log_info
 
 AGENT_URL = os.environ.get('VONX_API_URL', 'http://localhost:5000/bcreg')
+NOTIFY_OF_CREDENTIAL_POSTING_ERRORS = os.environ.get('NOTIFY_OF_CREDENTIAL_POSTING_ERRORS', 'false')
 
 CREDS_BATCH_SIZE = 3000
 CREDS_REQUEST_SIZE = 20
 MAX_CREDS_REQUESTS = 16
+
+def notify_error(message):
+    # Use NOTIFY_OF_CREDENTIAL_POSTING_ERRORS to turn error notification on(true)/off(false); off by default.
+    # It's recommended to have this off during bulk data loads as errors in these situations
+    # can cause an unnecessary flood of notifications.
+    # Turn this on during normal agent oppertion.
+    if NOTIFY_OF_CREDENTIAL_POSTING_ERRORS and NOTIFY_OF_CREDENTIAL_POSTING_ERRORS.lower() == 'true':
+        log_error(message)
 
 
 async def submit_cred_batch(http_client, creds):
@@ -134,6 +143,7 @@ async def post_credentials(http_client, conn, credentials):
                 cur2.close()
                 cur2 = None
                 failed = failed + 1
+                notify_error('An error was encountered while posting a credential:\n{}'.format(res))
 
     except (Exception) as error:
         # everything failed :-(
@@ -153,6 +163,7 @@ async def post_credentials(http_client, conn, credentials):
         conn.commit()
         cur2.close()
         cur2 = None
+        notify_error('An exception was encountered while posting credentials:\n{}'.format(res))
     finally:
         if cur2 is not None:
             cur2.close()
@@ -348,10 +359,9 @@ class CredsSubmitter:
 
         except (Exception, psycopg2.DatabaseError) as error:
             print(error)
+            notify_error('An exception was encountered while processing the credential queue:\n{}'.format(str(error)))
             print(traceback.print_exc())
         finally:
             await http_client.close()
             if cur is not None:
                 cur.close()
-
-
