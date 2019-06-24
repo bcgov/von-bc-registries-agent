@@ -143,7 +143,7 @@ async def post_credentials(http_client, conn, credentials):
                 cur2.close()
                 cur2 = None
                 failed = failed + 1
-                notify_error('An error was encountered while posting a credential:\n{}'.format(res))
+                # notify_error('An error was encountered while posting a credential:\n{}'.format(res))
 
     except (Exception) as error:
         # everything failed :-(
@@ -163,7 +163,7 @@ async def post_credentials(http_client, conn, credentials):
         conn.commit()
         cur2.close()
         cur2 = None
-        notify_error('An exception was encountered while posting credentials:\n{}'.format(res))
+        # notify_error('An exception was encountered while posting credentials:\n{}'.format(res))
     finally:
         if cur2 is not None:
             cur2.close()
@@ -342,7 +342,8 @@ class CredsSubmitter:
 
                 # wait for the current batch of credential posts to complete
                 for response in await asyncio.gather(*tasks):
-                    pass # print('response:' + response)
+                    pass 
+                    print('response:' + response)
                 tasks = []
 
                 print('>>> Processing {} of {} credentials.'.format(i, cred_count))
