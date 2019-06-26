@@ -27,7 +27,7 @@ import aiohttp
 import time
 import traceback
 from bcreg.config import config
-from bcreg.rocketchat_hooks import log_error, log_warning, log_info
+from bcreg.rocketchat_hooks import log_error, log_warning, log_info, log_error_async
 
 AGENT_URL = os.environ.get('VONX_API_URL', 'http://localhost:5000/bcreg')
 NOTIFY_OF_CREDENTIAL_POSTING_ERRORS = os.environ.get('NOTIFY_OF_CREDENTIAL_POSTING_ERRORS', 'false')
@@ -43,6 +43,15 @@ def notify_error(message):
     # Turn this on during normal agent oppertion.
     if NOTIFY_OF_CREDENTIAL_POSTING_ERRORS and NOTIFY_OF_CREDENTIAL_POSTING_ERRORS.lower() == 'true':
         log_error(message)
+
+
+async def notify_error_async(message):
+    # Use NOTIFY_OF_CREDENTIAL_POSTING_ERRORS to turn error notification on(true)/off(false); off by default.
+    # It's recommended to have this off during bulk data loads as errors in these situations
+    # can cause an unnecessary flood of notifications.
+    # Turn this on during normal agent oppertion.
+    if NOTIFY_OF_CREDENTIAL_POSTING_ERRORS and NOTIFY_OF_CREDENTIAL_POSTING_ERRORS.lower() == 'true':
+        await log_error_async(message)
 
 
 async def submit_cred_batch(http_client, creds):
@@ -143,7 +152,8 @@ async def post_credentials(http_client, conn, credentials):
                 cur2.close()
                 cur2 = None
                 failed = failed + 1
-                # notify_error('An error was encountered while posting a credential:\n{}'.format(res))
+                notify_error('An error was encountered while posting a credential:\n{}'.format(res))
+                # await notify_error_async('An error was encountered while posting a credential:\n{}'.format(res))
 
     except (Exception) as error:
         # everything failed :-(
@@ -163,7 +173,8 @@ async def post_credentials(http_client, conn, credentials):
         conn.commit()
         cur2.close()
         cur2 = None
-        # notify_error('An exception was encountered while posting credentials:\n{}'.format(res))
+        notify_error('An error was encountered while posting a credential:\n{}'.format(res))
+        # await notify_error_async('An exception was encountered while posting credentials:\n{}'.format(res))
     finally:
         if cur2 is not None:
             cur2.close()

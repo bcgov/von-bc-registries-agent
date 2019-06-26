@@ -46,12 +46,18 @@ async def _post_url(the_url, payload):
 
 
 def run_coroutine_with_args(coroutine, *args):
-    loop = asyncio.new_event_loop()
-    asyncio.set_event_loop(loop)
+    new_event_loop = True
+    loop = asyncio.get_event_loop()
+    if loop.is_running:
+        new_event_loop = False
     try:
-        return loop.run_until_complete(coroutine(*args))
+        if new_event_loop:
+            return loop.run_until_complete(coroutine(*args))
+        else:
+            loop.create_task(coroutine(*args))
     finally:
-        loop.close()
+        if new_event_loop:
+            loop.close()
 
 
 def post_msg_to_webhook(level, message):
@@ -61,15 +67,32 @@ def post_msg_to_webhook(level, message):
             (status, text) = run_coroutine_with_args(_post_url, webhook_url, payload)
 
 
+async def post_msg_to_webhook_async(level, message):
+    if webhook_url and 0 < len(webhook_url):
+        if level and level <= log_level:
+            payload = get_webhook_payload(level, message)
+            (status, text) = await _post_url(webhook_url, payload)
+
+
 def log_info(message):
     post_msg_to_webhook('2', message)
+
+
+async def log_info_async(message):
+    await post_msg_to_webhook_async('2', message)
 
 
 def log_warning(message):
     post_msg_to_webhook('1', message)
 
 
+async def log_warning_async(message):
+    await post_msg_to_webhook_async('1', message)
+
+
 def log_error(message):
     post_msg_to_webhook('0', message)
 
 
+async def log_error_async(message):
+    await post_msg_to_webhook_async('0', message)
