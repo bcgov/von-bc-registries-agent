@@ -342,8 +342,7 @@ class CredsSubmitter:
 
                 # wait for the current batch of credential posts to complete
                 for response in await asyncio.gather(*tasks):
-                    pass 
-                    print('response:' + response)
+                    pass # print('response:' + response)
                 tasks = []
 
                 print('>>> Processing {} of {} credentials.'.format(i, cred_count))
@@ -364,5 +363,7 @@ class CredsSubmitter:
             print(traceback.print_exc())
         finally:
             await http_client.close()
+            remaining_tasks = asyncio.Task.all_tasks()
+            await asyncio.wait(remaining_tasks, return_when=asyncio.ALL_COMPLETED)
             if cur is not None:
                 cur.close()
