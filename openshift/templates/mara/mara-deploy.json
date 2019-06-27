@@ -211,6 +211,10 @@
                   {
                     "name": "FRIENDLY_PROJECT_NAME",
                     "value": "${FRIENDLY_PROJECT_NAME}"
+                  },
+                  {
+                    "name": "NOTIFY_OF_CREDENTIAL_POSTING_ERRORS",
+                    "value": "${NOTIFY_OF_CREDENTIAL_POSTING_ERRORS}"
                   }
                 ],
                 "readinessProbe": {
@@ -386,6 +390,13 @@
       "description": "The human readable name of the Project.  This variable is used by the webhook integration to identify the project in which the backup notifications originate.",
       "required": false,
       "value": ""
+    },
+    {
+      "name": "NOTIFY_OF_CREDENTIAL_POSTING_ERRORS",
+      "displayName": "Notify of Credential Posting Errors",
+      "description": "Use NOTIFY_OF_CREDENTIAL_POSTING_ERRORS to turn error notification on(true)/off(false); off by default.  It's recommended to have this off during bulk data loads as errors in these situations can cause an unnecessary flood of notifications.",
+      "required": true,
+      "value": "false"
     },
     {
       "name": "CPU_REQUEST",

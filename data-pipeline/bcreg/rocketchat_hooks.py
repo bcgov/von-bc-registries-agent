@@ -46,12 +46,19 @@ async def _post_url(the_url, payload):
 
 
 def run_coroutine_with_args(coroutine, *args):
-    loop = asyncio.new_event_loop()
-    asyncio.set_event_loop(loop)
+    new_event_loop = True
+    loop = asyncio.get_event_loop()
+    if loop.is_running:
+        new_event_loop = False
     try:
-        return loop.run_until_complete(coroutine(*args))
+        if new_event_loop:
+            return loop.run_until_complete(coroutine(*args))
+        else:
+            loop.create_task(coroutine(*args))
+            return ('0', 'Message queued.')
     finally:
-        loop.close()
+        if new_event_loop:
+            loop.close()
 
 
 def post_msg_to_webhook(level, message):
@@ -71,5 +78,3 @@ def log_warning(message):
 
 def log_error(message):
     post_msg_to_webhook('0', message)
-
-
