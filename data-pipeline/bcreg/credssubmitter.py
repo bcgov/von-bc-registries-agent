@@ -250,6 +250,9 @@ class CredsSubmitter:
         """ Connect to the PostgreSQL database server """
         #conn = None
         cur = None
+        # Track the current set of tasks.
+        # When gathering tasks at the end we don't want to include these in the list.
+        external_tasks = asyncio.Task.all_tasks()
         try:
             params = config(section='event_processor')
             pool = mpool.ThreadPool(MAX_CREDS_REQUESTS)
@@ -363,7 +366,14 @@ class CredsSubmitter:
             print(traceback.print_exc())
         finally:
             await http_client.close()
+
+            # Gather all remaining tasks that were spawned during processing ...
             remaining_tasks = asyncio.Task.all_tasks()
-            await asyncio.wait(remaining_tasks, return_when=asyncio.ALL_COMPLETED)
+            for task in external_tasks:
+                # Remove any that were not created during processing ...
+                remaining_tasks.discard(task)
+            if len(remaining_tasks) > 0:
+                await asyncio.gather(*remaining_tasks)
+
             if cur is not None:
                 cur.close()
