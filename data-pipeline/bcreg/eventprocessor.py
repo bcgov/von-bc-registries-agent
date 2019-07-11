@@ -898,8 +898,8 @@ class EventProcessor:
         #    return False
 
         # include if this record is within the desired event range ...
-        if ((prev_event['event_date'] <= party['start_event']['event_timestmp'] and party['start_event']['event_timestmp'] <= last_event['event_date']) or
-            (party['end_event_id'] is not None and prev_event['event_date'] <= party['end_event']['event_timestmp'] and party['end_event']['event_timestmp'] <= last_event['event_date'])):
+        if ((prev_event['event_date'] <= party['start_event']['effective_date'] and party['start_event']['effective_date'] <= last_event['event_date']) or
+            (party['end_event_id'] is not None and prev_event['event_date'] <= party['end_event']['effective_date'] and party['end_event']['effective_date'] <= last_event['event_date'])):
             #print("  ---> party record is in our window, check for ownership")
 
             # ... AND it belongs to the correct company type/party type logic
@@ -926,8 +926,8 @@ class EventProcessor:
 
         if 0 < len(effective_events):
             #print('effective_events', effective_events)
-            prev_effective_event = event_dict(effective_events[0]['event_id'], effective_events[0]['event_timestmp'])
-            last_effective_event = event_dict(effective_events[len(effective_events)-1]['event_id'], effective_events[len(effective_events)-1]['event_timestmp'])
+            prev_effective_event = event_dict(effective_events[0]['event_id'], effective_events[0]['effective_date'])
+            last_effective_event = event_dict(effective_events[len(effective_events)-1]['event_id'], effective_events[len(effective_events)-1]['effective_date'])
             if self.compare_dates(prev_effective_event['event_date'], ">", prev_event['event_date'], 'Events'):
                 use_prev_event = prev_effective_event
             else:
@@ -941,13 +941,8 @@ class EventProcessor:
             for i in range(len(effective_events)):
                 #print('effective_event', effective_events[i])
 
-                #{'event_id': 100103739, 'corp_num': 'FM0368694', 'event_typ_cd': 'CONVFMREGI', 
-                # 'event_timestmp': datetime.datetime(2004, 3, 26, 0, 0), 'trigger_dts': None, 'event_class': 'CONVFIRM', 
-                # 'short_desc': 'CONV FIRM REGI', 'full_desc': 'Conversion Firm Registration', 'filing': {}, 'conv_event': {}, 
-                # 'effective_date': datetime.datetime(2004, 3, 26, 0, 0), 'appears_as_end_event': False}
-
                 loop_start_event = effective_events[i]
-                if (not (is_data_conversion_event(loop_start_event) and loop_start_event['event_timestmp'] != loop_start_event['effective_date'])) and use_prev_event['event_date'] <= loop_start_event['event_timestmp'] and loop_start_event['event_timestmp'] <= use_last_event['event_date']:
+                if (not (is_data_conversion_event(loop_start_event) and loop_start_event['event_timestmp'] != loop_start_event['effective_date'])) and use_prev_event['event_date'] <= loop_start_event['effective_date'] and loop_start_event['effective_date'] <= use_last_event['event_date']:
                     # generate corp credential
                     corp_cred = {}
                     corp_cred['registration_id'] = self.corp_num_with_prefix(corp_info['corp_typ_cd'], corp_info['corp_num'])
@@ -959,7 +954,7 @@ class EventProcessor:
                     if org_name is not None:
                         #print('org_name', org_name)
                         corp_cred['entity_name'] = org_name['corp_nme']
-                        if is_data_conversion_event(org_name['start_event']) and org_name['effective_start_date'] == org_name['start_event']['event_timestmp']:
+                        if is_data_conversion_event(org_name['start_event']) and org_name['effective_start_date'] == org_name['start_event']['effective_date']:
                             corp_cred['entity_name_effective'] = ''
                         else:
                             corp_cred['entity_name_effective'] = self.filter_min_date(org_name['effective_start_date'])
@@ -980,7 +975,7 @@ class EventProcessor:
                     if org_name_assumed is not None:
                         #print('org_name_assumed', org_name_assumed)
                         corp_cred['entity_name_assumed'] = org_name_assumed['corp_nme'] 
-                        if is_data_conversion_event(org_name_assumed['start_event']) and org_name_assumed['effective_start_date'] == org_name_assumed['start_event']['event_timestmp']:
+                        if is_data_conversion_event(org_name_assumed['start_event']) and org_name_assumed['effective_start_date'] == org_name_assumed['start_event']['effective_date']:
                             corp_cred['entity_name_assumed_effective'] = ''
                         else:
                             corp_cred['entity_name_assumed_effective'] = self.filter_min_date(org_name_assumed['effective_start_date'])
@@ -990,7 +985,7 @@ class EventProcessor:
                     if corp_state is not None:
                         #print('corp_state', corp_state)
                         corp_cred['entity_status'] = corp_state['op_state_typ_cd']
-                        if is_data_conversion_event(corp_state['start_event']) and corp_state['effective_start_date'] == corp_state['start_event']['event_timestmp']:
+                        if is_data_conversion_event(corp_state['start_event']) and corp_state['effective_start_date'] == corp_state['start_event']['effective_date']:
                             corp_cred['entity_status_effective'] = ''
                         else:
                             corp_cred['entity_status_effective'] = self.filter_min_date(corp_state['effective_start_date'])
@@ -1008,7 +1003,7 @@ class EventProcessor:
                     corp_cred['extra_jurisdictional_registration'] = ''
                     # determine the date to use for jurisdiction effective
                     if jurisdiction is not None:
-                        if is_data_conversion_event(jurisdiction['start_event']) and jurisdiction['effective_start_date'] == jurisdiction['start_event']['event_timestmp']:
+                        if is_data_conversion_event(jurisdiction['start_event']) and jurisdiction['effective_start_date'] == jurisdiction['start_event']['effective_date']:
                             jurisdiction_effective_date = None
                         else:
                             jurisdiction_effective_date = self.filter_min_date(jurisdiction['effective_start_date'])
@@ -1055,8 +1050,8 @@ class EventProcessor:
         corp_offices = sorted(corp_info['office'], key=lambda k: int(k['start_event_id']))
         corp_offices = sorted(corp_info['office'], key=lambda k: k['effective_start_date'])
         for office in corp_offices:
-            if ((prev_event['event_date'] <= office['start_event']['event_timestmp'] and office['start_event']['event_timestmp'] <= last_event['event_date']) or
-                (office['end_event_id'] is not None and prev_event['event_date'] <= office['end_event']['event_timestmp'] and office['end_event']['event_timestmp'] <= last_event['event_date'])):
+            if ((prev_event['event_date'] <= office['start_event']['effective_date'] and office['start_event']['effective_date'] <= last_event['event_date']) or
+                (office['end_event_id'] is not None and prev_event['event_date'] <= office['end_event']['effective_date'] and office['end_event']['effective_date'] <= last_event['event_date'])):
                 # ensure address history is generated correctly
                 if 'office_typ_cd' in office:
                     if 'delivery_addr' in office and 'local_addr' in office['delivery_addr']:
@@ -1369,10 +1364,10 @@ class EventProcessor:
                                 if (0 < len(future_events)) and (0 < len(corp_creds) or load_regs):
                                     # create another record to handle future events (will do a re-load)
                                     future_events = sorted(future_events, key=lambda k: int(k['event_id']))
-                                    future_events = sorted(future_events, key=lambda k: k['event_timestmp'])
+                                    future_events = sorted(future_events, key=lambda k: k['effective_date'])
                                     cur = self.conn.cursor()
-                                    cur.execute(sql2b, (corp['SYSTEM_TYPE_CD'], future_events[0]['event_id'], future_events[0]['event_timestmp'], 
-                                                        future_events[len(future_events)-1]['event_id'], future_events[len(future_events)-1]['event_timestmp'],  
+                                    cur.execute(sql2b, (corp['SYSTEM_TYPE_CD'], future_events[0]['event_id'], future_events[0]['effective_date'], 
+                                                        future_events[len(future_events)-1]['event_id'], future_events[len(future_events)-1]['effective_date'],  
                                                         corp['CORP_NUM'], datetime.datetime.now(),))
                                     cur.close()
                                     cur = None

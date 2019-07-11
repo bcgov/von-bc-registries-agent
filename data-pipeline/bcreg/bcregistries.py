@@ -73,7 +73,7 @@ class CustomJsonEncoder(json.JSONEncoder):
 
 
 def is_data_conversion_event(event):
-    if event['event_timestmp'].year == DATA_CONVERSION_DATE.year and event['event_timestmp'].month == DATA_CONVERSION_DATE.month and event['event_timestmp'].day == DATA_CONVERSION_DATE.day:
+    if event['effective_date'].year == DATA_CONVERSION_DATE.year and event['effective_date'].month == DATA_CONVERSION_DATE.month and event['effective_date'].day == DATA_CONVERSION_DATE.day:
         return True
     return False
 

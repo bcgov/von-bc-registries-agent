@@ -182,6 +182,8 @@ specific_corps = [
                     'PA0000139',
                     'PA0000159',
                     'PA0000375',
+                    '0277447',   # missing in prod
+                    'FM0780183', # dba for the above
                     ]
 
 with BCRegistries() as bc_registries:
