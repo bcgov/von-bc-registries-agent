@@ -60,6 +60,11 @@ usage () {
     requeueProcessedCreds
       - Use with caution.  Requeue any credentials that have already been posted.
 
+    repostFailedCredentials
+      - Use with caution.  Repost any failed credentials.  Requeues and posts any credentials that have failed
+        posting one at a time to avoid any potential issues (such as deadlocks on the TOB side caused by 
+        processing related credentials).
+
     scaleUp
       - Scale up one or more pods.
         For example;
@@ -336,6 +341,38 @@ requeueFailedCorps() {
     ${_databasePodName} \
     "psql -d "'${POSTGRESQL_DATABASE}'" -ac \"update event_by_corp_filing set process_success = null, process_date = null, process_msg = null where corp_num in (${corp_nums});\""
 }
+
+repostFailedCredentials() {
+  (
+    _databasePodName=${1}
+    _maraPodName=${2}
+
+    if [ -z "${_databasePodName}" ] || [ -z "${_maraPodName}" ]; then
+      echo -e \\n"repostFailedCredentials; Missing parameter!"\\n
+      exit 1
+    fi
+
+    # Get affected record_ids
+    record_ids=$(runInContainer \
+      ${_databasePodName} \
+      'psql -d ${POSTGRESQL_DATABASE} -t -c "select record_id from credential_log where process_success = '"'"'N'"'"' order by record_id;"')
+    record_ids=$(echo "${record_ids}" | sed -e "s~[[:space:]]*\(.*\)~'\1'~")
+
+    for record_id in ${record_ids}; do
+
+      echo -e "\nReposting failed credential  ${record_id} ..."
+
+      runInContainer \
+        ${_databasePodName} \
+        "psql -d "'${POSTGRESQL_DATABASE}'" -ac \"update credential_log set process_success = null, process_date = null, process_msg = null where record_id = ${record_id};\""
+
+      echo
+      runInContainer \
+        ${_maraPodName} \
+        'cd scripts && ./run-step.sh bcreg/bc_reg_pipeline_post_credentials.py'
+    done
+  )
+}
 # =================================================================================================================
 
 pushd ${SCRIPT_HOME} >/dev/null
@@ -384,6 +421,11 @@ case "${_cmd}" in
   getpipelinestatus)
     maraPodName=${1:-mara}
     getPipelineStatus "${maraPodName}"
+    ;;
+  repostfailedcredentials)
+    dbPodName=${1:-event-db}
+    maraPodName=${2:-mara}
+    repostFailedCredentials "${dbPodName}" "${maraPodName}"
     ;;
   scaleup)
     scaleUp ${@}
