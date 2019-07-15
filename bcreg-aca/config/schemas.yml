@@ -1,5 +1,6 @@
 - name: registration.registries.ca
   version: '1.0.42'
+  description: TODO
   attributes:
     registration_id:
       label_en: Registration ID
@@ -80,6 +81,7 @@
 
 - name: address.registries.ca
   version: '1.0.42'
+  description: TODO
   attributes:
     registration_id:
       label_en: Registration ID
@@ -132,6 +134,7 @@
 
 - name: relationship.registries.ca
   version: '1.0.42'
+  description: TODO
   attributes:
     registration_id:
       label_en: Registration ID

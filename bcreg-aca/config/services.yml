@@ -1,5 +1,12 @@
 issuers:
   bcreg:
+    name: BC Corporate Registry
+    abbreviation: BCReg
+    url: https://www2.gov.bc.ca/gov/content/governments/organizational-structure/ministries-organizations/ministries/citizens-services/bc-registries-online-services
+    email: bcregistries@gov.bc.ca
+    logo_path: ../assets/img/bcreg-logo-square.jpg
+    endpoint: $ENDPOINT_URL
+
     details:
       label_en: BC Corporate Registry
       abbreviation_en: BCReg
@@ -31,6 +38,8 @@ issuers:
 
     credential_types:
       - schema: registration.registries.ca
+        issuer_url: $APPLICATION_URL_INCORP
+        description: TODO
         details:
           label_en: Registration
           url_en: $APPLICATION_URL_INCORP
@@ -172,6 +181,8 @@ issuers:
                 from: claim
 
       - schema: relationship.registries.ca
+        issuer_url: $APPLICATION_URL_DBA
+        description: TODO
         details:
           label_en: Relationship
           url_en: $APPLICATION_URL_DBA
@@ -195,8 +206,8 @@ issuers:
           type:
             input: registration
             from: value
-        cardinality_fields:
-          - associated_registration_id
+        #cardinality_fields:
+        #  - associated_registration_id
         mapping:
           - model: attribute
             fields:
@@ -260,6 +271,8 @@ issuers:
                 from: claim
 
       - schema: address.registries.ca
+        issuer_url: $APPLICATION_URL_ADDRESS
+        description: TODO
         details:
           label_en: Corporate Address
           url_en: $APPLICATION_URL_ADDRESS
@@ -277,8 +290,8 @@ issuers:
           type:
             input: registration
             from: value
-        cardinality_fields:
-          - address_type
+        #cardinality_fields:
+        #  - address_type
         mapping:
           - model: address
             fields:
@@ -314,3 +327,12 @@ issuers:
               value:
                 input: reason_description
                 from: claim
+
+verifiers:
+  bctob:
+    name: BC OrgBook
+    alias: tob-agent
+    connection:
+      type: TheOrgBook
+      api_url: $TOB_API_URL
+      agent_admin_url: $TOB_AGENT_ADMIN_URL

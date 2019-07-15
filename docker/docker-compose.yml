@@ -14,21 +14,22 @@ services:
       AGENT_HOST: ${AGENT_HOST:-agent}
       AGENT_PORT: ${AGENT_PORT:-8000}
     links:
-      - bcreg-agent:agent
+      - bcreg-controller:agent
     networks:
-      - vonx
+      - bcreg
     ports:
       - ${WEB_HTTP_PORT:-5000}:${WEB_HOST_PORT:-8080}
     volumes:
       - caddy-data:/root/.caddy
       - caddy-logs:/srv/logs
 
-  bcreg-agent:
+  bcreg-controller:
     build:
-      context: ../bcreg-x
+      context: ../bcreg-aca
       dockerfile: Dockerfile
     environment:
-      APPLICATION_URL: ${APPLICATION_URL:-http://localhost:5000}
+      LEDGER_URL: ${LEDGER_URL}
+      APPLICATION_URL: ${APPLICATION_URL:-http://localhost:5001}
       ENDPOINT_URL: ${ENDPOINT_URL:-http://localhost:5001}
       CONFIG_ROOT: ../config
       ENVIRONMENT: ${ENVIRONMENT:-default}
@@ -47,18 +48,82 @@ services:
       POSTGRESQL_WALLET_PASSWORD: ${POSTGRESQL_PASSWORD}
       POSTGRESQL_WALLET_ADMIN_PASSWORD: ${POSTGRESQL_ADMIN_PASSWORD}
       WALLET_ENCRYPTION_KEY: ${WALLET_ENCRYPTION_KEY}
-      INDY_WALLET_SEED: ${INDY_WALLET_SEED:-}
-      INDY_WALLET_DID: ${INDY_WALLET_DID}
+      WALLET_SEED_VONX: ${WALLET_SEED_VONX:-}
+      ISSUER_WALLET_DID: ${ISSUER_WALLET_DID}
+      HTTP_FORCE_CLOSE_CONNECTIONS: "true"
+      AGENT_ADMIN_URL: http://bcreg-agent:${AGENT_ADMIN_PORT}
+      TOB_AGENT_ADMIN_URL: http://tob-agent:${TOB_AGENT_ADMIN_PORT}
+      TOB_CONNECTION_NAME: tob-agent
+      WEBHOOK_PORT: ${WEBHOOK_PORT}
     networks:
       - orgbook
-      - vonx
+      - bcreg
+    ports:
+      - ${WEBHOOK_PORT}:${WEBHOOK_PORT}
     depends_on:
-      - bc-wallet-db
+      - bcreg-agent
     entrypoint: >
       /bin/bash -c "
         echo sleeping ...;
         sleep 15;
         ../docker-entrypoint.sh;"
+
+  bcreg-agent:
+    image: tob-agent
+    environment:
+      - LEDGER_URL=${LEDGER_URL}
+      - WALLET_TYPE=${WALLET_TYPE}
+      - POSTGRESQL_WALLET_HOST=${POSTGRESQL_WALLET_HOST}
+      - POSTGRESQL_WALLET_PORT=${POSTGRESQL_WALLET_PORT}
+      - POSTGRESQL_WALLET_USER=${POSTGRESQL_USER}
+      - POSTGRESQL_WALLET_PASSWORD=${POSTGRESQL_PASSWORD}
+      - POSTGRESQL_WALLET_ADMIN_PASSWORD=${POSTGRESQL_ADMIN_PASSWORD}
+      - WALLET_ENCRYPTION_KEY=${WALLET_ENCRYPTION_KEY}
+      - WALLET_SEED_VONX=${WALLET_SEED_VONX:-}
+      - ISSUER_WALLET_DID=${ISSUER_WALLET_DID}
+      - WEBHOOK_URL=${WEBHOOK_HOST}/api/agentcb
+      - AGENT_HTTP_IN_PORT=${AGENT_HTTP_IN_PORT}
+      - AGENT_WS_IN_PORT=${AGENT_WS_IN_PORT}
+      - AGENT_ADMIN_PORT=${AGENT_ADMIN_PORT}
+      - AGENT_NAME=${AGENT_NAME}
+    networks:
+      - orgbook
+      - bcreg
+    ports:
+      - ${AGENT_HTTP_IN_PORT}:${AGENT_HTTP_IN_PORT}
+      - ${AGENT_WS_IN_PORT}:${AGENT_WS_IN_PORT}
+      - ${AGENT_ADMIN_PORT}:${AGENT_ADMIN_PORT}
+    depends_on:
+      - bcreg-wallet-db
+    entrypoint: /bin/bash
+    command: [
+        "-c",
+        " sleep 5; \
+        aca-py \
+        --inbound-transport http '0.0.0.0' ${AGENT_HTTP_IN_PORT} \
+        --inbound-transport ws '0.0.0.0' ${AGENT_WS_IN_PORT} \
+        --endpoint ${AGENT_ENDPOINT} \
+        --outbound-transport ws \
+        --outbound-transport http \
+        --genesis-url '${LEDGER_URL}/genesis' \
+        --auto-ping-connection \
+        --auto-respond-messages \
+        --auto-respond-credential-offer \
+        --auto-respond-presentation-request \
+        --auto-verify-presentation \
+        --accept-invites \
+        --accept-requests \
+        --wallet-type 'indy' \
+        --wallet-name 'icat_agent_wallet' \
+        --wallet-key '${WALLET_ENCRYPTION_KEY}' \
+        --wallet-storage-type '${WALLET_TYPE}' \
+        --wallet-storage-config '{\"url\":\"${POSTGRESQL_WALLET_HOST}:${POSTGRESQL_WALLET_PORT}\",\"max_connections\":5}' \
+        --wallet-storage-creds '{\"account\":\"${POSTGRESQL_USER}\",\"password\":\"${POSTGRESQL_PASSWORD}\",\"admin_account\":\"postgres\",\"admin_password\":\"${POSTGRESQL_ADMIN_PASSWORD}\"}' \
+        --seed '${WALLET_SEED_VONX}' \
+        --admin '0.0.0.0' ${AGENT_ADMIN_PORT} \
+        --label ${AGENT_NAME} \
+        --protocol indy_catalyst_issuer_registration",
+      ]
 
   bcregmara:
     build:
@@ -71,7 +136,7 @@ services:
       - WEBHOOK_LEVEL=${WEBHOOK_LEVEL:-0}  # 0=Error, 1=Warning, 2=Info
       - PROJECT_NAME=${PROJECT_NAME:-von-local-developer-agent}
       - FRIENDLY_PROJECT_NAME=${FRIENDLY_PROJECT_NAME:-Local Developer Data Pipeline}
-      - VONX_API_URL=${VONX_API_URL:-http://bcreg-agent:8000/bcreg}
+      - VONX_API_URL=${VONX_API_URL:-http://bcreg-controller:8000}
       # [bc_registries]
       - BC_REG_DB_HOST=${BC_REG_DB_HOST:-host.docker.internal}
       - BC_REG_DB_PORT=${BC_REG_DB_PORT:-5454}
@@ -117,7 +182,7 @@ services:
     volumes:
       - mara-data:/var/lib/pgsql/data
 
-  bc-wallet-db:
+  bcreg-wallet-db:
     image: registry.access.redhat.com/rhscl/postgresql-95-rhel7:9.5
     environment:
       - POSTGRESQL_USER=${POSTGRESQL_USER}
@@ -138,7 +203,7 @@ volumes:
   wallet-db:
 
 networks:
-  vonx:
+  bcreg:
   orgbook:
     external:
       name: tob_tob
