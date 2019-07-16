@@ -649,6 +649,8 @@ class EventProcessor:
         addr_cred['effective_date'] = addr_cred['address_effective']
         if office['end_event_id'] is not None and office['end_event']['effective_date'] <= corp_info['current_date']:
             addr_cred['expiry_date'] = office['effective_end_date']
+        else:
+            addr_cred['expiry_date'] = ''
 
         return addr_cred
 
@@ -965,6 +967,7 @@ class EventProcessor:
                     corp_cred = {}
                     corp_cred['registration_id'] = self.corp_num_with_prefix(corp_info['corp_typ_cd'], corp_info['corp_num'])
                     corp_cred['registration_date'] = self.filter_min_date(corp_info['recognition_dts'])
+                    corp_cred['registration_expiry_date'] = ''
                     corp_cred['entity_type'] = corp_info['corp_type']['corp_typ_cd']
 
                     # org_names active at effective date
@@ -997,6 +1000,9 @@ class EventProcessor:
                             corp_cred['entity_name_assumed_effective'] = ''
                         else:
                             corp_cred['entity_name_assumed_effective'] = self.filter_min_date(org_name_assumed['effective_start_date'])
+                    else:
+                        corp_cred['entity_name_assumed'] = ''
+                        corp_cred['entity_name_assumed_effective'] = ''
 
                     # corp_state active at effective date
                     corp_state = self.corp_rec_at_effective_date(corp_info['corp_state'], loop_start_event)
@@ -1036,6 +1042,10 @@ class EventProcessor:
                         corp_cred['effective_date'] = loop_start_event['effective_date']
                     if corp_cred['effective_date'] is None or corp_cred['effective_date'] == '':
                         corp_cred['effective_date'] = corp_cred['registration_date']
+                    corp_cred['expiry_date'] = ''
+                    corp_cred['registration_renewal_effective'] = ''
+                    corp_cred['entity_name_trans'] = ''
+                    corp_cred['entity_name_trans_effective'] = ''
 
                     reason_description = self.build_corp_reason_code(loop_start_event)
 
@@ -1108,14 +1118,18 @@ class EventProcessor:
                     if self.is_owner_of_sole_prop(party, corp_num, corp_info):
                         dba_cred['relationship'] = 'Owns'
                         dba_cred['relationship_description'] = 'Does Business As'
+                        dba_cred['associated_registration_name'] = ''
                     elif self.is_owned_sole_prop(party, corp_num, corp_info):
                         dba_cred['relationship'] = 'IsOwned'
                         dba_cred['relationship_description'] = 'Is Owned By'
                         if 'business_nme' in party and 0 < len(party['business_nme']):
                             dba_cred['associated_registration_name'] = party['business_nme']
+                        else:
+                            dba_cred['associated_registration_name'] = ''
                     else:
                         dba_cred['relationship'] = 'TBD' # party['']
                         dba_cred['relationship_description'] = 'TBD' # party['']
+                        dba_cred['associated_registration_name'] = ''
                     dba_cred['relationship_status'] = 'ACT'
                     dba_cred['effective_date'] = party['effective_start_date']
 
@@ -1126,6 +1140,8 @@ class EventProcessor:
                     dba_cred['relationship_status_effective'] = self.filter_min_date(dba_cred['effective_date'])
                     if party['end_event_id'] is not None and party['end_event']['effective_date'] <= corp_info['current_date']:
                         dba_cred['expiry_date'] = party['effective_end_date']
+                    else:
+                        dba_cred['expiry_date'] = ''
                     reason_description = self.build_corp_reason_code(party['start_event'])
                     corp_creds.append(self.build_credential_dict(dba_credential, dba_schema, dba_version, dba_cred['registration_id'], dba_cred, reason_description, dba_cred['effective_date']))
 
