@@ -206,8 +206,8 @@ issuers:
           type:
             input: registration
             from: value
-        #cardinality_fields:
-        #  - associated_registration_id
+        cardinality_fields:
+          - associated_registration_id
         mapping:
           - model: attribute
             fields:
@@ -290,8 +290,8 @@ issuers:
           type:
             input: registration
             from: value
-        #cardinality_fields:
-        #  - address_type
+        cardinality_fields:
+          - address_type
         mapping:
           - model: address
             fields:
