@@ -16,6 +16,12 @@ def config(filename='database.ini', section='postgresql'):
         db['database'] = os.environ.get('EVENT_PROC_DB_DATABASE', 'bc_reg_db')
         db['user'] = os.environ.get('EVENT_PROC_DB_USER', 'bc_reg_db')
         db['password'] = os.environ.get('EVENT_PROC_DB_PASSWORD', '')
+    elif section == 'org_book':
+        db['host'] = os.environ.get('ORGBOOK_DB_HOST', 'localhost')
+        db['port'] = os.environ.get('ORGBOOK_DB_PORT', '5432')
+        db['database'] = os.environ.get('ORGBOOK_DB_DATABASE', 'THE_ORG_BOOK')
+        db['user'] = os.environ.get('ORGBOOK_DB_USER', 'DB_USER')
+        db['password'] = os.environ.get('ORGBOOK_DB_PASSWORD', 'DB_PASSWORD')
     else:
         raise Exception('Section {0} not a valid database'.format(section))
  
