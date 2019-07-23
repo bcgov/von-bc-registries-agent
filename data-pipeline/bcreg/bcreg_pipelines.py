@@ -117,6 +117,10 @@ def bc_reg_pipeline_status():
 
     pipeline.add(Task(id='display_pipeline_status', description='Display status of the overall pipeline processing status',
                         commands=[ExecutePython('./bcreg/display_pipeline_status.py')]))
+    pipeline.add(Task(id='display_pipeline_stats', description='Display stats of each stage in the pipeline processing',
+                        commands=[ExecutePython('./bcreg/display_processed_corps_counts.py')]))
+    pipeline.add(Task(id='display_event_processor_stats', description='Display stats of each event processor stage',
+                        commands=[ExecutePython('./bcreg/display_event_processor_counts.py')]))
 
     return pipeline
 

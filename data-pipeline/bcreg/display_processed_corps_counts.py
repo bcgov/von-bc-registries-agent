@@ -163,4 +163,11 @@ for key, value in stats_dict.items():
     if 0 < (value['bc_reg'] - value['orgbook']):
         print(key + ',' + str(value['bc_reg']) + ',' + str(value['orgbook']) + ',' + str(value['bc_reg'] - value['orgbook']))
 print("===========================")
+print("Incomplete data in Event Processor:")
+print("===========================")
+print("Company Type,Company Status,event_proc_inbound,event_proc_outbound,event_proc_diff")
+for key, value in stats_dict.items():
+    if 0 < (value['event_proc_inbound'] - value['event_proc_outbound']):
+        print(key + ',' + str(value['event_proc_inbound']) + ',' + str(value['event_proc_outbound']) + ',' + str(value['event_proc_inbound'] - value['event_proc_outbound']))
+print("===========================")
 
