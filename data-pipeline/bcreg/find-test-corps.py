@@ -184,6 +184,7 @@ specific_corps = [
                     'PA0000375',
                     '0277447',   # missing in prod
                     'FM0780183', # dba for the above
+                    '0276176',   # quartech
                     ]
 
 with BCRegistries() as bc_registries:

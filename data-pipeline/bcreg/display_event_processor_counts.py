@@ -68,8 +68,22 @@ print("===========================")
 print("Incomplete data in Event Processor:")
 print("===========================")
 print("Company Type,Company Status,event_proc_inbound,event_proc_outbound,event_proc_diff")
+missing_corps = False
 for key, value in stats_dict.items():
     if 0 < (value['event_proc_inbound'] - value['event_proc_outbound']):
         print(key + ',' + str(value['event_proc_inbound']) + ',' + str(value['event_proc_outbound']) + ',' + str(value['event_proc_inbound'] - value['event_proc_outbound']))
+        missing_corps = True
 print("===========================")
+
+
+with EventProcessor() as event_processor:
+    if missing_corps:
+        sql5 = """
+        select corp_num from corp_history_log where process_date is not null and corp_num not in
+        (select corp_num from credential_log where credential_type_cd = 'REG' and process_date is not null)
+        """
+
+        event_proc_corps = event_processor.get_event_proc_sql("event_proc_corps", sql5)
+        for corp in event_proc_corps:
+            print(corp['corp_num'])
 
