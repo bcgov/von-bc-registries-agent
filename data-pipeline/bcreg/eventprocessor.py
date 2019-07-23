@@ -350,6 +350,36 @@ class EventProcessor:
             if cur is not None:
                 cur.close()
 
+    ###########################################################################
+    # utility method to query event processing data
+    ###########################################################################
+
+    # get all records and return in an array of dicts
+    # returns a zero-length array if none found
+    # optionally takes a WHERE clause and ORDER BY clause (must be valid SQL)
+    def get_event_proc_sql(self, table, sql):
+        cursor = None
+        try:
+            cursor = self.conn.cursor()
+            cursor.execute(sql)
+            desc = cursor.description
+            column_names = [col[0] for col in desc]
+            rows = [dict(zip(column_names, row))  
+                for row in cursor]
+            cursor.close()
+            cursor = None
+            return rows
+        except (Exception, psycopg2.DatabaseError) as error:
+            print(error)
+            print(traceback.print_exc())
+            log_error("Event Processor exception reading DB: " + str(error))
+            raise 
+        finally:
+            if cursor is not None:
+                cursor.close()
+            cursor = None
+
+
     # record the last event processed
     def insert_last_event(self, system_type, event_id, event_date):
         """ insert a new event into the event table """

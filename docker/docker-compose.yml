@@ -156,6 +156,12 @@ services:
       - MARA_DB_PORT=${MARA_DB_PORT:-5432}
       - MARA_DB_DATABASE=${MARA_DB_DATABASE:-mara_db}
       - MARA_DB_USER=${MARA_DB_USER:-mara_db}
+      # orgbook DB
+      - ORGBOOK_DB_HOST=${ORGBOOK_DB_HOST:-tob-db}
+      - ORGBOOK_DB_PORT=${ORGBOOK_DB_PORT:-5432}
+      - ORGBOOK_DB_DATABASE=${ORGBOOK_DB_DATABASE:-THE_ORG_BOOK}
+      - ORGBOOK_DB_USER=${ORGBOOK_DB_USER:-DB_USER}
+      - ORGBOOK_DB_PASSWORD=${ORGBOOK_DB_PASSWORD:-DB_PASSWORD}
     networks:
       - orgbook
     ports:
