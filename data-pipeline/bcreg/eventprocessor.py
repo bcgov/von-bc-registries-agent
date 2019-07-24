@@ -954,7 +954,7 @@ class EventProcessor:
         (for the initial load, prev_event is the genesis date of Jan 1, 0000)
         The event "date" is based on some complicated logic and can come from the event or the related filing.
         """
-        #print("Generate credentials for", corp_num)
+        print("Generate credentials for", corp_num, prev_event, last_event)
         corp_creds = []
 
         # get events - only generate credentials for events in the past
@@ -963,18 +963,21 @@ class EventProcessor:
         if 0 < len(effective_events):
             #print('effective_events', effective_events)
             # build a standard dict for the first and last events in the effective range
-            prev_effective_event = event_dict(effective_events[0]['event_id'], effective_events[0]['effective_date'])
-            last_effective_event = event_dict(effective_events[len(effective_events)-1]['event_id'], effective_events[len(effective_events)-1]['effective_date'])
+            prev_effective_event = event_dict(effective_events[0]['event_id'], effective_events[0]['event_timestmp'])
+            last_effective_event = event_dict(effective_events[len(effective_events)-1]['event_id'], effective_events[len(effective_events)-1]['event_timestmp'])
 
             # get the "overlap" with the supplied event range (this check is based on the event date, the date the event was registered)
-            if self.compare_dates(prev_effective_event['event_date'], ">", prev_event['event_date'], 'Events'):
-                use_prev_event = prev_effective_event
-            else:
-                use_prev_event = prev_event
-            if self.compare_dates(last_effective_event['event_date'], "<", last_event['event_date'], 'Events'):
-                use_last_event = last_effective_event
-            else:
-                use_last_event = last_event
+            #if self.compare_dates(prev_effective_event['event_date'], ">=", prev_event['event_date'], 'Events'):
+            #    use_prev_event = prev_effective_event
+            #else:
+            #    use_prev_event = prev_event
+            #if self.compare_dates(last_effective_event['event_date'], "<=", last_event['event_date'], 'Events'):
+            #    use_last_event = last_effective_event
+            #else:
+            #    use_last_event = last_event
+
+            use_prev_event = prev_event
+            use_last_event = last_event
 
             # loop based on start/end events
             for i in range(len(effective_events)):
@@ -987,7 +990,7 @@ class EventProcessor:
                 #   - unless it is the most recent event, in which case include it anyways
                 if i < (len(effective_events)-1) and is_data_conversion_event(loop_start_event) and loop_start_event['event_timestmp'] == loop_start_event['effective_date']:
                     # skip data conversion event
-                    #print(" >>> Skip credential for data conversion event")
+                    print(" >>> Skip credential for data conversion event", i, len(effective_events)-1, loop_start_event)
                     pass
                 elif use_prev_event['event_date'] <= loop_start_event['event_timestmp'] and loop_start_event['event_timestmp'] <= use_last_event['event_date']:
                     # event is in the "overlap" range
@@ -1082,16 +1085,17 @@ class EventProcessor:
                     if (len(corp_creds) == 0) or (len(corp_creds) > 0 and corp_cred['credential'] != corp_creds[len(corp_creds)-1]['credential']):
                         corp_creds.append(corp_cred)
                     else:
-                        #print(" >>> Skip credential for whatever reason")
+                        print(" >>> Skip credential for reason Duplicate")
                         pass
                 else:
                     # skipping event because out of range of start/end period
-                    #print(" >>> Skip event not in range", loop_start_event)
+                    print(" >>> Skip event not in range")
+                    print(use_prev_event['event_date'], loop_start_event['event_timestmp'], use_last_event['event_date'])
                     pass
 
         else:
             # skip due to no effective dates in range
-            #print(" >>> Skip no effective events in range")
+            print(" >>> Skip no effective events in range")
             pass
 
         # generate addr credential(s)
