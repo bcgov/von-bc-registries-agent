@@ -38,7 +38,7 @@ with EventProcessor() as event_processor:
     from (
     SELECT record_id, corp_num, corp_state, corp_json->>'corp_typ_cd' as corp_typ_cd, entry_date, process_date 
     FROM corp_history_log ch1
-    WHERE record_id = (SELECT MAX(record_id) FROM corp_history_log ch2 WHERE ch1.corp_num = ch2.corp_num and process_date is not null)
+    WHERE record_id = (SELECT MAX(record_id) FROM corp_history_log ch2 WHERE ch1.corp_num = ch2.corp_num and (ch2.process_msg != 'Withdrawn' or ch2.process_msg is null) and ch2.process_date is not null)
     ORDER BY corp_num, record_id
     ) as foo group by corp_typ_cd, corp_state
     order by corp_typ_cd, corp_state;
@@ -160,14 +160,14 @@ print("Incomplete data in OrgBook:")
 print("===========================")
 print("Company Type,Company Status,bc_reg,orgbook,orgbook_diff")
 for key, value in stats_dict.items():
-    if 0 < (value['bc_reg'] - value['orgbook']):
+    if 0 != (value['bc_reg'] - value['orgbook']):
         print(key + ',' + str(value['bc_reg']) + ',' + str(value['orgbook']) + ',' + str(value['bc_reg'] - value['orgbook']))
 print("===========================")
 print("Incomplete data in Event Processor:")
 print("===========================")
 print("Company Type,Company Status,event_proc_inbound,event_proc_outbound,event_proc_diff")
 for key, value in stats_dict.items():
-    if 0 < (value['event_proc_inbound'] - value['event_proc_outbound']):
+    if 0 != (value['event_proc_inbound'] - value['event_proc_outbound']):
         print(key + ',' + str(value['event_proc_inbound']) + ',' + str(value['event_proc_outbound']) + ',' + str(value['event_proc_inbound'] - value['event_proc_outbound']))
 print("===========================")
 
