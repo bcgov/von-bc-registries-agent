@@ -956,7 +956,7 @@ class EventProcessor:
         (for the initial load, prev_event is the genesis date of Jan 1, 0000)
         The event "date" is based on some complicated logic and can come from the event or the related filing.
         """
-        #print("Generate credentials for", corp_num)
+        #print("Generate credentials for", corp_num, prev_event, last_event)
         corp_creds = []
 
         # get events - only generate credentials for events in the past
@@ -965,18 +965,21 @@ class EventProcessor:
         if 0 < len(effective_events):
             #print('effective_events', effective_events)
             # build a standard dict for the first and last events in the effective range
-            prev_effective_event = event_dict(effective_events[0]['event_id'], effective_events[0]['effective_date'])
-            last_effective_event = event_dict(effective_events[len(effective_events)-1]['event_id'], effective_events[len(effective_events)-1]['effective_date'])
+            prev_effective_event = event_dict(effective_events[0]['event_id'], effective_events[0]['event_timestmp'])
+            last_effective_event = event_dict(effective_events[len(effective_events)-1]['event_id'], effective_events[len(effective_events)-1]['event_timestmp'])
 
             # get the "overlap" with the supplied event range (this check is based on the event date, the date the event was registered)
-            if self.compare_dates(prev_effective_event['event_date'], ">", prev_event['event_date'], 'Events'):
-                use_prev_event = prev_effective_event
-            else:
-                use_prev_event = prev_event
-            if self.compare_dates(last_effective_event['event_date'], "<", last_event['event_date'], 'Events'):
-                use_last_event = last_effective_event
-            else:
-                use_last_event = last_event
+            #if self.compare_dates(prev_effective_event['event_date'], ">=", prev_event['event_date'], 'Events'):
+            #    use_prev_event = prev_effective_event
+            #else:
+            #    use_prev_event = prev_event
+            #if self.compare_dates(last_effective_event['event_date'], "<=", last_event['event_date'], 'Events'):
+            #    use_last_event = last_effective_event
+            #else:
+            #    use_last_event = last_event
+
+            use_prev_event = prev_event
+            use_last_event = last_event
 
             # loop based on start/end events
             for i in range(len(effective_events)):
@@ -989,7 +992,7 @@ class EventProcessor:
                 #   - unless it is the most recent event, in which case include it anyways
                 if i < (len(effective_events)-1) and is_data_conversion_event(loop_start_event) and loop_start_event['event_timestmp'] == loop_start_event['effective_date']:
                     # skip data conversion event
-                    #print(" >>> Skip credential for data conversion event")
+                    #print(" >>> Skip credential for data conversion event", i, len(effective_events)-1, loop_start_event)
                     pass
                 elif use_prev_event['event_date'] <= loop_start_event['event_timestmp'] and loop_start_event['event_timestmp'] <= use_last_event['event_date']:
                     # event is in the "overlap" range
@@ -1005,7 +1008,7 @@ class EventProcessor:
                     if org_name is not None:
                         #print('org_name', org_name)
                         corp_cred['entity_name'] = org_name['corp_nme']
-                        if is_data_conversion_event(org_name['start_event']) and org_name['effective_start_date'] == org_name['start_event']['effective_date']:
+                        if is_data_conversion_event(org_name['start_event']) and org_name['effective_start_date'] == org_name['start_event']['event_timestmp']:
                             corp_cred['entity_name_effective'] = ''
                         else:
                             corp_cred['entity_name_effective'] = self.filter_min_date(org_name['effective_start_date'])
@@ -1016,7 +1019,7 @@ class EventProcessor:
                     # check for NOALU/NOALB/NOALC filing type on the org_name end event
                     if self.is_notice_of_alteration_event(org_name):
                         # erase the corp_type in previously created/expired credentials
-                        print("Cleaning corp type history for 'notice of alteration'", corp_num)
+                        #print("Cleaning corp type history for 'notice of alteration'", corp_num)
                         for cred in corp_creds:
                             cred['credential']['entity_type'] = ''
 
@@ -1026,7 +1029,7 @@ class EventProcessor:
                     if org_name_assumed is not None:
                         #print('org_name_assumed', org_name_assumed)
                         corp_cred['entity_name_assumed'] = org_name_assumed['corp_nme'] 
-                        if is_data_conversion_event(org_name_assumed['start_event']) and org_name_assumed['effective_start_date'] == org_name_assumed['start_event']['effective_date']:
+                        if is_data_conversion_event(org_name_assumed['start_event']) and org_name_assumed['effective_start_date'] == org_name_assumed['start_event']['event_timestmp']:
                             corp_cred['entity_name_assumed_effective'] = ''
                         else:
                             corp_cred['entity_name_assumed_effective'] = self.filter_min_date(org_name_assumed['effective_start_date'])
@@ -1039,7 +1042,7 @@ class EventProcessor:
                     if corp_state is not None:
                         #print('corp_state', corp_state)
                         corp_cred['entity_status'] = corp_state['op_state_typ_cd']
-                        if is_data_conversion_event(corp_state['start_event']) and corp_state['effective_start_date'] == corp_state['start_event']['effective_date']:
+                        if is_data_conversion_event(corp_state['start_event']) and corp_state['effective_start_date'] == corp_state['start_event']['event_timestmp']:
                             corp_cred['entity_status_effective'] = ''
                         else:
                             corp_cred['entity_status_effective'] = self.filter_min_date(corp_state['effective_start_date'])
@@ -1057,7 +1060,7 @@ class EventProcessor:
                     corp_cred['extra_jurisdictional_registration'] = ''
                     # determine the date to use for jurisdiction effective
                     if jurisdiction is not None:
-                        if is_data_conversion_event(jurisdiction['start_event']) and jurisdiction['effective_start_date'] == jurisdiction['start_event']['effective_date']:
+                        if is_data_conversion_event(jurisdiction['start_event']) and jurisdiction['effective_start_date'] == jurisdiction['start_event']['event_timestmp']:
                             jurisdiction_effective_date = None
                         else:
                             jurisdiction_effective_date = self.filter_min_date(jurisdiction['effective_start_date'])
@@ -1092,11 +1095,12 @@ class EventProcessor:
                     if (len(corp_creds) == 0) or (len(corp_creds) > 0 and corp_cred['credential'] != corp_creds[len(corp_creds)-1]['credential']):
                         corp_creds.append(corp_cred)
                     else:
-                        #print(" >>> Skip credential for whatever reason")
+                        #print(" >>> Skip credential for reason Duplicate")
                         pass
                 else:
                     # skipping event because out of range of start/end period
-                    #print(" >>> Skip event not in range", loop_start_event)
+                    #print(" >>> Skip event not in range")
+                    #print(use_prev_event['event_date'], loop_start_event['event_timestmp'], use_last_event['event_date'])
                     pass
 
         else:
