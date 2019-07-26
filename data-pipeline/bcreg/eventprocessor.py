@@ -331,7 +331,42 @@ class EventProcessor:
             """,
             """ 
             REINDEX TABLE CREDENTIAL_LOG;
+            """,
             """
+            CREATE TABLE IF NOT EXISTS CORP_AUDIT_LOG (
+                RECORD_ID SERIAL PRIMARY KEY,
+                SYSTEM_TYPE_CD VARCHAR(255) NOT NULL, 
+                CORP_NUM VARCHAR(255) NOT NULL,
+                CORP_STATE VARCHAR(255) NOT NULL,
+                CORP_TYPE VARCHAR(255) NOT NULL,
+                ENTRY_DATE TIMESTAMP NOT NULL,
+                CRED_EFFECTIVE_DATE TIMESTAMP
+            )
+            """,
+            """
+            -- Hit for query
+            CREATE INDEX IF NOT EXISTS audit_corp_num_asc ON CORP_AUDIT_LOG 
+            (CORP_NUM);
+            """,
+            """
+            ALTER TABLE CORP_AUDIT_LOG
+            SET (autovacuum_vacuum_scale_factor = 0.0);
+            """,
+            """ 
+            ALTER TABLE CORP_AUDIT_LOG
+            SET (autovacuum_vacuum_threshold = 5000);
+            """,
+            """
+            ALTER TABLE CORP_AUDIT_LOG  
+            SET (autovacuum_analyze_scale_factor = 0.0);
+            """,
+            """ 
+            ALTER TABLE CORP_AUDIT_LOG  
+            SET (autovacuum_analyze_threshold = 5000);
+            """,
+            """ 
+            REINDEX TABLE CORP_AUDIT_LOG;
+            """,
             )
         cur = None
         try:
