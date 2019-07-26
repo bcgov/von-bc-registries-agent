@@ -7,6 +7,24 @@ from bcreg.config import config
 from bcreg.eventprocessor import EventProcessor
 from bcreg.bcregistries import BCRegistries
 
+"""
+Note:  For any companies that are identified as "missing" by this report, run the following query to 
+       reset the status in the Event Processor database to force reprocess of these companies:
+
+update corp_history_log
+set process_success = null, process_date = null, process_msg = null
+where process_success is not null
+and corp_num not in
+(select corp_num from credential_log where credential_type_cd = 'REG');
+
+commit;
+
+1. Stop any scheduled jobs (cron)
+2. Run the above query
+3. Run the "initial reload" and "post credentials" jobs
+4. Re-run the audit report
+5. Restart the cron jobs
+"""
 
 stats_dict = {}
 def add_stats_to_dict(key, type):
@@ -71,18 +89,18 @@ for key, value in stats_dict.items():
 print("===========================")
 
 
-with EventProcessor() as event_processor:
-    if missing_corps:
-        sql5 = """
-        select corp_num from corp_history_log where (process_msg != 'Withdrawn' or process_msg is null) and process_date is not null and corp_num not in
-        (select corp_num from credential_log where credential_type_cd = 'REG' and process_date is not null)
-        """
-
-        event_proc_corps = event_processor.get_event_proc_sql("event_proc_corps", sql5)
-        corp_count = 0
-        for corp in event_proc_corps:
-            #print(corp['corp_num'])
-            corp_count = corp_count + 1
-        print("Missing corps =", corp_count)
+#with EventProcessor() as event_processor:
+#    if missing_corps:
+#        sql5 = """
+#        select corp_num from corp_history_log where (process_msg != 'Withdrawn' or process_msg is null) and process_date is not null and corp_num not in
+#        (select corp_num from credential_log where credential_type_cd = 'REG' and process_date is not null)
+#        """
+#
+#        event_proc_corps = event_processor.get_event_proc_sql("event_proc_corps", sql5)
+#        corp_count = 0
+#        for corp in event_proc_corps:
+#            #print(corp['corp_num'])
+#            corp_count = corp_count + 1
+#        print("Missing corps =", corp_count)
 
 
