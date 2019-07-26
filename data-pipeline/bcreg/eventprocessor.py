@@ -928,8 +928,8 @@ class EventProcessor:
         #    return False
 
         # include if this record is within the desired event range ...
-        if ((prev_event['event_date'] <= party['start_event']['effective_date'] and party['start_event']['effective_date'] <= last_event['event_date']) or
-            (party['end_event_id'] is not None and prev_event['event_date'] <= party['end_event']['effective_date'] and party['end_event']['effective_date'] <= last_event['event_date'])):
+        if ((prev_event['event_date'] <= party['start_event']['event_timestmp'] and party['start_event']['event_timestmp'] <= last_event['event_date']) or
+            (party['end_event_id'] is not None and prev_event['event_date'] <= party['end_event']['event_timestmp'] and party['end_event']['event_timestmp'] <= last_event['event_date'])):
             #print("  ---> party record is in our window, check for ownership")
 
             # ... AND it belongs to the correct company type/party type logic
@@ -1102,8 +1102,8 @@ class EventProcessor:
         corp_offices = sorted(corp_info['office'], key=lambda k: int(k['start_event_id']))
         corp_offices = sorted(corp_info['office'], key=lambda k: k['effective_start_date'])
         for office in corp_offices:
-            if ((prev_event['event_date'] <= office['start_event']['effective_date'] and office['start_event']['effective_date'] <= last_event['event_date']) or
-                (office['end_event_id'] is not None and prev_event['event_date'] <= office['end_event']['effective_date'] and office['end_event']['effective_date'] <= last_event['event_date'])):
+            if ((prev_event['event_date'] <= office['start_event']['event_timestmp'] and office['start_event']['event_timestmp'] <= last_event['event_date']) or
+                (office['end_event_id'] is not None and prev_event['event_date'] <= office['end_event']['event_timestmp'] and office['end_event']['event_timestmp'] <= last_event['event_date'])):
                 # ensure address history is generated correctly
                 if 'office_typ_cd' in office:
                     if 'delivery_addr' in office and 'local_addr' in office['delivery_addr']:
