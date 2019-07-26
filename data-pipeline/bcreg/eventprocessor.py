@@ -350,6 +350,36 @@ class EventProcessor:
             if cur is not None:
                 cur.close()
 
+    ###########################################################################
+    # utility method to query event processing data
+    ###########################################################################
+
+    # get all records and return in an array of dicts
+    # returns a zero-length array if none found
+    # optionally takes a WHERE clause and ORDER BY clause (must be valid SQL)
+    def get_event_proc_sql(self, table, sql):
+        cursor = None
+        try:
+            cursor = self.conn.cursor()
+            cursor.execute(sql)
+            desc = cursor.description
+            column_names = [col[0] for col in desc]
+            rows = [dict(zip(column_names, row))  
+                for row in cursor]
+            cursor.close()
+            cursor = None
+            return rows
+        except (Exception, psycopg2.DatabaseError) as error:
+            print(error)
+            print(traceback.print_exc())
+            log_error("Event Processor exception reading DB: " + str(error))
+            raise 
+        finally:
+            if cursor is not None:
+                cursor.close()
+            cursor = None
+
+
     # record the last event processed
     def insert_last_event(self, system_type, event_id, event_date):
         """ insert a new event into the event table """
@@ -918,7 +948,13 @@ class EventProcessor:
 
     # generate credentials for the provided corp
     def generate_credentials(self, system_typ_cd, prev_event, last_event, corp_num, corp_info):
-        #print("Generate credentials for", corp_num)
+        """
+        Generate credentials for the given corporation based on the supplied event range.
+        prev_event and last_event represent the start and end event range we are processing.
+        (for the initial load, prev_event is the genesis date of Jan 1, 0000)
+        The event "date" is based on some complicated logic and can come from the event or the related filing.
+        """
+        #print("Generate credentials for", corp_num, prev_event, last_event)
         corp_creds = []
 
         # get events - only generate credentials for events in the past
@@ -926,28 +962,38 @@ class EventProcessor:
 
         if 0 < len(effective_events):
             #print('effective_events', effective_events)
+            # build a standard dict for the first and last events in the effective range
             prev_effective_event = event_dict(effective_events[0]['event_id'], effective_events[0]['event_timestmp'])
             last_effective_event = event_dict(effective_events[len(effective_events)-1]['event_id'], effective_events[len(effective_events)-1]['event_timestmp'])
-            if self.compare_dates(prev_effective_event['event_date'], ">", prev_event['event_date'], 'Events'):
-                use_prev_event = prev_effective_event
-            else:
-                use_prev_event = prev_event
-            if self.compare_dates(last_effective_event['event_date'], "<", last_event['event_date'], 'Events'):
-                use_last_event = last_effective_event
-            else:
-                use_last_event = last_event
+
+            # get the "overlap" with the supplied event range (this check is based on the event date, the date the event was registered)
+            #if self.compare_dates(prev_effective_event['event_date'], ">=", prev_event['event_date'], 'Events'):
+            #    use_prev_event = prev_effective_event
+            #else:
+            #    use_prev_event = prev_event
+            #if self.compare_dates(last_effective_event['event_date'], "<=", last_event['event_date'], 'Events'):
+            #    use_last_event = last_effective_event
+            #else:
+            #    use_last_event = last_event
+
+            use_prev_event = prev_event
+            use_last_event = last_event
 
             # loop based on start/end events
             for i in range(len(effective_events)):
                 #print('effective_event', effective_events[i])
 
-                #{'event_id': 100103739, 'corp_num': 'FM0368694', 'event_typ_cd': 'CONVFMREGI', 
-                # 'event_timestmp': datetime.datetime(2004, 3, 26, 0, 0), 'trigger_dts': None, 'event_class': 'CONVFIRM', 
-                # 'short_desc': 'CONV FIRM REGI', 'full_desc': 'Conversion Firm Registration', 'filing': {}, 'conv_event': {}, 
-                # 'effective_date': datetime.datetime(2004, 3, 26, 0, 0), 'appears_as_end_event': False}
-
                 loop_start_event = effective_events[i]
-                if (not (is_data_conversion_event(loop_start_event) and loop_start_event['event_timestmp'] != loop_start_event['effective_date'])) and use_prev_event['event_date'] <= loop_start_event['event_timestmp'] and loop_start_event['event_timestmp'] <= use_last_event['event_date']:
+                # for the registration credential, we need to check if this event is in the "overlap range"
+                # note the special case logic for data conversion events:
+                #   - if it is a data conversion event and we don't have any other dates we can apply, skip it
+                #   - unless it is the most recent event, in which case include it anyways
+                if i < (len(effective_events)-1) and is_data_conversion_event(loop_start_event) and loop_start_event['event_timestmp'] == loop_start_event['effective_date']:
+                    # skip data conversion event
+                    #print(" >>> Skip credential for data conversion event", i, len(effective_events)-1, loop_start_event)
+                    pass
+                elif use_prev_event['event_date'] <= loop_start_event['event_timestmp'] and loop_start_event['event_timestmp'] <= use_last_event['event_date']:
+                    # event is in the "overlap" range
                     # generate corp credential
                     corp_cred = {}
                     corp_cred['registration_id'] = self.corp_num_with_prefix(corp_info['corp_typ_cd'], corp_info['corp_num'])
@@ -970,7 +1016,7 @@ class EventProcessor:
                     # check for NOALU/NOALB/NOALC filing type on the org_name end event
                     if self.is_notice_of_alteration_event(org_name):
                         # erase the corp_type in previously created/expired credentials
-                        print("Cleaning corp type history for 'notice of alteration'", corp_num)
+                        #print("Cleaning corp type history for 'notice of alteration'", corp_num)
                         for cred in corp_creds:
                             cred['credential']['entity_type'] = ''
 
@@ -1039,11 +1085,12 @@ class EventProcessor:
                     if (len(corp_creds) == 0) or (len(corp_creds) > 0 and corp_cred['credential'] != corp_creds[len(corp_creds)-1]['credential']):
                         corp_creds.append(corp_cred)
                     else:
-                        #print(" >>> Skip credential for whatever reason")
+                        #print(" >>> Skip credential for reason Duplicate")
                         pass
                 else:
                     # skipping event because out of range of start/end period
-                    #print(" >>> Skip event not in range", loop_start_event)
+                    #print(" >>> Skip event not in range")
+                    #print(use_prev_event['event_date'], loop_start_event['event_timestmp'], use_last_event['event_date'])
                     pass
 
         else:
@@ -1120,6 +1167,15 @@ class EventProcessor:
 
     # process corps that have been queued - update data from bc_registries
     def process_corp_event_queue_internal(self, load_regs=True, generate_creds=False, use_cache=False, corp_types=CORP_TYPES_IN_SCOPE):
+        """
+        The main process for loading BC Reg data and producing credentials.
+        This process takes unprocessed events from the EVENT_BY_CORP_FILING table, and for each corp_num:
+           - if load_regs: loads data from BC Reg for that corp (stores in CORP_HISTORY_LOG)
+           - if generate_creds: produces credentials (stores in CREDENTIAL_LOG)
+        Credentials are submitted to TOB via the agent using a separate process.
+        If use_cache is True, BC Reg data is cached into a local in-memory sqlite database prior to generating credentials.
+        """
+
         sql1 = """SELECT RECORD_ID, 
                          SYSTEM_TYPE_CD, 
                          PREV_EVENT_ID, 
@@ -1187,6 +1243,7 @@ class EventProcessor:
             if load_regs:
                 try:
                     # we are loading data from BC Registries based on the corp event queue
+                    # sql1 = find unprocessed events from our local table EVENT_BY_CORP_FILING
                     cur = self.conn.cursor()
                     cur.execute(sql1.replace("!BS!", str(max_batch_size)))
                     row = cur.fetchone()
@@ -1209,6 +1266,7 @@ class EventProcessor:
             else:
                 try:
                     # not loading from BC Reg, just processing data already loaded in corp_history
+                    # sql1a = load staged corp data from local table CORP_HISTORY_LOG
                     cur = self.conn.cursor()
                     cur.execute(sql1a.replace("!BS!", str(max_batch_size)))
                     row = cur.fetchone()
@@ -1229,6 +1287,9 @@ class EventProcessor:
                     if cur is not None:
                         cur.close()
 
+            # at this point specific corps will be either:
+            #   - a list of corps from the event table EVENT_BY_CORP_FILING
+            #   - a list of corp data from the corp history table CORP_HISTORY_LOG
             if len(specific_corps) == 0:
                 continue_loop = False
             else:
@@ -1238,6 +1299,7 @@ class EventProcessor:
                 with BCRegistries(use_cache) as bc_registries:
                     if use_cache:
                         try:
+                            # cache BC Reg data into local in-memory sqlite database (for performance)
                             bc_registries.cache_bcreg_corps(specific_corps)
                         except (Exception, psycopg2.DatabaseError, psycopg2.DataError) as error:
                             # raises a SQL error if error during caching
@@ -1253,6 +1315,7 @@ class EventProcessor:
                                 corps = []
                                 use_cache = False
 
+                    # process each corp in our list
                     for i,corp in enumerate(corps): 
                         process_success = True
                         process_msg = None
@@ -1262,6 +1325,7 @@ class EventProcessor:
                             print('Processing: ' + str(processing_time))
                             print('>>> Processing {} of {} corporations.'.format(i+1, len(corps)))
 
+                        # check if we need to load BC Reg data (we need to do this if we are running from the event list)
                         if load_regs:
                             try:
                                 # fetch corp info from bc_registries
@@ -1290,8 +1354,10 @@ class EventProcessor:
                             prev_event_json = corp['PREV_EVENT']
                             last_event_json = corp['LAST_EVENT']
 
+                        # at this point we have all the corp data, now generate credentials
                         if corp_in_scope and process_success:
                             # get events - only generate credentials for events in the past
+                            # for future-effective events (if any) we defer to the next processing cycle
                             (effective_events, future_events) = self.current_and_future_corp_events(corp['CORP_NUM'], corp_info)
 
                             corp_active_state = self.get_corp_active_state(corp_info)
@@ -1303,6 +1369,7 @@ class EventProcessor:
                                 effective_events = []
                                 future_events = []
 
+                            # check if we are generating credentials (vs just pre-loading BC Reg data)
                             if generate_creds:
                                 corp_creds = []
                                 if 0 < len(effective_events):
@@ -1369,10 +1436,10 @@ class EventProcessor:
                                 if (0 < len(future_events)) and (0 < len(corp_creds) or load_regs):
                                     # create another record to handle future events (will do a re-load)
                                     future_events = sorted(future_events, key=lambda k: int(k['event_id']))
-                                    future_events = sorted(future_events, key=lambda k: k['event_timestmp'])
+                                    future_events = sorted(future_events, key=lambda k: k['effective_date'])
                                     cur = self.conn.cursor()
-                                    cur.execute(sql2b, (corp['SYSTEM_TYPE_CD'], future_events[0]['event_id'], future_events[0]['event_timestmp'], 
-                                                        future_events[len(future_events)-1]['event_id'], future_events[len(future_events)-1]['event_timestmp'],  
+                                    cur.execute(sql2b, (corp['SYSTEM_TYPE_CD'], future_events[0]['event_id'], future_events[0]['effective_date'], 
+                                                        future_events[len(future_events)-1]['event_id'], future_events[len(future_events)-1]['effective_date'],  
                                                         corp['CORP_NUM'], datetime.datetime.now(),))
                                     cur.close()
                                     cur = None
@@ -1428,14 +1495,27 @@ class EventProcessor:
 
     # process corps that have been queued - update data from bc_registries
     def process_corp_event_queue(self, use_cache=False):
+        """
+        Reads data from BC Reg and loads into local database (CORP_HISTORY_LOG).
+        """
         self.process_corp_event_queue_internal(True, False, use_cache)
 
     # generate creds based on pre-processed data (no connect to bc reg)
     def process_corp_generate_creds(self):
+        """
+        Reads staged data (CORP_HISTORY_LOG) and produces credentials (CREDENTIAL_LOG).
+        """
         self.process_corp_event_queue_internal(False, True)
 
     # process corps that have been queued - update data from bc_registries - and generate credentials
     def process_corp_event_queue_and_generate_creds(self, use_cache=False, corp_types=CORP_TYPES_IN_SCOPE):
+        """
+        The main process for loading BC Reg data and producing credentials.
+        This process takes unprocessed events from the EVENT_BY_CORP_FILING table, and for each corp_num:
+           - loads data from BC Reg for that corp (stores in CORP_HISTORY_LOG)
+           - produces credentials (stores in CREDENTIAL_LOG)
+        Credentials are submitted to TOB via the agent using a separate process.
+        """
         self.process_corp_event_queue_internal(True, True, use_cache)
 
     # insert a transform into the transform table

@@ -182,7 +182,33 @@ specific_corps = [
                     'PA0000139',
                     'PA0000159',
                     'PA0000375',
+                    '0277447',   # missing in prod
+                    'FM0780183', # dba for the above
+                    '0276176',   # quartech
                     ]
+
+"""
+specific_corps = [ 
+'0046062',
+'0136093',
+'0142362',
+'0143311',
+'0206483',
+'0206786',
+'0276176',
+'0277447',
+'0319629',
+'0517093',
+'0641396',
+'0693705',
+'0928747',
+'0979020',
+'1101218',
+'1185488',
+'1198849',
+'A0020540',
+]
+"""
 
 with BCRegistries() as bc_registries:
     # get 5 corps for each type in scope (in addition to the above list)

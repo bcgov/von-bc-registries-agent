@@ -1,6 +1,8 @@
 
 # VON Event Processor
 
+Note that this document is not up-to-date with the latest data processing logic, however it provides a valuable overview of the overall process.  Links to the current code have been added to the doc - if you are interested in the most up-to-date documentation and logic, please look at the code.
+
 ## Event Processor Overview
 
 The VON Event Processor connects enterprise data sources to a Sovrin edge agent, monitoring the enterprise data source(s) for changes to enterprise data, and generating credential requests that are sent to the network, using a von-x connector.
@@ -26,6 +28,8 @@ The following BC Registries tables provide information for Incorporation and Add
 ![BC Registries Corporation Data Model](https://github.com/ianco/von-bc-registries-agent/raw/master/doc/BCReg-Data-Model.png "BC Registries Corporation Data Model")
 
 For each Corporation:
+
+(see the latest code here:  https://github.com/bcgov/von-bc-registries-agent/blob/master/data-pipeline/bcreg/bcregistries.py#L1500)
 
 ```
 select * from corporation
@@ -102,6 +106,14 @@ Question - should the DBA corporation generate Address credentials based on the 
 ## BC Registries Initial Data Load
 
 Determine the corporations to process (any corporation with activity since the last run):
+
+(
+Note that the main process is:  
+- find unprocessed events:  https://github.com/bcgov/von-bc-registries-agent/blob/master/data-pipeline/bcreg/find-unprocessed-corps_actve.py
+- process events and generate credenials:  https://github.com/bcgov/von-bc-registries-agent/blob/master/data-pipeline/bcreg/process-corps-generate-creds.py
+
+The primary method that converts corp data to credentials is here:  https://github.com/bcgov/von-bc-registries-agent/blob/master/data-pipeline/bcreg/eventprocessor.py#L1438
+)
 
 ```
 :prev_event_id = the previously processed max event (will be zero for the initial load)
