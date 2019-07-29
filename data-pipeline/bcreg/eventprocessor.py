@@ -336,10 +336,14 @@ class EventProcessor:
             CREATE TABLE IF NOT EXISTS CORP_AUDIT_LOG (
                 RECORD_ID SERIAL PRIMARY KEY,
                 SYSTEM_TYPE_CD VARCHAR(255) NOT NULL, 
+                LAST_CORP_HISTORY_ID INT NOT NULL,
+                SYSTEM_TYPE_CD VARCHAR(255) NOT NULL, 
+                LAST_EVENT_DATE TIMESTAMP NOT NULL, 
                 CORP_NUM VARCHAR(255) NOT NULL,
                 CORP_STATE VARCHAR(255) NOT NULL,
                 CORP_TYPE VARCHAR(255) NOT NULL,
                 ENTRY_DATE TIMESTAMP NOT NULL,
+                LAST_CREDENTIAL_ID INT,
                 CRED_EFFECTIVE_DATE TIMESTAMP
             )
             """,
@@ -367,7 +371,7 @@ class EventProcessor:
             """ 
             REINDEX TABLE CORP_AUDIT_LOG;
             """,
-            )
+        )
         cur = None
         try:
             cur = self.conn.cursor()
@@ -391,12 +395,15 @@ class EventProcessor:
 
     # get all records and return in an array of dicts
     # returns a zero-length array if none found
-    # optionally takes a WHERE clause and ORDER BY clause (must be valid SQL)
-    def get_event_proc_sql(self, table, sql):
+    # optionally takes sql arguements
+    def get_event_proc_sql(self, table, sql, args=None):
         cursor = None
         try:
             cursor = self.conn.cursor()
-            cursor.execute(sql)
+            if args:
+                cursor.execute(sql, args)
+            else:
+                cursor.execute(sql)
             desc = cursor.description
             column_names = [col[0] for col in desc]
             rows = [dict(zip(column_names, row))  
@@ -419,7 +426,7 @@ class EventProcessor:
     def insert_last_event(self, system_type, event_id, event_date):
         """ insert a new event into the event table """
         sql = """INSERT INTO LAST_EVENT (SYSTEM_TYPE_CD, EVENT_ID, EVENT_DATE, ENTRY_DATE)
-                 VALUES(%s, %s, %s, %s) RETURNING RECORD_ID;"""
+                 VALUES (%s, %s, %s, %s) RETURNING RECORD_ID;"""
         cur = None
         try:
             cur = self.conn.cursor()
