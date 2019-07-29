@@ -75,56 +75,66 @@ with EventProcessor() as event_processor:
 
 with EventProcessor() as event_processor:
     # run this query against Event Processor database:
-    sql3 = """
+    sql3s = [
+    """
     SELECT record_id, corp_num, credential_json->>'entity_status' as corp_state, credential_json->>'entity_type' as corp_typ_cd, credential_json->>'effective_date' as effective_date, entry_date, process_date 
     FROM credential_log 
     WHERE process_date is not null and credential_type_cd = 'REG'
       AND ((corp_state = 'ACT' and record_id > (select COALESCE(MAX(LAST_CREDENTIAL_ID), 0) from CORP_AUDIT_LOG where corp_state = 'ACT'))
-       OR  (corp_state = 'HIS' and record_id > (select COALESCE(MAX(LAST_CREDENTIAL_ID), 0) from CORP_AUDIT_LOG where corp_state = 'HIS'))
-       OR  (corp_num in (select corp_num from CORP_AUDIT_LOG where last_credential_id is null)))
+       OR  (corp_state = 'HIS' and record_id > (select COALESCE(MAX(LAST_CREDENTIAL_ID), 0) from CORP_AUDIT_LOG where corp_state = 'HIS')))
     ORDER BY record_id;
+    """,
     """
+    SELECT record_id, corp_num, credential_json->>'entity_status' as corp_state, credential_json->>'entity_type' as corp_typ_cd, credential_json->>'effective_date' as effective_date, entry_date, process_date 
+    FROM credential_log 
+    WHERE process_date is not null and credential_type_cd = 'REG'
+      AND corp_num in (select corp_num from CORP_AUDIT_LOG where last_credential_id is null)
+    ORDER BY record_id;
+    """,
+    ]
+
     print("Get corp REG credentials from Event Processor DB", datetime.datetime.now())
-    event_proc_outbound_recs = event_processor.get_event_proc_sql("outbound_recs", sql3)
-    print("... build audit log", datetime.datetime.now())
-    i = 0
-    for outbound_rec in event_proc_outbound_recs:
-        i = i + 1
-        if (i % 10000 == 0):
-            print('>>> Processing {} {}.'.format(i, datetime.datetime.now()))
-        # see if we have a record for this corp yet
-        sql3a = """
-        SELECT RECORD_ID, LAST_CORP_HISTORY_ID, SYSTEM_TYPE_CD, LAST_EVENT_DATE, CORP_NUM, CORP_STATE, CORP_TYPE, ENTRY_DATE,
-                LAST_CREDENTIAL_ID, CRED_EFFECTIVE_DATE
-        FROM CORP_AUDIT_LOG WHERE CORP_NUM = %s;
-        """
-        corp_recs = event_processor.get_event_proc_sql("corp_recs", sql3a, (outbound_rec['corp_num'],))
-        if 0 == len(corp_recs):
-            # if not, it's an error
-            # ignore for now
-            print("Error no inbound record found for", outbound_rec['corp_num'])
-            pass
-        else:
-            # if yes, see if we need to update it
-            sql3b = """
-            UPDATE CORP_AUDIT_LOG
-            SET LAST_CREDENTIAL_ID = %s, CRED_EFFECTIVE_DATE = %s
-            WHERE RECORD_ID = %s AND CORP_NUM = %s;
+    for sql3 in sql3s:
+        event_proc_outbound_recs = event_processor.get_event_proc_sql("outbound_recs", sql3)
+        print("... build audit log", datetime.datetime.now())
+        i = 0
+        for outbound_rec in event_proc_outbound_recs:
+            i = i + 1
+            if (i % 10000 == 0):
+                print('>>> Processing {} {}.'.format(i, datetime.datetime.now()))
+            # see if we have a record for this corp yet
+            sql3a = """
+            SELECT RECORD_ID, LAST_CORP_HISTORY_ID, SYSTEM_TYPE_CD, LAST_EVENT_DATE, CORP_NUM, CORP_STATE, CORP_TYPE, ENTRY_DATE,
+                    LAST_CREDENTIAL_ID, CRED_EFFECTIVE_DATE
+            FROM CORP_AUDIT_LOG WHERE CORP_NUM = %s;
             """
-            cur = None
-            corp_rec = corp_recs[0]
-            try:
-                cur = event_processor.conn.cursor()
-                cur.execute(sql3b, (outbound_rec['record_id'], outbound_rec['effective_date'], corp_rec['record_id'], corp_rec['corp_num']))
-                event_processor.conn.commit()
-                cur.close()
+            corp_recs = event_processor.get_event_proc_sql("corp_recs", sql3a, (outbound_rec['corp_num'],))
+            if 0 == len(corp_recs):
+                # if not, it's an error
+                # ignore for now
+                print("Error no inbound record found for", outbound_rec['corp_num'])
+                pass
+            else:
+                # if yes, see if we need to update it
+                sql3b = """
+                UPDATE CORP_AUDIT_LOG
+                SET LAST_CREDENTIAL_ID = %s, CRED_EFFECTIVE_DATE = %s
+                WHERE RECORD_ID = %s AND CORP_NUM = %s;
+                """
                 cur = None
-            except (Exception, psycopg2.DatabaseError) as error:
-                print(error)
-                raise
-            finally:
-                if cur is not None:
+                corp_rec = corp_recs[0]
+                try:
+                    cur = event_processor.conn.cursor()
+                    cur.execute(sql3b, (outbound_rec['record_id'], outbound_rec['effective_date'], corp_rec['record_id'], corp_rec['corp_num']))
+                    event_processor.conn.commit()
                     cur.close()
+                    cur = None
+                except (Exception, psycopg2.DatabaseError) as error:
+                    print(error)
+                    raise
+                finally:
+                    if cur is not None:
+                        cur.close()
 
 print("Got all corp audits", datetime.datetime.now())
 
