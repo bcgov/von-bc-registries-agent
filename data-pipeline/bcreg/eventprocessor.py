@@ -337,7 +337,6 @@ class EventProcessor:
                 RECORD_ID SERIAL PRIMARY KEY,
                 SYSTEM_TYPE_CD VARCHAR(255) NOT NULL, 
                 LAST_CORP_HISTORY_ID INT NOT NULL,
-                SYSTEM_TYPE_CD VARCHAR(255) NOT NULL, 
                 LAST_EVENT_DATE TIMESTAMP NOT NULL, 
                 CORP_NUM VARCHAR(255) NOT NULL,
                 CORP_STATE VARCHAR(255) NOT NULL,
