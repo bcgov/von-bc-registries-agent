@@ -22,6 +22,7 @@ MAX_WHERE_IN = 1000
 MIN_START_DATE = datetime.datetime(datetime.MINYEAR+1, 1, 1)
 MAX_END_DATE   = datetime.datetime(datetime.MAXYEAR-1, 12, 31)
 DATA_CONVERSION_DATE = datetime.datetime(2004, 3, 26)
+DATA_CONVERSION_DATE_STR = "2004-03-26"
 
 # for now, we are in PST time
 timezone = pytz.timezone("PST8PDT")
@@ -73,8 +74,13 @@ class CustomJsonEncoder(json.JSONEncoder):
 
 
 def is_data_conversion_event(event):
-    if event['event_timestmp'].year == DATA_CONVERSION_DATE.year and event['event_timestmp'].month == DATA_CONVERSION_DATE.month and event['event_timestmp'].day == DATA_CONVERSION_DATE.day:
-        return True
+    if isinstance(event['event_timestmp'], datetime.datetime):
+        if event['event_timestmp'].year == DATA_CONVERSION_DATE.year and event['event_timestmp'].month == DATA_CONVERSION_DATE.month and event['event_timestmp'].day == DATA_CONVERSION_DATE.day:
+            return True
+    else:
+        # assume string
+        if event['event_timestmp'].startswith(DATA_CONVERSION_DATE_STR):
+            return True
     return False
 
 
