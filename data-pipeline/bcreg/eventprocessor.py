@@ -888,7 +888,7 @@ class EventProcessor:
         if isinstance(cred_date, str):
             if cred_date == "":
                 return True
-            if cred_date < MIN_VALID_DATE_TZ:
+            if cred_date < MIN_START_DATE_TZ.astimezone(pytz.utc).isoformat():
                 return True
         elif isinstance(cred_date, datetime.date):
             if cred_date < MIN_VALID_DATE:
@@ -899,7 +899,7 @@ class EventProcessor:
         if not cred_date:
             return cred_date
         if isinstance(cred_date, str):
-            if cred_date < MIN_VALID_DATE_TZ:
+            if cred_date < MIN_START_DATE_TZ.astimezone(pytz.utc).isoformat():
                 return ""
         elif isinstance(cred_date, datetime.date):
             if cred_date < MIN_VALID_DATE:
@@ -1393,6 +1393,7 @@ class EventProcessor:
                             corp_info_json = bc_registries.to_json(corp_info)
                             prev_event_json = corp['PREV_EVENT']
                             last_event_json = corp['LAST_EVENT']
+                            corp_in_scope = True
 
                         # at this point we have all the corp data, now generate credentials
                         if corp_in_scope and process_success:
