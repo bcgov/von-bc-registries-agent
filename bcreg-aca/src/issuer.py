@@ -198,6 +198,17 @@ def startup_init(ENV):
 credential_lock = threading.Lock()
 credential_requests = {}
 credential_responses = {}
+credential_threads = {}
+
+def set_credential_thread_id(cred_exch_id, thread_id):
+    credential_lock.acquire()
+    try:
+        # add 2 records so we can x-ref
+        print("Set cred_exch_id, thread_id", cred_exch_id, thread_id)
+        credential_threads[thread_id] = cred_exch_id
+        credential_threads[cred_exch_id] = thread_id
+    finally:
+        credential_lock.release()
 
 def add_credential_request(cred_exch_id):
     credential_lock.acquire()
@@ -219,12 +230,33 @@ def add_credential_response(cred_exch_id, response):
     finally:
         credential_lock.release()
 
+def add_credential_problem_report(thread_id, response):
+    print("get problem report for thread", thread_id)
+    if thread_id in credential_threads:
+        cred_exch_id = credential_threads[thread_id]
+        add_credential_response(cred_exch_id, response)
+    else:
+        print("thread_id not found", thread_id)
+        # hack for now
+        if 1 == len(list(credential_requests.keys())):
+            cred_exch_id = list(credential_requests.keys())[0]
+            add_credential_response(cred_exch_id, response)
+        else:
+            print("darn, too many outstanding requests :-(")
+            print(credential_requests)
+
+
 def get_credential_response(cred_exch_id):
     credential_lock.acquire()
     try:
         if cred_exch_id in credential_responses:
             response = credential_responses[cred_exch_id]
             del credential_responses[cred_exch_id]
+            if cred_exch_id in credential_threads:
+                thread_id = credential_threads[cred_exch_id]
+                print("cleaning out cred_exch_id, thread_id", cred_exch_id, thread_id)
+                del credential_threads[cred_exch_id]
+                del credential_threads[thread_id]
             return response
         else:
             return None
@@ -238,6 +270,7 @@ TOPIC_PRESENTATIONS = "presentations"
 TOPIC_GET_ACTIVE_MENU = "get-active-menu"
 TOPIC_PERFORM_MENU_ACTION = "perform-menu-action"
 TOPIC_ISSUER_REGISTRATION = "issuer_registration"
+TOPIC_PROBLEM_REPORT = "problem-report"
 
 
 def handle_connections(state, message):
@@ -248,7 +281,10 @@ def handle_connections(state, message):
 def handle_credentials(state, message):
     # TODO auto-respond to proof requests
     print("handle_credentials()", state, message['credential_exchange_id'])
-    if state == 'issued':
+    # TODO new "stored" state is being added by Nick
+    if 'thread_id' in message:
+        set_credential_thread_id(message['credential_exchange_id'], message['thread_id'])
+    if state == 'stored':
         response = {'success': True, 'result': message['credential_exchange_id']}
         add_credential_response(message['credential_exchange_id'], response)
     return jsonify({'message': state})
@@ -271,6 +307,14 @@ def handle_perform_menu_action(message):
 def handle_register_issuer(message):
     # TODO add/update issuer info?
     print("handle_register_issuer()")
+    return jsonify({})
+
+def handle_problem_report(message):
+    print("handle_problem_report()", message)
+
+    response = {'success': False, 'result': message['explain-ltxt']}
+    add_credential_problem_report(message['~thread']['thid'], response)
+
     return jsonify({})
 
 
