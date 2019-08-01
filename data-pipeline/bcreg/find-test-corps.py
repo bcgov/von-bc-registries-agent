@@ -185,6 +185,15 @@ specific_corps = [
                     '0277447',   # missing in prod
                     'FM0780183', # dba for the above
                     '0276176',   # quartech
+                    'S1000224',  # errored out in test
+                    'FM1000148',
+                    'FM1000145',
+                    'FM1000020',
+                    'FM1000019',
+                    'FM1000331',
+                    'FM1000146',
+                    'FM1000018',
+                    'FM1000200',
                     ]
 
 """

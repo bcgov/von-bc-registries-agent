@@ -6,6 +6,39 @@ import decimal
 from bcreg.config import config
 from bcreg.eventprocessor import EventProcessor
 
+"""
+This script will populate an audit table (CORP_AUDIT_LOG) in the event processor database to identify
+corporations inputted from BC Registries (CORP_HISTORY_LOG) but with no Registration credential
+posted to OrgBook (CREDENTIAL_LOG table).
+
+    ./run-step.sh bcreg/populate_audit_table.py
+
+Once this job completes, run the following sql to see how many companies are 'missed':
+
+    select count(*) from CORP_AUDIT_LOG where LAST_CREDENTIAL_ID is null;
+
+To force re-process of these companies, run the following sql's:
+
+    update corp_history_log
+    set process_success = null, process_date = null, process_msg = null
+    where process_success is not null
+    and corp_num in
+    (select corp_num from CORP_AUDIT_LOG where LAST_CREDENTIAL_ID is null);
+
+    commit;
+
+Then run the following script to re-generate the credentials (note this runs on cached data and does not
+re-query the BC Reg database):
+
+    ./run-step.sh bcreg/generate-creds.py
+
+Once this completes, re-run this script:
+
+    ./run-step.sh bcreg/populate_audit_table.py
+
+Re-run the 'select count(*) ...' query again and the numbers should now balance.
+"""
+
 QUERY_LIMIT = '200000'
 REPORT_COUNT = 10000
 
