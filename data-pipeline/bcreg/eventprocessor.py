@@ -1002,6 +1002,7 @@ class EventProcessor:
 
         # get events - only generate credentials for events in the past
         (effective_events, future_events) = self.current_and_future_corp_events(corp_num, corp_info)
+        print(corp_num, len(effective_events), len(future_events))
 
         if 0 < len(effective_events):
             #print('effective_events', effective_events)
@@ -1027,6 +1028,7 @@ class EventProcessor:
                 #print('effective_event', effective_events[i])
 
                 loop_start_event = effective_events[i]
+                print(use_prev_event['event_date'], loop_start_event['event_timestmp'], use_last_event['event_date'])
                 # for the registration credential, we need to check if this event is in the "overlap range"
                 # note the special case logic for data conversion events:
                 #   - if it is a data conversion event and we don't have any other dates we can apply, skip it
@@ -1038,6 +1040,7 @@ class EventProcessor:
                 elif use_prev_event['event_date'] <= loop_start_event['event_timestmp'] and loop_start_event['event_timestmp'] <= use_last_event['event_date']:
                     # event is in the "overlap" range
                     # generate corp credential
+                    #print(" >>> Process event")
                     corp_cred = {}
                     corp_cred['registration_id'] = self.corp_num_with_prefix(corp_info['corp_typ_cd'], corp_info['corp_num'])
                     corp_cred['registration_date'] = self.filter_min_date(corp_info['recognition_dts'])

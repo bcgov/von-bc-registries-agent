@@ -15,6 +15,13 @@ def add_stats_to_dict(key, type):
     stats_dict[key][type] = stats_dict[key][type] + 1
 
 
+corps_dict = {}
+def add_corp_to_dict(corp_num, type):
+    if not corp_num in corps_dict:
+        corps_dict[corp_num] = {}
+    corps_dict[corp_num][type] = corp_num
+
+
 with BCRegistries() as bc_registries:
     # run this query against BC Reg database:
     sql1 = """
@@ -36,6 +43,7 @@ with BCRegistries() as bc_registries:
     for bc_reg_rec in bc_reg_recs:
         key = bc_reg_rec['corp_typ_cd'] + ',' + bc_reg_rec['op_state_typ_cd']
         add_stats_to_dict(key, 'bc_reg')
+        add_corp_to_dict(bc_reg_rec['corp_num'], 'bc_reg')
     #print(bc_reg_stats)
 
 
@@ -55,6 +63,7 @@ with EventProcessor() as event_processor:
         if not inbound_rec['corp_num'] in processed_inbound_corps.keys():
             key = inbound_rec['corp_typ_cd'] + ',' + inbound_rec['corp_state']
             add_stats_to_dict(key, 'event_proc_inbound')
+            add_corp_to_dict(inbound_rec['corp_num'], 'event_proc_inbound')
             processed_inbound_corps[inbound_rec['corp_num']] = 'Done'
 
     # run this query against Event Processor database:
@@ -72,6 +81,7 @@ with EventProcessor() as event_processor:
         if not outbound_rec['corp_num'] in processed_outbound_corps.keys():
             key = outbound_rec['corp_typ_cd'] + ',' + outbound_rec['corp_state']
             add_stats_to_dict(key, 'event_proc_outbound')
+            add_corp_to_dict(outbound_rec['corp_num'], 'event_proc_outbound')
             processed_outbound_corps[outbound_rec['corp_num']] = 'Done'
     #print(event_proc_outbound_stats)
 
@@ -93,18 +103,20 @@ if conn:
     try:
         # run this query against OrgBook Search database
         sql4 = """
-        select 
-          credential_id, 
-          MAX(CASE WHEN claim_name='entity_type' THEN claim_value END) corp_typ_cd,
-          MAX(CASE WHEN claim_name='entity_status' THEN claim_value END) corp_state
-        from (
-        select claim.credential_id as credential_id, claim.name as claim_name, claim.value as claim_value
-        from credential_set, credential, claim
-        where credential_set.credential_type_id in (select id from credential_type where description = 'Registration')
-            and credential.id = credential_set.latest_credential_id
-            and claim.credential_id = credential.id
-            and claim.name in ('registration_id', 'entity_type', 'entity_status')) as foo
-        group by credential_id;
+                select 
+                  source_id,
+                  credential_id, 
+                  MAX(CASE WHEN claim_name='entity_type' THEN claim_value END) corp_typ_cd,
+                  MAX(CASE WHEN claim_name='entity_status' THEN claim_value END) corp_state
+                from (
+                select topic.source_id as source_id, claim.credential_id as credential_id, claim.name as claim_name, claim.value as claim_value
+                from credential_set, credential, claim, topic
+                where credential_set.credential_type_id in (select id from credential_type where description like 'Registration%' or description like 'registration%')
+                    and credential.id = credential_set.latest_credential_id
+                    and topic.id = credential_set.topic_id
+                    and claim.credential_id = credential.id
+                    and claim.name in ('registration_id', 'entity_type', 'entity_status')) as foo
+                group by source_id, credential_id;
         """
 
         print("Get corp stats from OrgBook DB", datetime.datetime.now())
@@ -119,6 +131,7 @@ if conn:
         for orgbook_stat in orgbook_stats:
             key = orgbook_stat['corp_typ_cd'] + ',' + orgbook_stat['corp_state']
             add_stats_to_dict(key, 'orgbook')
+            add_corp_to_dict(orgbook_stat['source_id'], 'orgbook')
     except (Exception, psycopg2.DatabaseError) as error:
         print(error)
         log_error("Event Processor exception reading DB: " + str(error))
@@ -156,4 +169,40 @@ for key, value in stats_dict.items():
     if 0 != (value['event_proc_inbound'] - value['event_proc_outbound']):
         print(key + ',' + str(value['event_proc_inbound']) + ',' + str(value['event_proc_outbound']) + ',' + str(value['event_proc_inbound'] - value['event_proc_outbound']))
 print("===========================")
+
+
+MAX_SPECIFIC_CORPS = 500
+specific_corps = []
+missing_corps = {'bc_reg': 0, 'event_proc_inbound': 0, 'event_proc_outbound': 0, 'orgbook': 0}
+for corp_num, corp_set in corps_dict.items():
+    if not 'orgbook' in corp_set:
+        missing_corps['orgbook'] = missing_corps['orgbook'] + 1
+        if len(specific_corps) < MAX_SPECIFIC_CORPS:
+            specific_corps.append(corp_num)
+
+print("Total of", missing_corps['orgbook'], "corps missing in orgbook")
+
+system_type = 'BC_REG'
+if 0 < len(specific_corps):
+    print("Adding", len(specific_corps), "corps to outstanding queue ...")
+    with BCRegistries() as bc_registries:
+        with EventProcessor() as event_processor:
+            print("Get last processed event")
+            prev_event_id = 0
+
+            print("Get last max event")
+            max_event_date = event_processor.get_last_processed_event_date(system_type)
+            max_event_id = event_processor.get_last_processed_event(max_event_date, system_type)
+            
+            # get specific test corps (there are about 6)
+            print("Get specific corps")
+            corps = bc_registries.get_specific_corps(specific_corps)
+            
+            print("Find unprocessed events for each corp")
+            last_event_dt = bc_registries.get_event_effective_date(prev_event_id)
+            max_event_dt = bc_registries.get_event_effective_date(max_event_id)
+            corps = bc_registries.get_unprocessed_corp_events(prev_event_id, last_event_dt, max_event_id, max_event_dt, corps)
+            
+            print("Update our queue")
+            event_processor.update_corp_event_queue(system_type, corps, max_event_id, max_event_date)
 
