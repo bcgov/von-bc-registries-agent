@@ -7,6 +7,15 @@ from bcreg.config import config
 from bcreg.eventprocessor import EventProcessor
 from bcreg.bcregistries import BCRegistries
 
+import argparse
+
+parser = argparse.ArgumentParser(description='Audit BC Reg vs OrgBook.')
+parser.add_argument("--fixme", action='store_true', help="Add missing corps to processing queue", required=False)
+args = parser.parse_args()
+if args.fixme:
+    print("FIX incorrect corps")
+else:
+    print("DON'T fix incorrect corps")
 
 stats_dict = {}
 def add_stats_to_dict(key, type):
@@ -16,10 +25,12 @@ def add_stats_to_dict(key, type):
 
 
 corps_dict = {}
-def add_corp_to_dict(corp_num, type):
+def add_corp_to_dict(corp_num, key, type):
+    if corp_num.startswith('BC'):
+        corp_num = corp_num[2:]
     if not corp_num in corps_dict:
         corps_dict[corp_num] = {}
-    corps_dict[corp_num][type] = corp_num
+    corps_dict[corp_num][type] = key
 
 
 with BCRegistries() as bc_registries:
@@ -43,7 +54,7 @@ with BCRegistries() as bc_registries:
     for bc_reg_rec in bc_reg_recs:
         key = bc_reg_rec['corp_typ_cd'] + ',' + bc_reg_rec['op_state_typ_cd']
         add_stats_to_dict(key, 'bc_reg')
-        add_corp_to_dict(bc_reg_rec['corp_num'], 'bc_reg')
+        add_corp_to_dict(bc_reg_rec['corp_num'], key, 'bc_reg')
     #print(bc_reg_stats)
 
 
@@ -63,7 +74,7 @@ with EventProcessor() as event_processor:
         if not inbound_rec['corp_num'] in processed_inbound_corps.keys():
             key = inbound_rec['corp_typ_cd'] + ',' + inbound_rec['corp_state']
             add_stats_to_dict(key, 'event_proc_inbound')
-            add_corp_to_dict(inbound_rec['corp_num'], 'event_proc_inbound')
+            add_corp_to_dict(inbound_rec['corp_num'], key, 'event_proc_inbound')
             processed_inbound_corps[inbound_rec['corp_num']] = 'Done'
 
     # run this query against Event Processor database:
@@ -81,7 +92,7 @@ with EventProcessor() as event_processor:
         if not outbound_rec['corp_num'] in processed_outbound_corps.keys():
             key = outbound_rec['corp_typ_cd'] + ',' + outbound_rec['corp_state']
             add_stats_to_dict(key, 'event_proc_outbound')
-            add_corp_to_dict(outbound_rec['corp_num'], 'event_proc_outbound')
+            add_corp_to_dict(outbound_rec['corp_num'], key, 'event_proc_outbound')
             processed_outbound_corps[outbound_rec['corp_num']] = 'Done'
     #print(event_proc_outbound_stats)
 
@@ -131,7 +142,7 @@ if conn:
         for orgbook_stat in orgbook_stats:
             key = orgbook_stat['corp_typ_cd'] + ',' + orgbook_stat['corp_state']
             add_stats_to_dict(key, 'orgbook')
-            add_corp_to_dict(orgbook_stat['source_id'], 'orgbook')
+            add_corp_to_dict(orgbook_stat['source_id'], key, 'orgbook')
     except (Exception, psycopg2.DatabaseError) as error:
         print(error)
         log_error("Event Processor exception reading DB: " + str(error))
@@ -171,20 +182,8 @@ for key, value in stats_dict.items():
 print("===========================")
 
 
-MAX_SPECIFIC_CORPS = 500
-specific_corps = []
-missing_corps = {'bc_reg': 0, 'event_proc_inbound': 0, 'event_proc_outbound': 0, 'orgbook': 0}
-for corp_num, corp_set in corps_dict.items():
-    if not 'orgbook' in corp_set:
-        missing_corps['orgbook'] = missing_corps['orgbook'] + 1
-        if len(specific_corps) < MAX_SPECIFIC_CORPS:
-            specific_corps.append(corp_num)
-
-print("Total of", missing_corps['orgbook'], "corps missing in orgbook")
-
-system_type = 'BC_REG'
-if 0 < len(specific_corps):
-    print("Adding", len(specific_corps), "corps to outstanding queue ...")
+def add_missing_corps_to_queue(specific_corps):
+    system_type = 'BC_REG'
     with BCRegistries() as bc_registries:
         with EventProcessor() as event_processor:
             print("Get last processed event")
@@ -205,4 +204,37 @@ if 0 < len(specific_corps):
             
             print("Update our queue")
             event_processor.update_corp_event_queue(system_type, corps, max_event_id, max_event_date)
+
+
+MAX_SPECIFIC_CORPS = 500
+specific_corps_1 = []
+missing_corps = {'bc_reg': 0, 'event_proc_inbound': 0, 'event_proc_outbound': 0, 'orgbook': 0}
+specific_corps_2 = []
+incorrect_corps = {'bc_reg': 0, 'event_proc_inbound': 0, 'event_proc_outbound': 0, 'orgbook': 0}
+for corp_num, corp_set in corps_dict.items():
+    if not 'orgbook' in corp_set:
+        # company is missing in orgbook
+        missing_corps['orgbook'] = missing_corps['orgbook'] + 1
+        if len(specific_corps_1) < MAX_SPECIFIC_CORPS:
+            specific_corps_1.append(corp_num)
+    elif 'bc_reg' in corp_set:
+        if corp_set['orgbook'] != corp_set['bc_reg']:
+            # company is in orgbook but company type and/or status is wrong
+            incorrect_corps['orgbook'] = incorrect_corps['orgbook'] + 1
+            if len(specific_corps_2) < MAX_SPECIFIC_CORPS:
+                specific_corps_2.append(corp_num)
+    else:
+        print(corp_num, 'in orgbook but not bc_reg, weird ...')
+
+print("Total of", missing_corps['orgbook'], "corps MISSING in orgbook")
+print("Total of", incorrect_corps['orgbook'], "corps INCORRECT in orgbook")
+
+if args.fixme:
+    if 0 < len(specific_corps_1):
+        print("Adding MISSING", len(specific_corps_1), "corps to outstanding queue ...")
+        add_missing_corps_to_queue(specific_corps_1)
+
+    if 0 < len(specific_corps_2):
+        print("Adding INCORRECT", len(specific_corps_1), "corps to outstanding queue ...")
+        add_missing_corps_to_queue(specific_corps_2)
 
