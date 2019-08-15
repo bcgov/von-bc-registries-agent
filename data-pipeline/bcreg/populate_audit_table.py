@@ -4,10 +4,62 @@ import datetime
 import json
 import decimal
 from bcreg.config import config
-from bcreg.eventprocessor import EventProcessor
+from bcreg.eventprocessor import EventProcessor, CORP_TYPES_IN_SCOPE
+from bcreg.bcregistries import BCRegistries
+from bcreg.rocketchat_hooks import log_error, log_warning, log_info
+
+
+"""
+This script will populate an audit table (CORP_AUDIT_LOG) in the event processor database to identify
+corporations inputted from BC Registries (CORP_HISTORY_LOG) but with no Registration credential
+posted to OrgBook (CREDENTIAL_LOG table).
+
+    ./run-step.sh bcreg/populate_audit_table.py
+
+Once this job completes, run the following sql to see how many companies are 'missed':
+
+    select count(*) from CORP_AUDIT_LOG where LAST_CREDENTIAL_ID is null;
+
+To force re-process of these companies, run the following sql's:
+
+    update corp_history_log
+    set process_success = null, process_date = null, process_msg = null
+    where process_success is not null
+    and corp_num in
+    (select corp_num from CORP_AUDIT_LOG where LAST_CREDENTIAL_ID is null);
+
+    commit;
+
+Then run the following script to re-generate the credentials (note this runs on cached data and does not
+re-query the BC Reg database):
+
+    ./run-step.sh bcreg/generate-creds.py
+
+Once this completes, re-run this script:
+
+    ./run-step.sh bcreg/populate_audit_table.py
+
+Re-run the 'select count(*) ...' query again and the numbers should now balance.
+"""
 
 QUERY_LIMIT = '200000'
 REPORT_COUNT = 10000
+ERROR_THRESHOLD_COUNT = 5
+
+bc_reg_count = 0
+with BCRegistries() as bc_registries:
+    # run this query against BC Reg database:
+    sql1 = """
+    select corp.corp_num, corp.corp_typ_cd
+    from bc_registries.corporation corp;
+    """
+
+    print("Get corp stats from BC Registries DB", datetime.datetime.now())
+    bc_reg_recs = bc_registries.get_bcreg_sql("corp_stats", sql1, cache=False)
+    for bc_reg_rec in bc_reg_recs:
+        if bc_reg_rec['corp_typ_cd'] in CORP_TYPES_IN_SCOPE:
+            bc_reg_count = bc_reg_count + 1
+
 
 with EventProcessor() as event_processor:
     # run this query against Event Processor database:
@@ -158,4 +210,31 @@ with EventProcessor() as event_processor:
                             cur.close()
 
 print("Got all corp audits", datetime.datetime.now())
+
+# now check counts
+evp_corp_history_count = 0
+evp_credential_count = 0
+with EventProcessor() as event_processor:
+    sql1 = """
+    SELECT count(*) FROM CORP_AUDIT_LOG;
+    """
+    sql2 = """
+    SELECT count(*) FROM CORP_AUDIT_LOG WHERE last_credential_id is not null;
+    """
+    evp_corp_history_count = event_processor.get_sql_record_count(sql1)
+    evp_credential_count = event_processor.get_sql_record_count(sql2)
+
+if evp_corp_history_count != bc_reg_count:
+    print("Error missing corps in Event Processor", bc_reg_count, evp_corp_history_count)
+    if ERROR_THRESHOLD_COUNT < abs(evp_corp_history_count - bc_reg_count):
+        log_error("Error missing corps in Event Processor: reg={} evp={}".format(bc_reg_count, evp_corp_history_count))
+    else:
+        log_warning("Warning missing corps in Event Processor: reg={} evp={}".format(bc_reg_count, evp_corp_history_count))
+
+if evp_credential_count != evp_corp_history_count:
+    print("Error missing credentials in Event Processor", evp_corp_history_count, evp_credential_count)
+    if ERROR_THRESHOLD_COUNT < abs(evp_credential_count - evp_corp_history_count):
+        log_error("Error missing credentials in Event Processor: evp corps={} evp creds={}".format(evp_corp_history_count, evp_credential_count))
+    else:
+        log_warning("Warning missing credentials in Event Processor: evp corps={} evp creds={}".format(evp_corp_history_count, evp_credential_count))
 

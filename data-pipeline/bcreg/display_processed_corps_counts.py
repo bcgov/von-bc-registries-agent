@@ -4,15 +4,51 @@ import datetime
 import json
 import decimal
 from bcreg.config import config
-from bcreg.eventprocessor import EventProcessor
+from bcreg.eventprocessor import EventProcessor, CORP_TYPES_IN_SCOPE
 from bcreg.bcregistries import BCRegistries
 
+import argparse
+
+
+"""
+This script identifies missing corps based on the BC Registries, Event Processor and OrgBook databases.
+
+Note:  This report runs based on the audit table, populated by the `populate_audit_table.py` script
+
+Note:  For any companies that are identified as "missing" by this report, re-run with "--fixme" to get these
+       companies auto-re-queued for processing
+
+1. Stop any scheduled jobs (cron)
+2. Run this script with "--fixme"
+3. Run the "initial reload" and "post credentials" jobs
+4. Re-run the audit report
+5. Restart the cron jobs
+
+After step 4 above, try re-running this script to verify the counts are correct.
+"""
+
+parser = argparse.ArgumentParser(description='Audit BC Reg vs OrgBook.')
+parser.add_argument("--fixme", action='store_true', help="Add missing corps to processing queue", required=False)
+args = parser.parse_args()
+if args.fixme:
+    print("FIX incorrect corps")
+else:
+    print("DON'T fix incorrect corps")
 
 stats_dict = {}
 def add_stats_to_dict(key, type):
     if not key in stats_dict:
         stats_dict[key] = {'bc_reg': 0, 'event_proc_inbound': 0, 'event_proc_outbound': 0, 'orgbook': 0}
     stats_dict[key][type] = stats_dict[key][type] + 1
+
+
+corps_dict = {}
+def add_corp_to_dict(corp_num, key, type):
+    if corp_num.startswith('BC'):
+        corp_num = corp_num[2:]
+    if not corp_num in corps_dict:
+        corps_dict[corp_num] = {}
+    corps_dict[corp_num][type] = key
 
 
 with BCRegistries() as bc_registries:
@@ -23,56 +59,59 @@ with BCRegistries() as bc_registries:
            op_state.op_state_typ_cd
     from bc_registries.corporation corp, 
           bc_registries.corp_state state,
-       bc_registries.corp_op_state op_state,
-           bc_registries.corp_type ctype
+       bc_registries.corp_op_state op_state
     where state.corp_num = corp.corp_num
       and state.end_event_id is null
-      and op_state.state_typ_cd = state.state_typ_cd
-      and corp.corp_typ_cd = ctype.corp_typ_cd;
+      and op_state.state_typ_cd = state.state_typ_cd;
     """
 
     print("Get corp stats from BC Registries DB", datetime.datetime.now())
     bc_reg_recs = bc_registries.get_bcreg_sql("corp_stats", sql1, cache=False)
     for bc_reg_rec in bc_reg_recs:
-        key = bc_reg_rec['corp_typ_cd'] + ',' + bc_reg_rec['op_state_typ_cd']
-        add_stats_to_dict(key, 'bc_reg')
+        if bc_reg_rec['corp_typ_cd'] in CORP_TYPES_IN_SCOPE:
+            key = bc_reg_rec['corp_typ_cd'] + ',' + bc_reg_rec['op_state_typ_cd']
+            add_stats_to_dict(key, 'bc_reg')
+            add_corp_to_dict(bc_reg_rec['corp_num'], key, 'bc_reg')
     #print(bc_reg_stats)
 
 
 with EventProcessor() as event_processor:
     # run this query against Event Processor database:
     sql2 = """
-    SELECT record_id, corp_num, corp_state, corp_json->>'corp_typ_cd' as corp_typ_cd, entry_date, process_date 
-    FROM corp_history_log
-    WHERE process_date is not null and (process_msg != 'Withdrawn' or process_msg is null)
-    ORDER BY record_id desc;
+    SELECT last_corp_history_id, last_event_date, corp_num, corp_type, corp_state, entry_date, last_credential_id, cred_effective_date
+    FROM corp_audit_log
+    ORDER BY record_id;
     """
 
     print("Get corp stats from Event Processor DB", datetime.datetime.now())
     processed_inbound_corps = {}
     event_proc_inbound_recs = event_processor.get_event_proc_sql("inbound_recs", sql2)
     for inbound_rec in event_proc_inbound_recs:
-        if not inbound_rec['corp_num'] in processed_inbound_corps.keys():
-            key = inbound_rec['corp_typ_cd'] + ',' + inbound_rec['corp_state']
-            add_stats_to_dict(key, 'event_proc_inbound')
-            processed_inbound_corps[inbound_rec['corp_num']] = 'Done'
+        if inbound_rec['corp_type'] in CORP_TYPES_IN_SCOPE:
+            if not inbound_rec['corp_num'] in processed_inbound_corps.keys():
+                key = inbound_rec['corp_type'] + ',' + inbound_rec['corp_state']
+                add_stats_to_dict(key, 'event_proc_inbound')
+                add_corp_to_dict(inbound_rec['corp_num'], key, 'event_proc_inbound')
+                processed_inbound_corps[inbound_rec['corp_num']] = 'Done'
 
     # run this query against Event Processor database:
     sql3 = """
-    SELECT record_id, corp_num, credential_json->>'entity_status' as corp_state, credential_json->>'entity_type' as corp_typ_cd, entry_date, process_date 
-    FROM credential_log 
-    WHERE process_date is not null and credential_type_cd = 'REG'
-    ORDER BY record_id desc;
+    SELECT last_corp_history_id, last_event_date, corp_num, corp_type, corp_state, entry_date, last_credential_id, cred_effective_date
+    FROM corp_audit_log
+    WHERE last_credential_id is not null
+    ORDER BY record_id;
     """
 
     print("Get corp stats from Event Processor DB", datetime.datetime.now())
     processed_outbound_corps = {}
     event_proc_outbound_recs = event_processor.get_event_proc_sql("outbound_recs", sql3)
     for outbound_rec in event_proc_outbound_recs:
-        if not outbound_rec['corp_num'] in processed_outbound_corps.keys():
-            key = outbound_rec['corp_typ_cd'] + ',' + outbound_rec['corp_state']
-            add_stats_to_dict(key, 'event_proc_outbound')
-            processed_outbound_corps[outbound_rec['corp_num']] = 'Done'
+        if outbound_rec['corp_type'] in CORP_TYPES_IN_SCOPE:
+            if not outbound_rec['corp_num'] in processed_outbound_corps.keys():
+                key = outbound_rec['corp_type'] + ',' + outbound_rec['corp_state']
+                add_stats_to_dict(key, 'event_proc_outbound')
+                add_corp_to_dict(outbound_rec['corp_num'], key, 'event_proc_outbound')
+                processed_outbound_corps[outbound_rec['corp_num']] = 'Done'
     #print(event_proc_outbound_stats)
 
 
@@ -93,18 +132,20 @@ if conn:
     try:
         # run this query against OrgBook Search database
         sql4 = """
-        select 
-          credential_id, 
-          MAX(CASE WHEN claim_name='entity_type' THEN claim_value END) corp_typ_cd,
-          MAX(CASE WHEN claim_name='entity_status' THEN claim_value END) corp_state
-        from (
-        select claim.credential_id as credential_id, claim.name as claim_name, claim.value as claim_value
-        from credential_set, credential, claim
-        where credential_set.credential_type_id in (select id from credential_type where description = 'Registration')
-            and credential.id = credential_set.latest_credential_id
-            and claim.credential_id = credential.id
-            and claim.name in ('registration_id', 'entity_type', 'entity_status')) as foo
-        group by credential_id;
+                select 
+                  source_id,
+                  credential_id, 
+                  MAX(CASE WHEN claim_name='entity_type' THEN claim_value END) corp_typ_cd,
+                  MAX(CASE WHEN claim_name='entity_status' THEN claim_value END) corp_state
+                from (
+                select topic.source_id as source_id, claim.credential_id as credential_id, claim.name as claim_name, claim.value as claim_value
+                from credential_set, credential, claim, topic
+                where credential_set.credential_type_id in (select id from credential_type where description like 'Registration%' or description like 'registration%')
+                    and credential.id = credential_set.latest_credential_id
+                    and topic.id = credential_set.topic_id
+                    and claim.credential_id = credential.id
+                    and claim.name in ('registration_id', 'entity_type', 'entity_status')) as foo
+                group by source_id, credential_id;
         """
 
         print("Get corp stats from OrgBook DB", datetime.datetime.now())
@@ -117,8 +158,10 @@ if conn:
         cursor.close()
         cursor = None
         for orgbook_stat in orgbook_stats:
-            key = orgbook_stat['corp_typ_cd'] + ',' + orgbook_stat['corp_state']
-            add_stats_to_dict(key, 'orgbook')
+            if orgbook_stat['corp_typ_cd'] in CORP_TYPES_IN_SCOPE:
+                key = orgbook_stat['corp_typ_cd'] + ',' + orgbook_stat['corp_state']
+                add_stats_to_dict(key, 'orgbook')
+                add_corp_to_dict(orgbook_stat['source_id'], key, 'orgbook')
     except (Exception, psycopg2.DatabaseError) as error:
         print(error)
         log_error("Event Processor exception reading DB: " + str(error))
@@ -156,4 +199,61 @@ for key, value in stats_dict.items():
     if 0 != (value['event_proc_inbound'] - value['event_proc_outbound']):
         print(key + ',' + str(value['event_proc_inbound']) + ',' + str(value['event_proc_outbound']) + ',' + str(value['event_proc_inbound'] - value['event_proc_outbound']))
 print("===========================")
+
+
+def add_missing_corps_to_queue(specific_corps):
+    system_type = 'BC_REG'
+    with BCRegistries() as bc_registries:
+        with EventProcessor() as event_processor:
+            print("Get last processed event")
+            prev_event_id = 0
+
+            print("Get last max event")
+            max_event_date = event_processor.get_last_processed_event_date(system_type)
+            max_event_id = event_processor.get_last_processed_event(max_event_date, system_type)
+            
+            # get specific test corps (there are about 6)
+            print("Get specific corps")
+            corps = bc_registries.get_specific_corps(specific_corps)
+            
+            print("Find unprocessed events for each corp")
+            last_event_dt = bc_registries.get_event_effective_date(prev_event_id)
+            max_event_dt = bc_registries.get_event_effective_date(max_event_id)
+            corps = bc_registries.get_unprocessed_corp_events(prev_event_id, last_event_dt, max_event_id, max_event_dt, corps)
+            
+            print("Update our queue")
+            event_processor.update_corp_event_queue(system_type, corps, max_event_id, max_event_date)
+
+
+MAX_SPECIFIC_CORPS = 500
+specific_corps_1 = []
+missing_corps = {'bc_reg': 0, 'event_proc_inbound': 0, 'event_proc_outbound': 0, 'orgbook': 0}
+specific_corps_2 = []
+incorrect_corps = {'bc_reg': 0, 'event_proc_inbound': 0, 'event_proc_outbound': 0, 'orgbook': 0}
+for corp_num, corp_set in corps_dict.items():
+    if not 'orgbook' in corp_set:
+        # company is missing in orgbook
+        missing_corps['orgbook'] = missing_corps['orgbook'] + 1
+        if len(specific_corps_1) < MAX_SPECIFIC_CORPS:
+            specific_corps_1.append(corp_num)
+    elif 'bc_reg' in corp_set:
+        if corp_set['orgbook'] != corp_set['bc_reg']:
+            # company is in orgbook but company type and/or status is wrong
+            incorrect_corps['orgbook'] = incorrect_corps['orgbook'] + 1
+            if len(specific_corps_2) < MAX_SPECIFIC_CORPS:
+                specific_corps_2.append(corp_num)
+    else:
+        print(corp_num, 'in orgbook but not bc_reg, weird ...')
+
+print("Total of", missing_corps['orgbook'], "corps MISSING in orgbook")
+print("Total of", incorrect_corps['orgbook'], "corps INCORRECT in orgbook")
+
+if args.fixme:
+    if 0 < len(specific_corps_1):
+        print("Adding MISSING", len(specific_corps_1), "corps to outstanding queue ...")
+        add_missing_corps_to_queue(specific_corps_1)
+
+    if 0 < len(specific_corps_2):
+        print("Adding INCORRECT", len(specific_corps_1), "corps to outstanding queue ...")
+        add_missing_corps_to_queue(specific_corps_2)
 
