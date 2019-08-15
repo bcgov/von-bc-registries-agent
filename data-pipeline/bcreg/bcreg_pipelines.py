@@ -55,6 +55,11 @@ def bc_reg_pipeline():
                           commands=[ExecutePython('./bcreg/submit-creds.py')]))
     pipeline1.add(sub_pipeline1_3, ['load_and_process_bc_reg_data'])
 
+    sub_pipeline1_4 = Pipeline(id='populate_evp_audit_table', description='Populate Event Processor Audit Table')
+    sub_pipeline1_4.add(Task(id='populate_audit_table', description='Populate Audit Table',
+                          commands=[ExecutePython('./bcreg/populate_audit_table.py')]))
+    pipeline1.add(sub_pipeline1_4, ['submit_bc_reg_credentials'])
+
     return pipeline1
 
 def bc_reg_pipeline_single_thread():
@@ -105,6 +110,11 @@ def bc_reg_pipeline_post_credentials():
     sub_pipeline1_3.add(Task(id='submit_credentials_a', description='Submit credentials',
                           commands=[ExecutePython('./bcreg/submit-creds.py')]))
     pipeline1.add(sub_pipeline1_3)
+
+    sub_pipeline1_4 = Pipeline(id='populate_evp_audit_table_a', description='Populate Event Processor Audit Table')
+    sub_pipeline1_4.add(Task(id='populate_audit_table_a', description='Populate Audit Table',
+                          commands=[ExecutePython('./bcreg/populate_audit_table.py')]))
+    pipeline1.add(sub_pipeline1_4, ['submit_bc_reg_credentials_a'])
 
     return pipeline1
 
