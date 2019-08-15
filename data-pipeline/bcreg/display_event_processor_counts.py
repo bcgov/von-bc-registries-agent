@@ -4,10 +4,15 @@ import datetime
 import json
 import decimal
 from bcreg.config import config
-from bcreg.eventprocessor import EventProcessor
+from bcreg.eventprocessor import EventProcessor, CORP_TYPES_IN_SCOPE
 from bcreg.bcregistries import BCRegistries
 
 """
+This script identifies missing corps based on the Event Processor database, comparing input corporations
+and output (staged) credentials.
+
+Note:  This report runs based on the audit table, populated by the `populate_audit_table.py` script
+
 Note:  For any companies that are identified as "missing" by this report, run the following query to 
        reset the status in the Event Processor database to force reprocess of these companies:
 
@@ -54,17 +59,18 @@ with EventProcessor() as event_processor:
     processed_inbound_corps = {}
     event_proc_inbound_recs = event_processor.get_event_proc_sql("inbound_recs", sql2)
     for inbound_rec in event_proc_inbound_recs:
-        if not inbound_rec['corp_num'] in processed_inbound_corps.keys():
-            key = inbound_rec['corp_type'] + ',' + inbound_rec['corp_state']
-            add_stats_to_dict(key, 'event_proc_inbound')
-            add_corp_to_dict(inbound_rec['corp_num'], key, 'event_proc_inbound')
-            processed_inbound_corps[inbound_rec['corp_num']] = 'Done'
+        if inbound_rec['corp_type'] in CORP_TYPES_IN_SCOPE:
+            if not inbound_rec['corp_num'] in processed_inbound_corps.keys():
+                key = inbound_rec['corp_type'] + ',' + inbound_rec['corp_state']
+                add_stats_to_dict(key, 'event_proc_inbound')
+                add_corp_to_dict(inbound_rec['corp_num'], key, 'event_proc_inbound')
+                processed_inbound_corps[inbound_rec['corp_num']] = 'Done'
 
     # run this query against Event Processor database:
     sql3 = """
     SELECT last_corp_history_id, last_event_date, corp_num, corp_type, corp_state, entry_date, last_credential_id, cred_effective_date
     FROM corp_audit_log
-    WHERE last_credential_id is null
+    WHERE last_credential_id is not null
     ORDER BY record_id;
     """
 
@@ -72,11 +78,12 @@ with EventProcessor() as event_processor:
     processed_outbound_corps = {}
     event_proc_outbound_recs = event_processor.get_event_proc_sql("outbound_recs", sql3)
     for outbound_rec in event_proc_outbound_recs:
-        if not outbound_rec['corp_num'] in processed_outbound_corps.keys():
-            key = outbound_rec['corp_type'] + ',' + outbound_rec['corp_state']
-            add_stats_to_dict(key, 'event_proc_outbound')
-            add_corp_to_dict(outbound_rec['corp_num'], key, 'event_proc_outbound')
-            processed_outbound_corps[outbound_rec['corp_num']] = 'Done'
+        if outbound_rec['corp_type'] in CORP_TYPES_IN_SCOPE:
+            if not outbound_rec['corp_num'] in processed_outbound_corps.keys():
+                key = outbound_rec['corp_type'] + ',' + outbound_rec['corp_state']
+                add_stats_to_dict(key, 'event_proc_outbound')
+                add_corp_to_dict(outbound_rec['corp_num'], key, 'event_proc_outbound')
+                processed_outbound_corps[outbound_rec['corp_num']] = 'Done'
     #print(event_proc_outbound_stats)
 
 
