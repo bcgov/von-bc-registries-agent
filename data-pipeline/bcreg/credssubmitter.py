@@ -79,7 +79,7 @@ async def submit_cred(http_client, attrs, schema, version):
         return result_json
     except Exception as exc:
         print(exc)
-        raise
+        raise 
 
 # add reason code to the submitted credential
 def inject_reason(attributes, reason):
@@ -114,11 +114,37 @@ async def post_credentials(http_client, conn, credentials):
         # old code for submitting one credential at a time
         # result_json = await submit_cred(http_client, credential['CREDENTIAL_JSON'], credential['SCHEMA_NAME'], credential['SCHEMA_VERSION'])
         results = None
-        result_json = await submit_cred_batch(http_client, post_creds)
-        results = result_json 
+        results = await submit_cred_batch(http_client, post_creds)
 
         #print("Posted = ", len(credentials), ", results = ", len(results))
+    except (Exception) as error:
+        # everything failed :-(
+        print("log exception to database", str(error))
+        res = str(error)
+        if 0 == len(res):
+            res = "Unspecified error posting to OrgBook"
+        elif 255 < len(res):
+            res = res[:250] + '...'
+        if cur2 is not None:
+            cur2.close()
+            cur2 = None
+        cur2 = conn.cursor()
+        for i in range(len(credentials)):
+            credential = credentials[i]
+            cur2.execute(sql3, (datetime.datetime.now(), res, credential['RECORD_ID'],))
+            failed = failed + 1
+        conn.commit()
+        cur2.close()
+        cur2 = None
 
+        notify_error('An exception was encountered while posting credentials:\n{}'.format(res))
+        return '{' + str(success) + ',' + str(failed) + '}'
+    finally:
+        if cur2 is not None:
+            cur2.close()
+
+    cur2 = None
+    try:
         for i in range(len(credentials)):
             credential = credentials[i]
             result = results[i]
@@ -149,23 +175,24 @@ async def post_credentials(http_client, conn, credentials):
 
     except (Exception) as error:
         # everything failed :-(
-        print("log exception to database", error)
+        print("log exception to database", str(error))
         res = str(error)
-        if 255 < len(res):
+        if 0 == len(res):
+            res = "Unspecified error storing credential status"
+        elif 255 < len(res):
             res = res[:250] + '...'
-        if results:
-            if cur2 is not None:
-                cur2.close()
-                cur2 = None
-            cur2 = conn.cursor()
-            for i in range(len(credentials)):
-                credential = credentials[i]
-                result = results[i]
-                cur2.execute(sql3, (datetime.datetime.now(), res, credential['RECORD_ID'],))
-                failed = failed + 1
-            conn.commit()
+        if cur2 is not None:
             cur2.close()
             cur2 = None
+        cur2 = conn.cursor()
+        for i in range(len(credentials)):
+            credential = credentials[i]
+            cur2.execute(sql3, (datetime.datetime.now(), res, credential['RECORD_ID'],))
+            failed = failed + 1
+        conn.commit()
+        cur2.close()
+        cur2 = None
+
         notify_error('An exception was encountered while posting credentials:\n{}'.format(res))
     finally:
         if cur2 is not None:

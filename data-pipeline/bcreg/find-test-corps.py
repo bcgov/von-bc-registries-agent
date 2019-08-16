@@ -208,6 +208,8 @@ specific_corps = [
                     'FM0783805',
                     'FM0784112',
                     '1136244',
+                    ]
+"""
                     'FM0783403',  # latest batch of test data
                     'FM0782737',
                     '1214962',
@@ -256,7 +258,7 @@ specific_corps = [
                     '1217554',
                     '1217112',
                     ]
-
+"""
 """
 specific_corps = [ 
 '0046062',
