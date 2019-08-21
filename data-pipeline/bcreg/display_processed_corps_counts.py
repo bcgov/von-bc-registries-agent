@@ -100,6 +100,7 @@ with EventProcessor() as event_processor:
     SELECT last_corp_history_id, last_event_date, corp_num, corp_type, corp_state, entry_date, last_credential_id, cred_effective_date
     FROM corp_audit_log
     WHERE last_credential_id is not null
+      AND corp_num not in (select corp_num from event_by_corp_filing where process_success is null)
     ORDER BY record_id;
     """
 
@@ -113,6 +114,17 @@ with EventProcessor() as event_processor:
                 add_stats_to_dict(key, 'event_proc_outbound')
                 add_corp_to_dict(outbound_rec['corp_num'], key, 'event_proc_outbound')
                 processed_outbound_corps[outbound_rec['corp_num']] = 'Done'
+    #print(event_proc_outbound_stats)
+
+    sql3a = """
+    SELECT corp_num from event_by_corp_filing where process_success is null;
+    """
+
+    print("Get corps still outstanding from Event Processor DB", datetime.datetime.now())
+    un_processed_outbound_corps = {}
+    event_un_proc_outbound_recs = event_processor.get_event_proc_sql("outbound_un_recs", sql3a)
+    for outbound_rec in event_un_proc_outbound_recs:
+        un_processed_outbound_corps[outbound_rec['corp_num']] = outbound_rec['corp_num']
     #print(event_proc_outbound_stats)
 
 
@@ -232,7 +244,10 @@ missing_corps = {'bc_reg': 0, 'event_proc_inbound': 0, 'event_proc_outbound': 0,
 specific_corps_2 = []
 incorrect_corps = {'bc_reg': 0, 'event_proc_inbound': 0, 'event_proc_outbound': 0, 'orgbook': 0}
 for corp_num, corp_set in corps_dict.items():
-    if not 'orgbook' in corp_set:
+    if corp_num in un_processed_outbound_corps:
+        # skip records that are still outstanding
+        pass
+    elif not 'orgbook' in corp_set:
         # company is missing in orgbook
         missing_corps['orgbook'] = missing_corps['orgbook'] + 1
         if len(specific_corps_1) < MAX_SPECIFIC_CORPS:
@@ -248,6 +263,7 @@ for corp_num, corp_set in corps_dict.items():
 
 print("Total of", missing_corps['orgbook'], "corps MISSING in orgbook")
 print("Total of", incorrect_corps['orgbook'], "corps INCORRECT in orgbook")
+print(specific_corps_2)
 
 if args.fixme:
     if 0 < len(specific_corps_1):
@@ -255,6 +271,7 @@ if args.fixme:
         add_missing_corps_to_queue(specific_corps_1)
 
     if 0 < len(specific_corps_2):
-        print("Adding INCORRECT", len(specific_corps_1), "corps to outstanding queue ...")
+        print("Adding INCORRECT", len(specific_corps_2), "corps to outstanding queue ...")
+        print(specific_corps_2)
         add_missing_corps_to_queue(specific_corps_2)
 

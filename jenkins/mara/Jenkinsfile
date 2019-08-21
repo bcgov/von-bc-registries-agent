@@ -1,5 +1,5 @@
 // Wait timeout in minutes
-def WAIT_TIMEOUT = 10
+def WAIT_TIMEOUT = 20
 
 // Edit your app's name below 
 def APP_NAME = 'mara'
