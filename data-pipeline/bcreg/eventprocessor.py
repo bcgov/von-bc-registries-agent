@@ -900,13 +900,13 @@ class EventProcessor:
 
     def filter_min_date(self, cred_date):
         if not cred_date:
-            return cred_date
+            return ""
         if isinstance(cred_date, str):
             if cred_date < MIN_START_DATE_TZ.astimezone(pytz.utc).isoformat():
                 return ""
         elif isinstance(cred_date, datetime.date):
             if cred_date < MIN_VALID_DATE:
-                return None
+                return ""
         return cred_date
 
     # check if the org name is a notice of alteration
