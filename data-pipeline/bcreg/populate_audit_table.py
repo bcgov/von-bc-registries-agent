@@ -81,62 +81,63 @@ with EventProcessor() as event_processor:
         print("... build audit log", datetime.datetime.now())
         continue_loop = 0 < len(event_proc_inbound_recs)
         for inbound_rec in event_proc_inbound_recs:
-            i = i + 1
-            if (i % REPORT_COUNT == 0):
-                print('>>> Processing {} {}.'.format(i, datetime.datetime.now()))
+            if inbound_rec['corp_typ_cd'] in CORP_TYPES_IN_SCOPE:
+                i = i + 1
+                if (i % REPORT_COUNT == 0):
+                    print('>>> Processing {} {}.'.format(i, datetime.datetime.now()))
 
-            if inbound_rec['process_msg'] and inbound_rec['process_msg'] == 'Withdrawn':
-                # skip
-                pass
-            else:
-                # see if we have a record for this corp yet
-                sql2a = """
-                SELECT RECORD_ID, LAST_CORP_HISTORY_ID, SYSTEM_TYPE_CD, LAST_EVENT_DATE, CORP_NUM, CORP_STATE, CORP_TYPE, ENTRY_DATE
-                FROM CORP_AUDIT_LOG WHERE CORP_NUM = %s;
-                """
-                corp_recs = event_processor.get_event_proc_sql("corp_recs", sql2a, (inbound_rec['corp_num'],))
-                if 0 == len(corp_recs):
-                    # if not, add it
-                    sql2b = """
-                    INSERT INTO CORP_AUDIT_LOG 
-                    (LAST_CORP_HISTORY_ID, SYSTEM_TYPE_CD, LAST_EVENT_DATE, CORP_NUM, CORP_STATE, CORP_TYPE, ENTRY_DATE)
-                    VALUES (%s, %s, %s, %s, %s, %s, %s) RETURNING RECORD_ID;
-                    """
-                    cur = None
-                    try:
-                        cur = event_processor.conn.cursor()
-                        cur.execute(sql2b, (inbound_rec['record_id'], inbound_rec['system_type_cd'], inbound_rec['last_event_date'], inbound_rec['corp_num'], inbound_rec['corp_state'], inbound_rec['corp_typ_cd'], datetime.datetime.now(),))
-                        _record_id = cur.fetchone()[0]
-                        event_processor.conn.commit()
-                        cur.close()
-                        cur = None
-                    except (Exception, psycopg2.DatabaseError) as error:
-                        print(error)
-                        raise
-                    finally:
-                        if cur is not None:
-                            cur.close()
+                if inbound_rec['process_msg'] and inbound_rec['process_msg'] == 'Withdrawn':
+                    # skip
+                    pass
                 else:
-                    # if yes, see if we need to update it
-                    sql2c = """
-                    UPDATE CORP_AUDIT_LOG
-                    SET LAST_CORP_HISTORY_ID = %s, LAST_EVENT_DATE = %s, CORP_STATE = %s, CORP_TYPE = %s, ENTRY_DATE = %s
-                    WHERE RECORD_ID = %s AND CORP_NUM = %s;
+                    # see if we have a record for this corp yet
+                    sql2a = """
+                    SELECT RECORD_ID, LAST_CORP_HISTORY_ID, SYSTEM_TYPE_CD, LAST_EVENT_DATE, CORP_NUM, CORP_STATE, CORP_TYPE, ENTRY_DATE
+                    FROM CORP_AUDIT_LOG WHERE CORP_NUM = %s;
                     """
-                    cur = None
-                    corp_rec = corp_recs[0]
-                    try:
-                        cur = event_processor.conn.cursor()
-                        cur.execute(sql2c, (inbound_rec['record_id'], inbound_rec['last_event_date'], inbound_rec['corp_state'], inbound_rec['corp_typ_cd'], datetime.datetime.now(), corp_rec['record_id'], corp_rec['corp_num'],))
-                        event_processor.conn.commit()
-                        cur.close()
+                    corp_recs = event_processor.get_event_proc_sql("corp_recs", sql2a, (inbound_rec['corp_num'],))
+                    if 0 == len(corp_recs):
+                        # if not, add it
+                        sql2b = """
+                        INSERT INTO CORP_AUDIT_LOG 
+                        (LAST_CORP_HISTORY_ID, SYSTEM_TYPE_CD, LAST_EVENT_DATE, CORP_NUM, CORP_STATE, CORP_TYPE, ENTRY_DATE)
+                        VALUES (%s, %s, %s, %s, %s, %s, %s) RETURNING RECORD_ID;
+                        """
                         cur = None
-                    except (Exception, psycopg2.DatabaseError) as error:
-                        print(error)
-                        raise
-                    finally:
-                        if cur is not None:
+                        try:
+                            cur = event_processor.conn.cursor()
+                            cur.execute(sql2b, (inbound_rec['record_id'], inbound_rec['system_type_cd'], inbound_rec['last_event_date'], inbound_rec['corp_num'], inbound_rec['corp_state'], inbound_rec['corp_typ_cd'], datetime.datetime.now(),))
+                            _record_id = cur.fetchone()[0]
+                            event_processor.conn.commit()
                             cur.close()
+                            cur = None
+                        except (Exception, psycopg2.DatabaseError) as error:
+                            print(error)
+                            raise
+                        finally:
+                            if cur is not None:
+                                cur.close()
+                    else:
+                        # if yes, see if we need to update it
+                        sql2c = """
+                        UPDATE CORP_AUDIT_LOG
+                        SET LAST_CORP_HISTORY_ID = %s, LAST_EVENT_DATE = %s, CORP_STATE = %s, CORP_TYPE = %s, ENTRY_DATE = %s
+                        WHERE RECORD_ID = %s AND CORP_NUM = %s;
+                        """
+                        cur = None
+                        corp_rec = corp_recs[0]
+                        try:
+                            cur = event_processor.conn.cursor()
+                            cur.execute(sql2c, (inbound_rec['record_id'], inbound_rec['last_event_date'], inbound_rec['corp_state'], inbound_rec['corp_typ_cd'], datetime.datetime.now(), corp_rec['record_id'], corp_rec['corp_num'],))
+                            event_processor.conn.commit()
+                            cur.close()
+                            cur = None
+                        except (Exception, psycopg2.DatabaseError) as error:
+                            print(error)
+                            raise
+                        finally:
+                            if cur is not None:
+                                cur.close()
 
 with EventProcessor() as event_processor:
     # run this query against Event Processor database:
@@ -172,42 +173,43 @@ with EventProcessor() as event_processor:
             print("... build audit log", datetime.datetime.now())
             continue_loop = 0 < len(event_proc_outbound_recs)
             for outbound_rec in event_proc_outbound_recs:
-                i = i + 1
-                if (i % REPORT_COUNT == 0):
-                    print('>>> Processing {} {}.'.format(i, datetime.datetime.now()))
-                # see if we have a record for this corp yet
-                sql3a = """
-                SELECT RECORD_ID, LAST_CORP_HISTORY_ID, SYSTEM_TYPE_CD, LAST_EVENT_DATE, CORP_NUM, CORP_STATE, CORP_TYPE, ENTRY_DATE,
-                        LAST_CREDENTIAL_ID, CRED_EFFECTIVE_DATE
-                FROM CORP_AUDIT_LOG WHERE CORP_NUM = %s;
-                """
-                corp_recs = event_processor.get_event_proc_sql("corp_recs", sql3a, (outbound_rec['corp_num'],))
-                if 0 == len(corp_recs):
-                    # if not, it's an error
-                    # ignore for now
-                    print("Error no inbound record found for", outbound_rec['corp_num'])
-                    pass
-                else:
-                    # if yes, see if we need to update it
-                    sql3b = """
-                    UPDATE CORP_AUDIT_LOG
-                    SET LAST_CREDENTIAL_ID = %s, CRED_EFFECTIVE_DATE = %s
-                    WHERE RECORD_ID = %s AND CORP_NUM = %s;
+                if outbound_rec['corp_typ_cd'] in CORP_TYPES_IN_SCOPE:
+                    i = i + 1
+                    if (i % REPORT_COUNT == 0):
+                        print('>>> Processing {} {}.'.format(i, datetime.datetime.now()))
+                    # see if we have a record for this corp yet
+                    sql3a = """
+                    SELECT RECORD_ID, LAST_CORP_HISTORY_ID, SYSTEM_TYPE_CD, LAST_EVENT_DATE, CORP_NUM, CORP_STATE, CORP_TYPE, ENTRY_DATE,
+                            LAST_CREDENTIAL_ID, CRED_EFFECTIVE_DATE
+                    FROM CORP_AUDIT_LOG WHERE CORP_NUM = %s;
                     """
-                    cur = None
-                    corp_rec = corp_recs[0]
-                    try:
-                        cur = event_processor.conn.cursor()
-                        cur.execute(sql3b, (outbound_rec['record_id'], outbound_rec['effective_date'], corp_rec['record_id'], corp_rec['corp_num']))
-                        event_processor.conn.commit()
-                        cur.close()
+                    corp_recs = event_processor.get_event_proc_sql("corp_recs", sql3a, (outbound_rec['corp_num'],))
+                    if 0 == len(corp_recs):
+                        # if not, it's an error
+                        # ignore for now
+                        print("Error no inbound record found for", outbound_rec['corp_num'])
+                        pass
+                    else:
+                        # if yes, see if we need to update it
+                        sql3b = """
+                        UPDATE CORP_AUDIT_LOG
+                        SET LAST_CREDENTIAL_ID = %s, CRED_EFFECTIVE_DATE = %s
+                        WHERE RECORD_ID = %s AND CORP_NUM = %s;
+                        """
                         cur = None
-                    except (Exception, psycopg2.DatabaseError) as error:
-                        print(error)
-                        raise
-                    finally:
-                        if cur is not None:
+                        corp_rec = corp_recs[0]
+                        try:
+                            cur = event_processor.conn.cursor()
+                            cur.execute(sql3b, (outbound_rec['record_id'], outbound_rec['effective_date'], corp_rec['record_id'], corp_rec['corp_num']))
+                            event_processor.conn.commit()
                             cur.close()
+                            cur = None
+                        except (Exception, psycopg2.DatabaseError) as error:
+                            print(error)
+                            raise
+                        finally:
+                            if cur is not None:
+                                cur.close()
 
 print("Got all corp audits", datetime.datetime.now())
 
