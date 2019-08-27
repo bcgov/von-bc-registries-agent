@@ -262,16 +262,18 @@ for corp_num, corp_set in corps_dict.items():
         print(corp_num, 'in orgbook but not bc_reg, weird ...')
 
 print("Total of", missing_corps['orgbook'], "corps MISSING in orgbook")
+print(specific_corps_1)
 print("Total of", incorrect_corps['orgbook'], "corps INCORRECT in orgbook")
 print(specific_corps_2)
 
 if args.fixme:
     if 0 < len(specific_corps_1):
         print("Adding MISSING", len(specific_corps_1), "corps to outstanding queue ...")
+        #print(specific_corps_1)
         add_missing_corps_to_queue(specific_corps_1)
 
     if 0 < len(specific_corps_2):
         print("Adding INCORRECT", len(specific_corps_2), "corps to outstanding queue ...")
-        print(specific_corps_2)
+        #print(specific_corps_2)
         add_missing_corps_to_queue(specific_corps_2)
 
