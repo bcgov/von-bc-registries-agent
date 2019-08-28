@@ -1,13 +1,22 @@
 import json
-import logging
+import os
 import threading
 import time
 
+import config
 import requests
 from flask import jsonify
 
-import config
+AGENT_ADMIN_API_KEY = os.environ.get("AGENT_ADMIN_API_KEY")
+ADMIN_REQUEST_HEADERS = {}
+if AGENT_ADMIN_API_KEY is not None:
+    ADMIN_REQUEST_HEADERS = {"x-api-key": AGENT_ADMIN_API_KEY}
 
+TOB_AGENT_ADMIN_URL = os.environ.get("TOB_AGENT_ADMIN_URL")
+TOB_ADMIN_API_KEY = os.environ.get("TOB_ADMIN_API_KEY")
+TOB_REQUEST_HEADERS = {}
+if TOB_ADMIN_API_KEY is not None:
+    TOB_REQUEST_HEADERS = {"x-api-key": TOB_ADMIN_API_KEY}
 
 # list of cred defs per schema name/version
 app_config = {}
@@ -80,7 +89,9 @@ class StartupProcessingThread(threading.Thread):
                 "attributes": schema_attrs,
             }
             response = requests.post(
-                agent_admin_url + "/schemas", json.dumps(schema_request)
+                agent_admin_url + "/schemas",
+                json.dumps(schema_request),
+                headers=ADMIN_REQUEST_HEADERS,
             )
             response.raise_for_status()
             schema_id = response.json()
@@ -94,6 +105,7 @@ class StartupProcessingThread(threading.Thread):
             response = requests.post(
                 agent_admin_url + "/credential-definitions",
                 json.dumps(cred_def_request),
+                headers=ADMIN_REQUEST_HEADERS,
             )
             response.raise_for_status()
             credential_definition_id = response.json()
@@ -106,7 +118,10 @@ class StartupProcessingThread(threading.Thread):
         tob_connection_params = config_services["verifiers"]["bctob"]
 
         # check if we have a TOB connection
-        response = requests.get(agent_admin_url + "/connections?alias=" + tob_connection_params['alias'])
+        response = requests.get(
+            agent_admin_url + "/connections?alias=" + tob_connection_params["alias"],
+            headers=ADMIN_REQUEST_HEADERS,
+        )
         response.raise_for_status()
         connections = response.json()["results"]
         tob_connection = None
@@ -115,8 +130,8 @@ class StartupProcessingThread(threading.Thread):
             if connection["alias"] == tob_connection_params["alias"]:
                 tob_connection = connection
 
-        if not tob_connection:
-            # if no tob connection then establish one
+        if not tob_connection and TOB_AGENT_ADMIN_URL:
+            # if no tob connection exists AND we have access to the tob agent admin API, then establish a new one
             tob_agent_admin_url = tob_connection_params["connection"]["agent_admin_url"]
             if not tob_agent_admin_url:
                 raise RuntimeError(
@@ -124,14 +139,18 @@ class StartupProcessingThread(threading.Thread):
                 )
 
             response = requests.post(
-                tob_agent_admin_url + "/connections/create-invitation"
+                tob_agent_admin_url + "/connections/create-invitation",
+                headers=TOB_REQUEST_HEADERS
             )
             response.raise_for_status()
             invitation = response.json()
 
             response = requests.post(
-                agent_admin_url + "/connections/receive-invitation?alias=" + tob_connection_params['alias'],
+                agent_admin_url
+                + "/connections/receive-invitation?alias="
+                + tob_connection_params["alias"],
                 json.dumps(invitation["invitation"]),
+                headers=ADMIN_REQUEST_HEADERS,
             )
             response.raise_for_status()
             tob_connection = response.json()
@@ -181,6 +200,7 @@ class StartupProcessingThread(threading.Thread):
             response = requests.post(
                 agent_admin_url + "/issuer_registration/send",
                 json.dumps(issuer_request),
+                headers=ADMIN_REQUEST_HEADERS
             )
             response.raise_for_status()
             response.json()
@@ -293,6 +313,7 @@ TOPIC_PROBLEM_REPORT = "problem-report"
 # max 15 second wait for a credential response (prevents blocking forever)
 MAX_CRED_RESPONSE_TIMEOUT = 15
 
+
 def handle_connections(state, message):
     # TODO auto-accept?
     print("handle_connections()", state)
@@ -348,19 +369,24 @@ def handle_problem_report(message):
 
 
 class SendCredentialThread(threading.Thread):
-    def __init__(self, credential_definition_id, cred_offer, url):
+    def __init__(self, credential_definition_id, cred_offer, url, headers):
         threading.Thread.__init__(self)
         self.credential_definition_id = credential_definition_id
         self.cred_offer = cred_offer
         self.url = url
+        self.headers = headers
 
     def run(self):
         cred_data = None
         try:
-            response = requests.post(self.url, json.dumps(self.cred_offer))
+            response = requests.post(
+                self.url, json.dumps(self.cred_offer), headers=self.headers
+            )
             response.raise_for_status()
             cred_data = response.json()
-            result_available = add_credential_request(cred_data["credential_exchange_id"])
+            result_available = add_credential_request(
+                cred_data["credential_exchange_id"]
+            )
             print(
                 "Sent offer",
                 cred_data["credential_exchange_id"],
@@ -374,7 +400,9 @@ class SendCredentialThread(threading.Thread):
             print(exc)
             # if cred_data is not set we don't have a credential to set status for
             if cred_data:
-                add_credential_exception_report(cred_data["credential_exchange_id"], exc)
+                add_credential_exception_report(
+                    cred_data["credential_exchange_id"], exc
+                )
             # don't re-raise; we want to log the exception as the credential error response
 
         self.cred_response = get_credential_response(
@@ -392,13 +420,13 @@ def handle_send_credential(cred_input):
             "version": "1.0.0",
             "attributes": {
                 "corp_num": "ABC12345",
-                "registration_date": "2018-01-01", 
+                "registration_date": "2018-01-01",
                 "entity_name": "Ima Permit",
-                "entity_name_effective": "2018-01-01", 
-                "entity_status": "ACT", 
+                "entity_name_effective": "2018-01-01",
+                "entity_status": "ACT",
                 "entity_status_effective": "2019-01-01",
-                "entity_type": "ABC", 
-                "registered_jurisdiction": "BC", 
+                "entity_type": "ABC",
+                "registered_jurisdiction": "BC",
                 "effective_date": "2019-01-01",
                 "expiry_date": ""
             }
@@ -410,9 +438,9 @@ def handle_send_credential(cred_input):
                 "permit_id": str(uuid.uuid4()),
                 "entity_name": "Ima Permit",
                 "corp_num": "ABC12345",
-                "permit_issued_date": "2018-01-01", 
-                "permit_type": "ABC", 
-                "permit_status": "OK", 
+                "permit_issued_date": "2018-01-01",
+                "permit_type": "ABC",
+                "permit_status": "OK",
                 "effective_date": "2019-01-01"
             }
         }
@@ -437,6 +465,7 @@ def handle_send_credential(cred_input):
             credential_definition_id,
             cred_offer,
             agent_admin_url + "/credential_exchange/send",
+            ADMIN_REQUEST_HEADERS,
         )
         thread.start()
         thread.join()
