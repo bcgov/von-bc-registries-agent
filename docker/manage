@@ -102,6 +102,16 @@ configureEnvironment () {
   export WEBHOOK_HOST=http://bcreg-controller:${WEBHOOK_PORT}
   export AGENT_NAME="bcreg-agent"
   export AGENT_ENDPOINT=${AGENT_ENDPOINT:-http://$DOCKERHOST:$AGENT_HTTP_IN_PORT}
+  export AGENT_ADMIN_API_KEY=${AGENT_ADMIN_API_KEY}
+  export AGENT_ADMIN_MODE="admin-insecure-mode"
+  if [ ! -z "${AGENT_ADMIN_API_KEY}" ]; then
+    AGENT_ADMIN_MODE="admin-api-key ${AGENT_ADMIN_API_KEY}"
+  fi
+
+  # bcreg-controller
+  export TOB_AGENT_ADMIN_URL=${TOB_AGENT_ADMIN_URL:-http://tob-agent:${TOB_AGENT_ADMIN_PORT}}
+  export TOB_CONNECTION_NAME=${TOB_CONNECTION_NAME:-tob-agent}
+  export TOB_ADMIN_API_KEY=${TOB_ADMIN_API_KEY}
 
   export VONX_API_URL=http://bcreg-controller:${WEBHOOK_PORT}
 
@@ -177,7 +187,7 @@ case "$COMMAND" in
   start|up)
     _startupParams=$(getStartupParams $@)
     configureEnvironment $@
-    docker-compose up -d ${_startupParams} 
+    docker-compose up -d ${_startupParams}
     docker-compose logs -f
     ;;
   logs)
@@ -186,7 +196,7 @@ case "$COMMAND" in
     ;;
   stop)
     configureEnvironment $@
-    docker-compose stop 
+    docker-compose stop
     ;;
   startdb)
     configureEnvironment $@
