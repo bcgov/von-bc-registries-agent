@@ -1,6 +1,5 @@
-version: '3'
+version: "3"
 services:
-
   caddy:
     build:
       context: ../bcreg-x
@@ -52,9 +51,11 @@ services:
       ISSUER_WALLET_DID: ${ISSUER_WALLET_DID}
       HTTP_FORCE_CLOSE_CONNECTIONS: "true"
       AGENT_ADMIN_URL: http://bcreg-agent:${AGENT_ADMIN_PORT}
-      TOB_AGENT_ADMIN_URL: http://tob-agent:${TOB_AGENT_ADMIN_PORT}
-      TOB_CONNECTION_NAME: tob-agent
+      AGENT_ADMIN_API_KEY: ${AGENT_ADMIN_API_KEY}
       WEBHOOK_PORT: ${WEBHOOK_PORT}
+      TOB_CONNECTION_NAME: ${TOB_CONNECTION_NAME}
+      TOB_AGENT_ADMIN_URL: ${TOB_AGENT_ADMIN_URL}
+      TOB_ADMIN_API_KEY: ${TOB_ADMIN_API_KEY}
     networks:
       - orgbook
       - bcreg
@@ -122,7 +123,7 @@ services:
         --wallet-storage-creds '{\"account\":\"${POSTGRESQL_USER}\",\"password\":\"${POSTGRESQL_PASSWORD}\",\"admin_account\":\"postgres\",\"admin_password\":\"${POSTGRESQL_ADMIN_PASSWORD}\"}' \
         --seed '${WALLET_SEED_VONX}' \
         --admin '0.0.0.0' ${AGENT_ADMIN_PORT} \
-        --admin-insecure-mode \
+        --${AGENT_ADMIN_MODE} \
         --label ${AGENT_NAME} \
         --protocol indy_catalyst_issuer_registration",
       ]
@@ -135,7 +136,7 @@ services:
       # web hooks
       - ENVIRONMENT=${ENVIRONMENT:-default}
       - WEBHOOK_URL=${WEBHOOK_URL}
-      - WEBHOOK_LEVEL=${WEBHOOK_LEVEL:-0}  # 0=Error, 1=Warning, 2=Info
+      - WEBHOOK_LEVEL=${WEBHOOK_LEVEL:-0} # 0=Error, 1=Warning, 2=Info
       - PROJECT_NAME=${PROJECT_NAME:-von-local-developer-agent}
       - FRIENDLY_PROJECT_NAME=${FRIENDLY_PROJECT_NAME:-Local Developer Data Pipeline}
       - VONX_API_URL=${VONX_API_URL:-http://bcreg-controller:8000}
@@ -215,5 +216,3 @@ networks:
   orgbook:
     external:
       name: tob_tob
-
-
