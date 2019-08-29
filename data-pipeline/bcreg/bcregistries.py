@@ -799,19 +799,6 @@ class BCRegistries:
     # use for initial data load
     def get_unprocessed_corps_data_load(self, last_event_id, last_event_dt, max_event_id, max_event_dt):
         sqls = []
-        # select all company types, not just corps and dba's
-        # keep the old sql's for historical curiosity
-        #sqls.append("""SELECT distinct(corp.corp_num) from """ + BC_REGISTRIES_TABLE_PREFIX + """corporation corp,
-        #                    """ + BC_REGISTRIES_TABLE_PREFIX + """corp_party party
-        #                 where corp.corp_typ_cd in ('SP','MF')
-        #                  and corp.corp_num = party.corp_num
-        #                  and party.party_typ_cd in ('FBO')
-        #                  and party.bus_company_num is not null
-        #                  and party.bus_company_num in 
-        #                  (SELECT corp_num from """ + BC_REGISTRIES_TABLE_PREFIX + """corporation corp, """ + BC_REGISTRIES_TABLE_PREFIX + """corp_type typ
-        #                  where corp.corp_typ_cd = typ.corp_typ_cd and typ.corp_class in ('BC','XPRO'))""")
-        #sqls.append("""SELECT distinct(corp.corp_num) from """ + BC_REGISTRIES_TABLE_PREFIX + """corporation corp, """ + BC_REGISTRIES_TABLE_PREFIX + """corp_type typ
-        #                  where corp.corp_typ_cd = typ.corp_typ_cd and typ.corp_class in ('BC','XPRO')""")
         
         # select *all* corps - we will filter in the next stage
         sqls.append("""SELECT distinct(corp.corp_num) from """ + BC_REGISTRIES_TABLE_PREFIX + """corporation corp """)
@@ -845,41 +832,25 @@ class BCRegistries:
     # return unprocessed corporations, based on an event range
     def get_unprocessed_corps(self, last_event_id, last_event_dt, max_event_id, max_event_dt):
         sqls = []
-        # select all company types, not just corps and dba's
-        # keep the old sql's for historical curiosity
-        #sqls.append("""SELECT distinct(corp_num) from """ + BC_REGISTRIES_TABLE_PREFIX + """event
-        #                where event_timestmp > %s and event_timestmp <= %s
-        #                and corp_num in
-        #                (SELECT corp.corp_num from """ + BC_REGISTRIES_TABLE_PREFIX + """corporation corp,
-        #                    """ + BC_REGISTRIES_TABLE_PREFIX + """corp_party party
-        #                 where corp.corp_typ_cd in ('SP','MF')
-        #                  and corp.corp_num = party.corp_num
-        #                  and party.party_typ_cd in ('FBO')
-        #                  and bus_company_num is not null
-        #                  and bus_company_num in 
-        #                  (SELECT corp_num from """ + BC_REGISTRIES_TABLE_PREFIX + """corporation corp, """ + BC_REGISTRIES_TABLE_PREFIX + """corp_type typ
-        #                  where corp.corp_typ_cd = typ.corp_typ_cd and typ.corp_class in ('BC','XPRO')))""")
-        #sqls.append("""SELECT distinct(corp_num) from """ + BC_REGISTRIES_TABLE_PREFIX + """event
-        #                where event_timestmp > %s and event_timestmp <= %s
-        #                and corp_num in
-        #                (SELECT corp.corp_num from """ + BC_REGISTRIES_TABLE_PREFIX + """corporation corp, """ + BC_REGISTRIES_TABLE_PREFIX + """corp_type typ
-        #                  where corp.corp_typ_cd = typ.corp_typ_cd and typ.corp_class in ('BC','XPRO'))""")
 
         # select *all* corps - we will filter in the next stage
-        sqls.append("""SELECT distinct(corp_num) from """ + BC_REGISTRIES_TABLE_PREFIX + """event
-                        where event_timestmp > %s and event_timestmp <= %s""")
+        sqls.append("""SELECT corp_num, event_id from """ + BC_REGISTRIES_TABLE_PREFIX + """event
+                        where event_timestmp >= %s""")
 
         corps = []
+        event_ids = []
+        corp_set = {}
         for sql in sqls:
             cur = None
             try:
-                print("Executing: " + sql)
                 cur = self.conn.cursor()
-                cur.execute(sql, (last_event_dt, max_event_dt,))
+                cur.execute(sql, (last_event_dt,))
                 row = cur.fetchone()
                 while row is not None:
-                    # print(row)
-                    corps.append({'CORP_NUM':row[0],})
+                    if not row[0] in corp_set:
+                        corp_set[row[0]] = row[0]
+                        corps.append({'CORP_NUM':row[0],})
+                    event_ids.append(row[1])
                     row = cur.fetchone()
                 cur.close()
                 cur = None
@@ -892,6 +863,33 @@ class BCRegistries:
             finally:
                 if cur is not None:
                     cur.close()
+
+        # since the event may affect more than one corp, check corp_state to see if there are any other corps to bring into scope
+        sql = """SELECT corp_num from """ + BC_REGISTRIES_TABLE_PREFIX + """corp_state
+                where start_event_id = %s or end_event_id = %s"""
+        for event_id in event_ids:
+            cur = None
+            try:
+                cur = self.conn.cursor()
+                cur.execute(sql, (event_id, event_id,))
+                row = cur.fetchone()
+                while row is not None:
+                    if not row[0] in corp_set:
+                        corp_set[row[0]] = row[0]
+                        corps.append({'CORP_NUM':row[0],})
+                    row = cur.fetchone()
+                cur.close()
+                cur = None
+            except (Exception, psycopg2.DatabaseError) as error:
+                print(error)
+                print(traceback.print_exc())
+                log_error("BCRegistries exception reading DB: " + str(error))
+                raise
+            finally:
+                if cur is not None:
+                    cur.close()
+        print("Loaded corps: " + str(len(corps)))
+
         return corps
 
     #return the (unprocessed) event range for each provided corporation
