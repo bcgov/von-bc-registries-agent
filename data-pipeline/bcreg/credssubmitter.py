@@ -29,7 +29,7 @@ import traceback
 from bcreg.config import config
 from bcreg.rocketchat_hooks import log_error, log_warning, log_info
 
-AGENT_URL = os.environ.get('VONX_API_URL', 'http://localhost:5000/bcreg')
+AGENT_URL = os.environ.get('VONX_API_URL', 'http://localhost:5002')
 NOTIFY_OF_CREDENTIAL_POSTING_ERRORS = os.environ.get('NOTIFY_OF_CREDENTIAL_POSTING_ERRORS', 'false')
 
 CREDS_BATCH_SIZE = 3000
@@ -47,6 +47,7 @@ def notify_error(message):
 
 async def submit_cred_batch(http_client, creds):
     try:
+        #print("Posting to:", '{}/issue-credential'.format(AGENT_URL))
         response = await http_client.post(
             '{}/issue-credential'.format(AGENT_URL),
             json=creds
@@ -78,7 +79,7 @@ async def submit_cred(http_client, attrs, schema, version):
         return result_json
     except Exception as exc:
         print(exc)
-        raise
+        raise 
 
 # add reason code to the submitted credential
 def inject_reason(attributes, reason):
@@ -99,8 +100,8 @@ async def post_credentials(http_client, conn, credentials):
     post_creds = []
     for credential in credentials:
       # need to inject reason into this process
-      if credential['CREDENTIAL_REASON'] is not None and 0 < len(credential['CREDENTIAL_REASON']):
-        credential['CREDENTIAL_JSON'] = inject_reason(credential['CREDENTIAL_JSON'], credential['CREDENTIAL_REASON'])
+      #if credential['CREDENTIAL_REASON'] is not None and 0 < len(credential['CREDENTIAL_REASON']):
+      credential['CREDENTIAL_JSON'] = inject_reason(credential['CREDENTIAL_JSON'], credential['CREDENTIAL_REASON'])
       post_creds.append({"schema":credential['SCHEMA_NAME'], "version":credential['SCHEMA_VERSION'], "attributes":credential['CREDENTIAL_JSON']})
 
     # post credential
@@ -112,11 +113,38 @@ async def post_credentials(http_client, conn, credentials):
         #print('=============')
         # old code for submitting one credential at a time
         # result_json = await submit_cred(http_client, credential['CREDENTIAL_JSON'], credential['SCHEMA_NAME'], credential['SCHEMA_VERSION'])
-        result_json = await submit_cred_batch(http_client, post_creds)
-        results = result_json 
+        results = None
+        results = await submit_cred_batch(http_client, post_creds)
 
         #print("Posted = ", len(credentials), ", results = ", len(results))
+    except (Exception) as error:
+        # everything failed :-(
+        print("log exception to database", str(error))
+        res = str(error)
+        if 0 == len(res):
+            res = "Unspecified error posting to OrgBook"
+        elif 255 < len(res):
+            res = res[:250] + '...'
+        if cur2 is not None:
+            cur2.close()
+            cur2 = None
+        cur2 = conn.cursor()
+        for i in range(len(credentials)):
+            credential = credentials[i]
+            cur2.execute(sql3, (datetime.datetime.now(), res, credential['RECORD_ID'],))
+            failed = failed + 1
+        conn.commit()
+        cur2.close()
+        cur2 = None
 
+        notify_error('An exception was encountered while posting credentials:\n{}'.format(res))
+        return '{' + str(success) + ',' + str(failed) + '}'
+    finally:
+        if cur2 is not None:
+            cur2.close()
+
+    cur2 = None
+    try:
         for i in range(len(credentials)):
             credential = credentials[i]
             result = results[i]
@@ -147,22 +175,24 @@ async def post_credentials(http_client, conn, credentials):
 
     except (Exception) as error:
         # everything failed :-(
-        print("log exception to database")
+        print("log exception to database", str(error))
+        res = str(error)
+        if 0 == len(res):
+            res = "Unspecified error storing credential status"
+        elif 255 < len(res):
+            res = res[:250] + '...'
         if cur2 is not None:
             cur2.close()
             cur2 = None
         cur2 = conn.cursor()
-        res = str(error)
-        if 255 < len(res):
-            res = res[:250] + '...'
         for i in range(len(credentials)):
             credential = credentials[i]
-            result = results[i]
             cur2.execute(sql3, (datetime.datetime.now(), res, credential['RECORD_ID'],))
             failed = failed + 1
         conn.commit()
         cur2.close()
         cur2 = None
+
         notify_error('An exception was encountered while posting credentials:\n{}'.format(res))
     finally:
         if cur2 is not None:

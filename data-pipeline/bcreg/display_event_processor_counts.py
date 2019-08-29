@@ -4,10 +4,15 @@ import datetime
 import json
 import decimal
 from bcreg.config import config
-from bcreg.eventprocessor import EventProcessor
+from bcreg.eventprocessor import EventProcessor, CORP_TYPES_IN_SCOPE
 from bcreg.bcregistries import BCRegistries
 
 """
+This script identifies missing corps based on the Event Processor database, comparing input corporations
+and output (staged) credentials.
+
+Note:  This report runs based on the audit table, populated by the `populate_audit_table.py` script
+
 Note:  For any companies that are identified as "missing" by this report, run the following query to 
        reset the status in the Event Processor database to force reprocess of these companies:
 
@@ -32,40 +37,53 @@ def add_stats_to_dict(key, type):
         stats_dict[key] = {'event_proc_inbound': 0, 'event_proc_outbound': 0}
     stats_dict[key][type] = stats_dict[key][type] + 1
 
+
+corps_dict = {}
+def add_corp_to_dict(corp_num, key, type):
+    if corp_num.startswith('BC'):
+        corp_num = corp_num[2:]
+    if not corp_num in corps_dict:
+        corps_dict[corp_num] = {}
+    corps_dict[corp_num][type] = key
+
+
 with EventProcessor() as event_processor:
     # run this query against Event Processor database:
     sql2 = """
-    SELECT record_id, corp_num, corp_state, corp_json->>'corp_typ_cd' as corp_typ_cd, entry_date, process_date 
-    FROM corp_history_log
-    WHERE process_date is not null and (process_msg != 'Withdrawn' or process_msg is null)
-    ORDER BY record_id desc;
+    SELECT last_corp_history_id, last_event_date, corp_num, corp_type, corp_state, entry_date, last_credential_id, cred_effective_date
+    FROM corp_audit_log
+    ORDER BY record_id;
     """
 
     print("Get corp stats from Event Processor DB", datetime.datetime.now())
     processed_inbound_corps = {}
     event_proc_inbound_recs = event_processor.get_event_proc_sql("inbound_recs", sql2)
     for inbound_rec in event_proc_inbound_recs:
-        if not inbound_rec['corp_num'] in processed_inbound_corps.keys():
-            key = inbound_rec['corp_typ_cd'] + ',' + inbound_rec['corp_state']
-            add_stats_to_dict(key, 'event_proc_inbound')
-            processed_inbound_corps[inbound_rec['corp_num']] = 'Done'
+        if inbound_rec['corp_type'] in CORP_TYPES_IN_SCOPE:
+            if not inbound_rec['corp_num'] in processed_inbound_corps.keys():
+                key = inbound_rec['corp_type'] + ',' + inbound_rec['corp_state']
+                add_stats_to_dict(key, 'event_proc_inbound')
+                add_corp_to_dict(inbound_rec['corp_num'], key, 'event_proc_inbound')
+                processed_inbound_corps[inbound_rec['corp_num']] = 'Done'
 
     # run this query against Event Processor database:
     sql3 = """
-    SELECT record_id, corp_num, credential_json->>'entity_status' as corp_state, credential_json->>'entity_type' as corp_typ_cd, entry_date, process_date 
-    FROM credential_log 
-    WHERE process_date is not null and credential_type_cd = 'REG'
-    ORDER BY record_id desc;
+    SELECT last_corp_history_id, last_event_date, corp_num, corp_type, corp_state, entry_date, last_credential_id, cred_effective_date
+    FROM corp_audit_log
+    WHERE last_credential_id is not null
+    ORDER BY record_id;
     """
 
     print("Get corp stats from Event Processor DB", datetime.datetime.now())
     processed_outbound_corps = {}
     event_proc_outbound_recs = event_processor.get_event_proc_sql("outbound_recs", sql3)
     for outbound_rec in event_proc_outbound_recs:
-        if not outbound_rec['corp_num'] in processed_outbound_corps.keys():
-            key = outbound_rec['corp_typ_cd'] + ',' + outbound_rec['corp_state']
-            add_stats_to_dict(key, 'event_proc_outbound')
-            processed_outbound_corps[outbound_rec['corp_num']] = 'Done'
+        if outbound_rec['corp_type'] in CORP_TYPES_IN_SCOPE:
+            if not outbound_rec['corp_num'] in processed_outbound_corps.keys():
+                key = outbound_rec['corp_type'] + ',' + outbound_rec['corp_state']
+                add_stats_to_dict(key, 'event_proc_outbound')
+                add_corp_to_dict(outbound_rec['corp_num'], key, 'event_proc_outbound')
+                processed_outbound_corps[outbound_rec['corp_num']] = 'Done'
     #print(event_proc_outbound_stats)
 
 

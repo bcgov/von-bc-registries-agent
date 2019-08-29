@@ -50,14 +50,14 @@ CORP_TYPES_IN_SCOPE = {
     "EPR": "EXTRA PRO REG",
     "FOR": "FOREIGN",
     "GP":  "PARTNERSHIP",
-    "FI":  "FINANCIAL", 
+    #"FI":  "FINANCIAL", 
     "LIC": "LICENSED",
     "LL":  "LL PARTNERSHIP",
     "LLC": "LIMITED CO",
     "LP":  "LIM PARTNERSHIP",
     "MF":  "MISC FIRM",
     "PA":  "PRIVATE ACT",
-    "PAR": "PARISHES",
+    #"PAR": "PARISHES",
     "QA":  "CO 1860",
     "QB":  "CO 1862",
     "QC":  "CO 1878",
@@ -335,8 +335,8 @@ class EventProcessor:
             """
             CREATE TABLE IF NOT EXISTS CORP_AUDIT_LOG (
                 RECORD_ID SERIAL PRIMARY KEY,
-                LAST_CORP_HISTORY_ID INT NOT NULL,
                 SYSTEM_TYPE_CD VARCHAR(255) NOT NULL, 
+                LAST_CORP_HISTORY_ID INT NOT NULL,
                 LAST_EVENT_DATE TIMESTAMP NOT NULL, 
                 CORP_NUM VARCHAR(255) NOT NULL,
                 CORP_STATE VARCHAR(255) NOT NULL,
@@ -369,7 +369,8 @@ class EventProcessor:
             """,
             """ 
             REINDEX TABLE CORP_AUDIT_LOG;
-            """,            )
+            """,
+        )
         cur = None
         try:
             cur = self.conn.cursor()
@@ -719,6 +720,8 @@ class EventProcessor:
         addr_cred['effective_date'] = addr_cred['address_effective']
         if office['end_event_id'] is not None and office['end_event']['effective_date'] <= corp_info['current_date']:
             addr_cred['expiry_date'] = office['effective_end_date']
+        else:
+            addr_cred['expiry_date'] = ''
 
         return addr_cred
 
@@ -897,13 +900,13 @@ class EventProcessor:
 
     def filter_min_date(self, cred_date):
         if not cred_date:
-            return cred_date
+            return ""
         if isinstance(cred_date, str):
             if cred_date < MIN_START_DATE_TZ.astimezone(pytz.utc).isoformat():
                 return ""
         elif isinstance(cred_date, datetime.date):
             if cred_date < MIN_VALID_DATE:
-                return None
+                return ""
         return cred_date
 
     # check if the org name is a notice of alteration
@@ -994,11 +997,12 @@ class EventProcessor:
         (for the initial load, prev_event is the genesis date of Jan 1, 0000)
         The event "date" is based on some complicated logic and can come from the event or the related filing.
         """
-        #print("Generate credentials for", corp_num, prev_event, last_event)
+        print("Generate credentials for", corp_num, prev_event, last_event)
         corp_creds = []
 
         # get events - only generate credentials for events in the past
         (effective_events, future_events) = self.current_and_future_corp_events(corp_num, corp_info)
+        #print(corp_num, len(effective_events), len(future_events))
 
         if 0 < len(effective_events):
             #print('effective_events', effective_events)
@@ -1024,20 +1028,23 @@ class EventProcessor:
                 #print('effective_event', effective_events[i])
 
                 loop_start_event = effective_events[i]
+                #print(use_prev_event['event_date'], loop_start_event['event_timestmp'], use_last_event['event_date'])
                 # for the registration credential, we need to check if this event is in the "overlap range"
                 # note the special case logic for data conversion events:
                 #   - if it is a data conversion event and we don't have any other dates we can apply, skip it
                 #   - unless it is the most recent event, in which case include it anyways
                 if i < (len(effective_events)-1) and is_data_conversion_event(loop_start_event) and loop_start_event['event_timestmp'] == loop_start_event['effective_date']:
                     # skip data conversion event
-                    #print(" >>> Skip credential for data conversion event", i, len(effective_events)-1, loop_start_event)
+                    print(" >>> Skip credential for data conversion event", i, len(effective_events)-1, loop_start_event)
                     pass
                 elif use_prev_event['event_date'] <= loop_start_event['event_timestmp'] and loop_start_event['event_timestmp'] <= use_last_event['event_date']:
                     # event is in the "overlap" range
                     # generate corp credential
+                    #print(" >>> Process event")
                     corp_cred = {}
                     corp_cred['registration_id'] = self.corp_num_with_prefix(corp_info['corp_typ_cd'], corp_info['corp_num'])
                     corp_cred['registration_date'] = self.filter_min_date(corp_info['recognition_dts'])
+                    corp_cred['registration_expiry_date'] = ''
                     corp_cred['entity_type'] = corp_info['corp_type']['corp_typ_cd']
 
                     # org_names active at effective date
@@ -1070,6 +1077,9 @@ class EventProcessor:
                             corp_cred['entity_name_assumed_effective'] = ''
                         else:
                             corp_cred['entity_name_assumed_effective'] = self.filter_min_date(org_name_assumed['effective_start_date'])
+                    else:
+                        corp_cred['entity_name_assumed'] = ''
+                        corp_cred['entity_name_assumed_effective'] = ''
 
                     # corp_state active at effective date
                     corp_state = self.corp_rec_at_effective_date(corp_info['corp_state'], loop_start_event)
@@ -1109,6 +1119,10 @@ class EventProcessor:
                         corp_cred['effective_date'] = loop_start_event['effective_date']
                     if corp_cred['effective_date'] is None or corp_cred['effective_date'] == '':
                         corp_cred['effective_date'] = corp_cred['registration_date']
+                    corp_cred['expiry_date'] = ''
+                    corp_cred['registration_renewal_effective'] = ''
+                    corp_cred['entity_name_trans'] = ''
+                    corp_cred['entity_name_trans_effective'] = ''
 
                     reason_description = self.build_corp_reason_code(loop_start_event)
 
@@ -1125,17 +1139,17 @@ class EventProcessor:
                     if (len(corp_creds) == 0) or (len(corp_creds) > 0 and corp_cred['credential'] != corp_creds[len(corp_creds)-1]['credential']):
                         corp_creds.append(corp_cred)
                     else:
-                        #print(" >>> Skip credential for reason Duplicate")
+                        print(" >>> Skip credential for reason Duplicate")
                         pass
                 else:
                     # skipping event because out of range of start/end period
-                    #print(" >>> Skip event not in range")
+                    print(" >>> Skip event not in range")
                     #print(use_prev_event['event_date'], loop_start_event['event_timestmp'], use_last_event['event_date'])
                     pass
 
         else:
             # skip due to no effective dates in range
-            #print(" >>> Skip no effective events in range")
+            print(" >>> Skip no effective events in range")
             pass
 
         # generate addr credential(s)
@@ -1182,14 +1196,18 @@ class EventProcessor:
                     if self.is_owner_of_sole_prop(party, corp_num, corp_info):
                         dba_cred['relationship'] = 'Owns'
                         dba_cred['relationship_description'] = 'Does Business As'
+                        dba_cred['associated_registration_name'] = ''
                     elif self.is_owned_sole_prop(party, corp_num, corp_info):
                         dba_cred['relationship'] = 'IsOwned'
                         dba_cred['relationship_description'] = 'Is Owned By'
                         if 'business_nme' in party and 0 < len(party['business_nme']):
                             dba_cred['associated_registration_name'] = party['business_nme']
+                        else:
+                            dba_cred['associated_registration_name'] = ''
                     else:
                         dba_cred['relationship'] = 'TBD' # party['']
                         dba_cred['relationship_description'] = 'TBD' # party['']
+                        dba_cred['associated_registration_name'] = ''
                     dba_cred['relationship_status'] = 'ACT'
                     dba_cred['effective_date'] = party['effective_start_date']
 
@@ -1200,6 +1218,8 @@ class EventProcessor:
                     dba_cred['relationship_status_effective'] = self.filter_min_date(dba_cred['effective_date'])
                     if party['end_event_id'] is not None and party['end_event']['effective_date'] <= corp_info['current_date']:
                         dba_cred['expiry_date'] = party['effective_end_date']
+                    else:
+                        dba_cred['expiry_date'] = ''
                     reason_description = self.build_corp_reason_code(party['start_event'])
                     corp_creds.append(self.build_credential_dict(dba_credential, dba_schema, dba_version, dba_cred['registration_id'], dba_cred, reason_description, dba_cred['effective_date']))
 
