@@ -117,6 +117,10 @@ with EventProcessor() as event_processor:
     #print(event_proc_outbound_stats)
 
     sql3a = """
+    SELECT corp_num from event_by_corp_filing where process_success is null
+      and prev_event_id = 0;
+    """
+    sql3b = """
     SELECT corp_num from event_by_corp_filing where process_success is null;
     """
 
@@ -125,7 +129,12 @@ with EventProcessor() as event_processor:
     event_un_proc_outbound_recs = event_processor.get_event_proc_sql("outbound_un_recs", sql3a)
     for outbound_rec in event_un_proc_outbound_recs:
         un_processed_outbound_corps[outbound_rec['corp_num']] = outbound_rec['corp_num']
-    #print(event_proc_outbound_stats)
+    #print(un_processed_outbound_corps)
+    semi_processed_outbound_corps = {}
+    event_semi_proc_outbound_recs = event_processor.get_event_proc_sql("outbound_semi_recs", sql3b)
+    for outbound_rec in event_semi_proc_outbound_recs:
+        semi_processed_outbound_corps[outbound_rec['corp_num']] = outbound_rec['corp_num']
+    #print(semi_processed_outbound_corps)
 
 
 # now something to read orgbook:
@@ -260,6 +269,9 @@ for corp_num, corp_set in corps_dict.items():
         else:
             if len(specific_corps_1) < MAX_SPECIFIC_CORPS:
                 specific_corps_1.append(corp_num)
+    elif corp_num in semi_processed_outbound_corps:
+        # skip records that are still outstanding
+        pass
     elif 'bc_reg' in corp_set:
         if corp_set['orgbook'] != corp_set['bc_reg']:
             # company is in orgbook but company type and/or status is wrong

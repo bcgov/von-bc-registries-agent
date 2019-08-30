@@ -53,7 +53,7 @@ with BCRegistries() as bc_registries:
     select corp.corp_num, corp.corp_typ_cd
     from bc_registries.corporation corp
     where corp.corp_num not in (
-        select corp_num from bc_registries.corp_state where state_typ_cd != 'HWT');
+        select corp_num from bc_registries.corp_state where state_typ_cd = 'HWT');
     """
 
     print("Get corp stats from BC Registries DB", datetime.datetime.now())
