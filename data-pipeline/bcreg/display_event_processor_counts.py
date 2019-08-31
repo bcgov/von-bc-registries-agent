@@ -59,7 +59,7 @@ with EventProcessor() as event_processor:
     processed_inbound_corps = {}
     event_proc_inbound_recs = event_processor.get_event_proc_sql("inbound_recs", sql2)
     for inbound_rec in event_proc_inbound_recs:
-        if inbound_rec['corp_type'] in CORP_TYPES_IN_SCOPE:
+        if inbound_rec['corp_type'] in CORP_TYPES_IN_SCOPE and inbound_rec['corp_state'] != 'HWT':
             if not inbound_rec['corp_num'] in processed_inbound_corps.keys():
                 key = inbound_rec['corp_type'] + ',' + inbound_rec['corp_state']
                 add_stats_to_dict(key, 'event_proc_inbound')
@@ -105,7 +105,6 @@ for key, value in stats_dict.items():
         print(key + ',' + str(value['event_proc_inbound']) + ',' + str(value['event_proc_outbound']) + ',' + str(value['event_proc_inbound'] - value['event_proc_outbound']))
         missing_corps = True
 print("===========================")
-
 
 #with EventProcessor() as event_processor:
 #    if missing_corps:

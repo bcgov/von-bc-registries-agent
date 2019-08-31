@@ -63,7 +63,8 @@ with BCRegistries() as bc_registries:
        bc_registries.corp_op_state op_state
     where state.corp_num = corp.corp_num
       and state.end_event_id is null
-      and op_state.state_typ_cd = state.state_typ_cd;
+      and op_state.state_typ_cd = state.state_typ_cd
+      and state.state_typ_cd != 'HWT';
     """
 
     print("Get corp stats from BC Registries DB", datetime.datetime.now())
@@ -88,7 +89,7 @@ with EventProcessor() as event_processor:
     processed_inbound_corps = {}
     event_proc_inbound_recs = event_processor.get_event_proc_sql("inbound_recs", sql2)
     for inbound_rec in event_proc_inbound_recs:
-        if inbound_rec['corp_type'] in CORP_TYPES_IN_SCOPE:
+        if inbound_rec['corp_type'] in CORP_TYPES_IN_SCOPE and inbound_rec['corp_state'] != 'HWT':
             if not inbound_rec['corp_num'] in processed_inbound_corps.keys():
                 key = inbound_rec['corp_type'] + ',' + inbound_rec['corp_state']
                 add_stats_to_dict(key, 'event_proc_inbound')
@@ -100,7 +101,6 @@ with EventProcessor() as event_processor:
     SELECT last_corp_history_id, last_event_date, corp_num, corp_type, corp_state, entry_date, last_credential_id, cred_effective_date
     FROM corp_audit_log
     WHERE last_credential_id is not null
-      AND corp_num not in (select corp_num from event_by_corp_filing where process_success is null)
     ORDER BY record_id;
     """
 
@@ -117,6 +117,10 @@ with EventProcessor() as event_processor:
     #print(event_proc_outbound_stats)
 
     sql3a = """
+    SELECT corp_num from event_by_corp_filing where process_success is null
+      and prev_event_id = 0;
+    """
+    sql3b = """
     SELECT corp_num from event_by_corp_filing where process_success is null;
     """
 
@@ -125,7 +129,12 @@ with EventProcessor() as event_processor:
     event_un_proc_outbound_recs = event_processor.get_event_proc_sql("outbound_un_recs", sql3a)
     for outbound_rec in event_un_proc_outbound_recs:
         un_processed_outbound_corps[outbound_rec['corp_num']] = outbound_rec['corp_num']
-    #print(event_proc_outbound_stats)
+    #print(un_processed_outbound_corps)
+    semi_processed_outbound_corps = {}
+    event_semi_proc_outbound_recs = event_processor.get_event_proc_sql("outbound_semi_recs", sql3b)
+    for outbound_rec in event_semi_proc_outbound_recs:
+        semi_processed_outbound_corps[outbound_rec['corp_num']] = outbound_rec['corp_num']
+    #print(semi_processed_outbound_corps)
 
 
 # now something to read orgbook:
@@ -242,6 +251,7 @@ MAX_SPECIFIC_CORPS = 500
 specific_corps_1 = []
 missing_corps = {'bc_reg': 0, 'event_proc_inbound': 0, 'event_proc_outbound': 0, 'orgbook': 0}
 specific_corps_2 = []
+specific_corps_3 = []
 incorrect_corps = {'bc_reg': 0, 'event_proc_inbound': 0, 'event_proc_outbound': 0, 'orgbook': 0}
 for corp_num, corp_set in corps_dict.items():
     if corp_num in un_processed_outbound_corps:
@@ -250,8 +260,18 @@ for corp_num, corp_set in corps_dict.items():
     elif not 'orgbook' in corp_set:
         # company is missing in orgbook
         missing_corps['orgbook'] = missing_corps['orgbook'] + 1
-        if len(specific_corps_1) < MAX_SPECIFIC_CORPS:
-            specific_corps_1.append(corp_num)
+        # check if company is partly processed
+        if 'event_proc_inbound' in corp_set and not 'event_proc_outbound' in corp_set:
+            # in the inbound processing queue but no credentials generated
+            missing_corps['event_proc_outbound'] = missing_corps['event_proc_outbound'] + 1
+            if len(specific_corps_3) < MAX_SPECIFIC_CORPS:
+                specific_corps_3.append(corp_num)
+        else:
+            if len(specific_corps_1) < MAX_SPECIFIC_CORPS:
+                specific_corps_1.append(corp_num)
+    elif corp_num in semi_processed_outbound_corps:
+        # skip records that are still outstanding
+        pass
     elif 'bc_reg' in corp_set:
         if corp_set['orgbook'] != corp_set['bc_reg']:
             # company is in orgbook but company type and/or status is wrong
@@ -263,6 +283,8 @@ for corp_num, corp_set in corps_dict.items():
 
 print("Total of", missing_corps['orgbook'], "corps MISSING in orgbook")
 print(specific_corps_1)
+print("Total of", missing_corps['event_proc_outbound'], "corps MISSING in event processing outbound queue")
+print(specific_corps_3)
 print("Total of", incorrect_corps['orgbook'], "corps INCORRECT in orgbook")
 print(specific_corps_2)
 
@@ -271,6 +293,11 @@ if args.fixme:
         print("Adding MISSING", len(specific_corps_1), "corps to outstanding queue ...")
         #print(specific_corps_1)
         add_missing_corps_to_queue(specific_corps_1)
+
+    if 0 < len(specific_corps_3):
+        print("Adding MISSING", len(specific_corps_3), "corps to outstanding queue ...")
+        #print(specific_corps_2)
+        add_missing_corps_to_queue(specific_corps_3)
 
     if 0 < len(specific_corps_2):
         print("Adding INCORRECT", len(specific_corps_2), "corps to outstanding queue ...")
