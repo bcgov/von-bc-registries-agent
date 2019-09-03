@@ -2,7 +2,7 @@
   "kind": "Template",
   "apiVersion": "v1",
   "metadata": {
-    "name": "${NAME}-deployment-template"
+    "name": "${NAME}${SUFFIX}-deployment-template"
   },
   "objects": [
     {
@@ -11,8 +11,10 @@
       "metadata": {
         "name": "${BACKUP_VOLUME_NAME}",
         "labels": {
-          "app": "${NAME}-persistent",
-          "template": "${NAME}-persistent-template"
+          "name": "${NAME}${SUFFIX}",
+          "app": "${APP_NAME}${SUFFIX}",
+          "app-group": "${APP_GROUP}",
+          "template": "${NAME}${SUFFIX}-template"
         }
       },
       "spec": {
@@ -33,8 +35,10 @@
       "metadata": {
         "name": "${VERIFICATION_VOLUME_NAME}",
         "labels": {
-          "app": "${NAME}-persistent",
-          "template": "${NAME}-persistent-template"
+          "name": "${NAME}${SUFFIX}",
+          "app": "${APP_NAME}${SUFFIX}",
+          "app-group": "${APP_GROUP}",
+          "template": "${NAME}${SUFFIX}-template"
         }
       },
       "spec": {
@@ -53,12 +57,15 @@
       "kind": "DeploymentConfig",
       "apiVersion": "v1",
       "metadata": {
-        "name": "${NAME}",
+        "name": "${NAME}${SUFFIX}",
         "labels": {
-          "template": "${NAME}-deployment"
+          "name": "${NAME}${SUFFIX}",
+          "app": "${APP_NAME}${SUFFIX}",
+          "app-group": "${APP_GROUP}",
+          "template": "${NAME}${SUFFIX}-template"
         },
         "annotations": {
-          "description": "Defines how to deploy the ${NAME} server"
+          "description": "Defines how to deploy the ${NAME}${SUFFIX} server"
         }
       },
       "spec": {
@@ -74,7 +81,7 @@
             "imageChangeParams": {
               "automatic": true,
               "containerNames": [
-                "${NAME}"
+                "${NAME}${SUFFIX}"
               ],
               "from": {
                 "kind": "ImageStreamTag",
@@ -86,13 +93,16 @@
         ],
         "replicas": 1,
         "selector": {
-          "name": "${NAME}"
+          "name": "${NAME}${SUFFIX}"
         },
         "template": {
           "metadata": {
-            "name": "${NAME}",
+            "name": "${NAME}${SUFFIX}",
             "labels": {
-              "name": "${NAME}"
+              "name": "${NAME}${SUFFIX}",
+              "app": "${APP_NAME}${SUFFIX}",
+              "app-group": "${APP_GROUP}",
+              "template": "${NAME}${SUFFIX}-template"
             }
           },
           "spec": {
@@ -110,7 +120,7 @@
                 }
               },
               {
-                "name": "${NAME}-config-volume",
+                "name": "${NAME}${SUFFIX}-config-volume",
                 "configMap": {
                   "name": "${CONFIG_MAP_NAME}",
                   "items": [
@@ -124,7 +134,7 @@
             ],
             "containers": [
               {
-                "name": "${NAME}",
+                "name": "${NAME}${SUFFIX}",
                 "image": "",
                 "ports": [],
                 "env": [
@@ -221,6 +231,10 @@
                   {
                     "name": "ENVIRONMENT_NAME",
                     "value": "${ENVIRONMENT_NAME}"
+                  },
+                  {
+                    "name": "DATABASE_SERVER_TIMEOUT",
+                    "value": "${DATABASE_SERVER_TIMEOUT}"
                   }
                 ],
                 "resources": {
@@ -243,7 +257,7 @@
                     "mountPath": "${VERIFICATION_VOLUME_MOUNT_PATH}"
                   },
                   {
-                    "name": "${NAME}-config-volume",
+                    "name": "${NAME}${SUFFIX}-config-volume",
                     "mountPath": "${CONFIG_MOUNT_PATH}${CONFIG_FILE_NAME}",
                     "subPath": "${CONFIG_FILE_NAME}"
                   }
@@ -262,6 +276,27 @@
       "description": "The name assigned to all of the resources defined in this template.",
       "required": true,
       "value": "backup"
+    },
+    {
+      "name": "SUFFIX",
+      "displayName": "Suffix",
+      "description": "A name suffix used for all objects",
+      "required": false,
+      "value": ""
+    },
+    {
+      "name": "APP_NAME",
+      "displayName": "App Name",
+      "description": "Used to group components together in the OpenShift console.",
+      "required": true,
+      "value": "Backup"
+    },
+    {
+      "name": "APP_GROUP",
+      "displayName": "App Group",
+      "description": "The name assigned to all of the deployments in this project.",
+      "required": true,
+      "value": "bcreg-x-agent"
     },
     {
       "name": "SOURCE_IMAGE_NAME",
@@ -374,6 +409,13 @@
       "description": "Period (d,m,s) between backups in a format used by the sleep command",
       "required": true,
       "value": "1d"
+    },
+    {
+      "name": "DATABASE_SERVER_TIMEOUT",
+      "displayName": "Database Server Timeout",
+      "description": "The timeout, in seconds, to wait for the local database server to startup during a verification.",
+      "required": true,
+      "value": "60"
     },
     {
       "name": "CONFIG_FILE_NAME",
