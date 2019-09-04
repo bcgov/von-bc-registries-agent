@@ -51,7 +51,9 @@ with BCRegistries() as bc_registries:
     # run this query against BC Reg database:
     sql1 = """
     select corp.corp_num, corp.corp_typ_cd
-    from bc_registries.corporation corp;
+    from bc_registries.corporation corp
+    where corp.corp_num not in (
+        select corp_num from bc_registries.corp_state where state_typ_cd = 'HWT');
     """
 
     print("Get corp stats from BC Registries DB", datetime.datetime.now())
@@ -81,7 +83,7 @@ with EventProcessor() as event_processor:
         print("... build audit log", datetime.datetime.now())
         continue_loop = 0 < len(event_proc_inbound_recs)
         for inbound_rec in event_proc_inbound_recs:
-            if inbound_rec['corp_typ_cd'] in CORP_TYPES_IN_SCOPE:
+            if inbound_rec['corp_typ_cd'] in CORP_TYPES_IN_SCOPE and inbound_rec['corp_state'] != 'HWT':
                 i = i + 1
                 if (i % REPORT_COUNT == 0):
                     print('>>> Processing {} {}.'.format(i, datetime.datetime.now()))
