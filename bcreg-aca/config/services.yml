@@ -61,7 +61,7 @@ issuers:
             input: registration_id
             from: claim
           type:
-            input: registration
+            input: registration.registries.ca
             from: value
         mapping:
           - model: name
@@ -198,13 +198,13 @@ issuers:
             input: associated_registration_id
             from: claim
           related_type:
-            input: registration
+            input: registration.registries.ca
             from: value
           source_id:
             input: registration_id
             from: claim
           type:
-            input: registration
+            input: registration.registries.ca
             from: value
         cardinality_fields:
           - associated_registration_id
@@ -288,7 +288,7 @@ issuers:
             input: registration_id
             from: claim
           type:
-            input: registration
+            input: registration.registries.ca
             from: value
         cardinality_fields:
           - address_type
