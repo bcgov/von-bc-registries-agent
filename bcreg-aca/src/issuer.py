@@ -3,16 +3,16 @@ import os
 import threading
 import time
 
-import config
 import requests
 from flask import jsonify
+
+import config
 
 AGENT_ADMIN_API_KEY = os.environ.get("AGENT_ADMIN_API_KEY")
 ADMIN_REQUEST_HEADERS = {}
 if AGENT_ADMIN_API_KEY is not None:
     ADMIN_REQUEST_HEADERS = {"x-api-key": AGENT_ADMIN_API_KEY}
 
-TOB_AGENT_ADMIN_URL = os.environ.get("TOB_AGENT_ADMIN_URL")
 TOB_ADMIN_API_KEY = os.environ.get("TOB_ADMIN_API_KEY")
 TOB_REQUEST_HEADERS = {}
 if TOB_ADMIN_API_KEY is not None:
@@ -47,24 +47,14 @@ class StartupProcessingThread(threading.Thread):
             )
         app_config["AGENT_ADMIN_URL"] = agent_admin_url
 
-        # ensure DID is registered
-        ledger_url = self.ENV.get("LEDGER_URL")
-        auto_register_did = self.ENV.get("AUTO_REGISTER_DID", False)
-        if auto_register_did and ledger_url:
-            # gt seed and alias to register
-            seed = self.ENV.get("WALLET_SEED_VONX")
-            alias = list(config_services["issuers"].keys())[0]
-
-            # register DID
-            response = requests.post(
-                ledger_url + "/register",
-                json.dumps({"alias": alias, "seed": seed, "role": "TRUST_ANCHOR"}),
-            )
-            response.raise_for_status()
-            did = response.json()
-            print("Registered did: ", did)
-            app_config["DID"] = did["did"]
-            time.sleep(5)
+        # get public DID from our agent
+        response = requests.get(
+            agent_admin_url + "/wallet/did/public"
+        )
+        result = response.json()
+        did = result["result"]
+        print("Fetched DID from agent: ", did)
+        app_config["DID"] = did["did"]
 
         # register schemas and credential definitions
         for schema in config_schemas:
@@ -130,8 +120,8 @@ class StartupProcessingThread(threading.Thread):
             if connection["alias"] == tob_connection_params["alias"]:
                 tob_connection = connection
 
-        if not tob_connection and TOB_AGENT_ADMIN_URL:
-            # if no tob connection exists AND we have access to the tob agent admin API, then establish a new one
+        if not tob_connection:
+            # if no tob connection then establish one
             tob_agent_admin_url = tob_connection_params["connection"]["agent_admin_url"]
             if not tob_agent_admin_url:
                 raise RuntimeError(
@@ -140,7 +130,7 @@ class StartupProcessingThread(threading.Thread):
 
             response = requests.post(
                 tob_agent_admin_url + "/connections/create-invitation",
-                headers=TOB_REQUEST_HEADERS
+                headers=TOB_REQUEST_HEADERS,
             )
             response.raise_for_status()
             invitation = response.json()
@@ -200,7 +190,7 @@ class StartupProcessingThread(threading.Thread):
             response = requests.post(
                 agent_admin_url + "/issuer_registration/send",
                 json.dumps(issuer_request),
-                headers=ADMIN_REQUEST_HEADERS
+                headers=ADMIN_REQUEST_HEADERS,
             )
             response.raise_for_status()
             response.json()
@@ -420,13 +410,13 @@ def handle_send_credential(cred_input):
             "version": "1.0.0",
             "attributes": {
                 "corp_num": "ABC12345",
-                "registration_date": "2018-01-01",
+                "registration_date": "2018-01-01", 
                 "entity_name": "Ima Permit",
-                "entity_name_effective": "2018-01-01",
-                "entity_status": "ACT",
+                "entity_name_effective": "2018-01-01", 
+                "entity_status": "ACT", 
                 "entity_status_effective": "2019-01-01",
-                "entity_type": "ABC",
-                "registered_jurisdiction": "BC",
+                "entity_type": "ABC", 
+                "registered_jurisdiction": "BC", 
                 "effective_date": "2019-01-01",
                 "expiry_date": ""
             }
@@ -438,9 +428,9 @@ def handle_send_credential(cred_input):
                 "permit_id": str(uuid.uuid4()),
                 "entity_name": "Ima Permit",
                 "corp_num": "ABC12345",
-                "permit_issued_date": "2018-01-01",
-                "permit_type": "ABC",
-                "permit_status": "OK",
+                "permit_issued_date": "2018-01-01", 
+                "permit_type": "ABC", 
+                "permit_status": "OK", 
                 "effective_date": "2019-01-01"
             }
         }
