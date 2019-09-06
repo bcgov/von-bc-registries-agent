@@ -49,7 +49,8 @@ class StartupProcessingThread(threading.Thread):
 
         # get public DID from our agent
         response = requests.get(
-            agent_admin_url + "/wallet/did/public"
+            agent_admin_url + "/wallet/did/public",
+            headers=ADMIN_REQUEST_HEADERS,
         )
         result = response.json()
         did = result["result"]
