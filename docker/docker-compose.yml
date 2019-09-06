@@ -50,7 +50,7 @@ services:
       HTTP_FORCE_CLOSE_CONNECTIONS: "true"
       AGENT_ADMIN_URL: http://bcreg-agent:${AGENT_ADMIN_PORT}
       AGENT_ADMIN_API_KEY: ${AGENT_ADMIN_API_KEY}
-      WEBHOOK_PORT: ${WEBHOOK_PORT}
+      HOST_PORT: ${CONTROLLER_PORT}
       TOB_CONNECTION_NAME: ${TOB_CONNECTION_NAME}
       TOB_AGENT_ADMIN_URL: ${TOB_AGENT_ADMIN_URL}
       TOB_ADMIN_API_KEY: ${TOB_ADMIN_API_KEY}
@@ -58,7 +58,7 @@ services:
       - orgbook
       - bcreg
     ports:
-      - ${WEBHOOK_PORT_EXPOSED}:${WEBHOOK_PORT}
+      - ${EXPOSED_CONTROLLER_PORT}:${CONTROLLER_PORT}
     depends_on:
       - bcreg-agent
     entrypoint: >
