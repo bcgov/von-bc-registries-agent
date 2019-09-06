@@ -10,4 +10,3 @@ default:
   #INDY_WALLET_SEED: TestBCGovSeedforSLN0000000000001
   #INDY_GENESIS_URL: https://raw.githubusercontent.com/sovrin-foundation/sovrin/1.1.50-master/sovrin/pool_transactions_sandbox_genesis
   #LEDGER_PROTOCOL_VERSION: "1.3"
-  AUTO_REGISTER_DID: true
