@@ -6,7 +6,7 @@ export HOST_PORT=${HOST_PORT:-5000}
 
 CMD="$@"
 if [ -z "$CMD" ]; then
-  CMD="python ${APP_NAME}.py runserver --host=${HOST_IP}:${HOST_PORT} --threaded"
+  CMD="python ${APP_NAME}.py runserver --host=${HOST_IP} --port=${HOST_PORT} --threaded"
 fi
 
 echo "Starting server ..."
