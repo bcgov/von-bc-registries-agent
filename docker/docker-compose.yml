@@ -27,33 +27,17 @@ services:
       context: ../bcreg-aca
       dockerfile: Dockerfile
     environment:
-      LEDGER_URL: ${LEDGER_URL}
       CONFIG_ROOT: ../config
+      HOST_PORT: ${CONTROLLER_PORT}
       ENVIRONMENT: ${ENVIRONMENT:-default}
       ENABLE_GUNICORN: ${ENABLE_GUNICORN:-0}
-      INDY_LEDGER_URL: ${LEDGER_URL:-http://localhost:9000}
-      FORMS: ${FORMS}
-      ISSUERS: ${ISSUERS}
       LOG_LEVEL: ${LOG_LEVEL}
       PYTHON_ENV: ${PYTHON_ENV:-development}
-      TOB_API_URL: ${TOB_API_URL}
-      TOB_APP_URL: ${TOB_APP_URL}
-      WALLET_TYPE: ${WALLET_TYPE}
-      POSTGRESQL_WALLET_HOST: ${POSTGRESQL_WALLET_HOST}
-      POSTGRESQL_WALLET_PORT: ${POSTGRESQL_WALLET_PORT}
-      POSTGRESQL_WALLET_USER: ${POSTGRESQL_USER}
-      POSTGRESQL_WALLET_PASSWORD: ${POSTGRESQL_PASSWORD}
-      POSTGRESQL_WALLET_ADMIN_PASSWORD: ${POSTGRESQL_ADMIN_PASSWORD}
-      WALLET_ENCRYPTION_KEY: ${WALLET_ENCRYPTION_KEY}
-      WALLET_SEED_VONX: ${WALLET_SEED_VONX}
-      ISSUER_WALLET_DID: ${ISSUER_WALLET_DID}
-      HTTP_FORCE_CLOSE_CONNECTIONS: "true"
-      AGENT_ADMIN_URL: http://bcreg-agent:${AGENT_ADMIN_PORT}
+      AGENT_ADMIN_URL: http://bcreg-agent:${AGENT_ADMIN_INTERFACE_PORT}
       AGENT_ADMIN_API_KEY: ${AGENT_ADMIN_API_KEY}
-      HOST_PORT: ${CONTROLLER_PORT}
-      TOB_CONNECTION_NAME: ${TOB_CONNECTION_NAME}
       TOB_AGENT_ADMIN_URL: ${TOB_AGENT_ADMIN_URL}
       TOB_ADMIN_API_KEY: ${TOB_ADMIN_API_KEY}
+      # ISSUERS: ${ISSUERS}
     networks:
       - orgbook
       - bcreg
@@ -70,7 +54,8 @@ services:
   bcreg-agent:
     image: tob-agent
     environment:
-      - LEDGER_URL=${LEDGER_URL}
+      - GENESIS_URL=${GENESIS_URL:-${LEDGER_URL}/genesis}
+      - AGENT_WALLET_NAME=${AGENT_WALLET_NAME:-icat_agent_wallet}
       - WALLET_TYPE=${WALLET_TYPE}
       - POSTGRESQL_WALLET_HOST=${POSTGRESQL_WALLET_HOST}
       - POSTGRESQL_WALLET_PORT=${POSTGRESQL_WALLET_PORT}
@@ -78,34 +63,36 @@ services:
       - POSTGRESQL_WALLET_PASSWORD=${POSTGRESQL_PASSWORD}
       - POSTGRESQL_WALLET_ADMIN_PASSWORD=${POSTGRESQL_ADMIN_PASSWORD}
       - WALLET_ENCRYPTION_KEY=${WALLET_ENCRYPTION_KEY}
-      - WALLET_SEED_VONX=${WALLET_SEED_VONX}
-      - ISSUER_WALLET_DID=${ISSUER_WALLET_DID}
+      - WALLET_SEED=${WALLET_SEED}
+      # - WALLET_DID=${ISSUER_WALLET_DID}
       - WEBHOOK_URL=${WEBHOOK_HOST}/api/agentcb
-      - AGENT_HTTP_IN_PORT=${AGENT_HTTP_IN_PORT}
-      - AGENT_WS_IN_PORT=${AGENT_WS_IN_PORT}
-      - AGENT_ADMIN_PORT=${AGENT_ADMIN_PORT}
+      - HTTP_INTERFACE_PORT=${AGENT_HTTP_INTERFACE_PORT}
+      - WS_INTERFACE_PORT=${AGENT_WS_INTERFACE_PORT}
+      - ADMIN_INTERFACE_PORT=${AGENT_ADMIN_INTERFACE_PORT}
       - AGENT_NAME=${AGENT_NAME}
+
+
     networks:
       - orgbook
       - bcreg
     ports:
-      - ${AGENT_HTTP_IN_PORT}:${AGENT_HTTP_IN_PORT}
-      - ${AGENT_WS_IN_PORT}:${AGENT_WS_IN_PORT}
-      - ${AGENT_ADMIN_PORT}:${AGENT_ADMIN_PORT}
+      - ${AGENT_HTTP_INTERFACE_PORT}:${AGENT_HTTP_INTERFACE_PORT}
+      - ${AGENT_WS_INTERFACE_PORT}:${AGENT_WS_INTERFACE_PORT}
+      - ${AGENT_ADMIN_INTERFACE_PORT}:${AGENT_ADMIN_INTERFACE_PORT}
     depends_on:
       - bcreg-wallet-db
     entrypoint: /bin/bash
     command: [
         "-c",
-        "curl -d '{\"seed\":\"${WALLET_SEED_VONX}\", \"role\":\"TRUST_ANCHOR\", \"alias\":\"${AGENT_NAME}\"}' -X POST ${LEDGER_URL}/register; \
+        "curl -d '{\"seed\":\"${WALLET_SEED}\", \"role\":\"TRUST_ANCHOR\", \"alias\":\"${AGENT_NAME}\"}' -X POST ${LEDGER_URL}/register; \
         sleep 3; \
         aca-py start \
-        --inbound-transport http '0.0.0.0' ${AGENT_HTTP_IN_PORT} \
-        --inbound-transport ws '0.0.0.0' ${AGENT_WS_IN_PORT} \
+        --inbound-transport http '0.0.0.0' ${HTTP_INTERFACE_PORT} \
+        --inbound-transport ws '0.0.0.0' ${WS_INTERFACE_PORT} \
         --endpoint ${AGENT_ENDPOINT} \
         --outbound-transport ws \
         --outbound-transport http \
-        --genesis-url '${LEDGER_URL}/genesis' \
+        --genesis-url '${GENESIS_URL}' \
         --auto-ping-connection \
         --auto-respond-messages \
         --auto-respond-credential-offer \
@@ -114,13 +101,13 @@ services:
         --auto-accept-invites \
         --auto-accept-requests \
         --wallet-type 'indy' \
-        --wallet-name 'icat_agent_wallet' \
+        --wallet-name '${AGENT_WALLET_NAME}' \
         --wallet-key '${WALLET_ENCRYPTION_KEY}' \
         --wallet-storage-type '${WALLET_TYPE}' \
         --wallet-storage-config '{\"url\":\"${POSTGRESQL_WALLET_HOST}:${POSTGRESQL_WALLET_PORT}\",\"max_connections\":5,\"wallet_scheme\":\"MultiWalletSingleTable\"}' \
         --wallet-storage-creds '{\"account\":\"${POSTGRESQL_USER}\",\"password\":\"${POSTGRESQL_PASSWORD}\",\"admin_account\":\"postgres\",\"admin_password\":\"${POSTGRESQL_ADMIN_PASSWORD}\"}' \
-        --seed '${WALLET_SEED_VONX}' \
-        --admin '0.0.0.0' ${AGENT_ADMIN_PORT} \
+        --seed '${WALLET_SEED}' \
+        --admin '0.0.0.0' ${ADMIN_INTERFACE_PORT} \
         --${AGENT_ADMIN_MODE} \
         --label ${AGENT_NAME} \
         --protocol indy_catalyst_issuer_registration",
@@ -131,13 +118,10 @@ services:
       context: ../data-pipeline
       dockerfile: docker/mara-app/Dockerfile
     environment:
-      # web hooks
+      - HOST_IP=${MARA_HOST_IP:-0.0.0.0}
+      - HOST_PORT=${MARA_HOST_PORT:-5000}
+      - CONTROLLER_URL=${CONTROLLER_URL:-http://bcreg-controller:8000}
       - ENVIRONMENT=${ENVIRONMENT:-default}
-      - WEBHOOK_URL=${WEBHOOK_URL}
-      - WEBHOOK_LEVEL=${WEBHOOK_LEVEL:-0} # 0=Error, 1=Warning, 2=Info
-      - PROJECT_NAME=${PROJECT_NAME:-von-local-developer-agent}
-      - FRIENDLY_PROJECT_NAME=${FRIENDLY_PROJECT_NAME:-Local Developer Data Pipeline}
-      - VONX_API_URL=${VONX_API_URL:-http://bcreg-controller:8000}
       # [bc_registries]
       - BC_REG_DB_HOST=${BC_REG_DB_HOST:-host.docker.internal}
       - BC_REG_DB_PORT=${BC_REG_DB_PORT:-5454}
@@ -161,10 +145,16 @@ services:
       - ORGBOOK_DB_DATABASE=${ORGBOOK_DB_DATABASE:-THE_ORG_BOOK}
       - ORGBOOK_DB_USER=${ORGBOOK_DB_USER:-DB_USER}
       - ORGBOOK_DB_PASSWORD=${ORGBOOK_DB_PASSWORD:-DB_PASSWORD}
+      # web hooks
+      - WEBHOOK_URL=${WEBHOOK_URL}
+      - WEBHOOK_LEVEL=${WEBHOOK_LEVEL:-0} # 0=Error, 1=Warning, 2=Info
+      - PROJECT_NAME=${PROJECT_NAME:-von-local-developer-agent}
+      - FRIENDLY_PROJECT_NAME=${FRIENDLY_PROJECT_NAME:-Local Developer Data Pipeline}
+      - NOTIFY_OF_CREDENTIAL_POSTING_ERRORS=${NOTIFY_OF_CREDENTIAL_POSTING_ERRORS:-false}
     networks:
       - orgbook
     ports:
-      - "5050:5000"
+      - 5050:${MARA_HOST_PORT:-5000}
     depends_on:
       - bcregdb
     entrypoint: >

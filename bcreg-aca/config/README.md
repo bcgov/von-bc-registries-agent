@@ -195,7 +195,7 @@ issuers:
 
     wallet:
       name: ${POSTGRESQL_WALLET_NAME:-myorg_issuer}
-      seed: $WALLET_SEED_VONX
+      seed: $WALLET_SEED
       type: $WALLET_TYPE
       params:
         storage_config:

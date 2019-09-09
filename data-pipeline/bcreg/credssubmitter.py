@@ -29,7 +29,7 @@ import traceback
 from bcreg.config import config
 from bcreg.rocketchat_hooks import log_error, log_warning, log_info
 
-AGENT_URL = os.environ.get('VONX_API_URL', 'http://localhost:5002')
+AGENT_URL = os.environ.get('CONTROLLER_URL', 'http://localhost:5002')
 NOTIFY_OF_CREDENTIAL_POSTING_ERRORS = os.environ.get('NOTIFY_OF_CREDENTIAL_POSTING_ERRORS', 'false')
 
 CREDS_BATCH_SIZE = 3000
