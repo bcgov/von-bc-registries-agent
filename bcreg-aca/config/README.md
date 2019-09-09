@@ -57,26 +57,12 @@ default:
   APPLICATION_URL_INCORP: $APPLICATION_URL/bcreg/incorporation
   APPLICATION_URL_DBA: $APPLICATION_URL/bcreg/dba
   TEMPLATE_PATH: ../templates
-  TOB_API_URL: http://tob-api:8080/api/v2
-  TOB_APP_URL: http://localhost:8080
-  INDY_WALLET_SEED: bc_registries_dev_00000000000000
-  INDY_GENESIS_URL: https://raw.githubusercontent.com/sovrin-foundation/sovrin/1.1.50-master/sovrin/pool_transactions_sandbox_genesis
-  LEDGER_PROTOCOL_VERSION: "1.6"
-  AUTO_REGISTER_DID: 0
 ```
 
 The following describes the purpose of each element:
 
 - `APPLICATION_URL_XXX` is the URL for each credential issued by the agent. The last two elements correspond to the path defined in the `routes.yml` file for the credential. The `$APPLICATION_URL` is the server part of the URL for the agent.
 - `TEMPLATE_PATH` is the location of the web form HTML templates referenced in the `routes.yml` file.
-- `TOB_API_URL` is the URL of the API for the instance of OrgBook to which the agent will issue credentials.
-- `TOB_APP_URL` is the URL of the application the instance of OrgBook to which the agent will issue credentials.
-  - **NOTE**: In the example above, although the same instance of OrgBook is referenced in both cases, the server section is different because of the vagaries of Docker
-- `INDY_WALLET_SEED` is the seed used to generate the encryption keypair for the agent wallet. This approach is used for testing. In production, the seed is handled in a secure manner, injected at startup time from a vault.
-- `INDY_GENESIS_URL` is the URL from which the genesis file for the instance of the Indy ledger that the agent is using.
-- `LEDGER_PROTOCOL_VERSION` is  the protocol version of the instance of the Indy ledger that the agent is using. Must be at least 1.6.
-- `AUTO_REGISTER_DID` is 1 if the agent should register the DID of the agent to the Indy ledger, 0 if not.
-  - **NOTE**: In production, the Agent's DID is written to the ledger before the initial deployment of the agent. Often in testing a script is used to pre-write the DID to the ledger to mimic the production behaviour.
 
 ## File: [routes.yml](routes.yml)
 
@@ -187,27 +173,6 @@ issuers:
     email: info@my-organization.ca
     logo_path: ../assets/img/my-organization-logo.jpg
     endpoint: $ENDPOINT_URL
-
-    connection:
-      type: TheOrgBook
-      api_url: $TOB_API_URL
-      sign_target: false
-
-    wallet:
-      name: ${POSTGRESQL_WALLET_NAME:-myorg_issuer}
-      seed: $WALLET_SEED
-      type: $WALLET_TYPE
-      params:
-        storage_config:
-          url: "$POSTGRESQL_WALLET_HOST:$POSTGRESQL_WALLET_PORT"
-      access_creds:
-        key: $WALLET_ENCRYPTION_KEY
-        storage_credentials:
-          account: $POSTGRESQL_WALLET_USER
-          password: $POSTGRESQL_WALLET_PASSWORD
-          admin_account: ${POSTGRESQL_WALLET_ADMIN_USER:-postgres}
-          admin_password: $POSTGRESQL_WALLET_ADMIN_PASSWORD
-        key_derivation_method: ARGON2I_MOD
 ```
 
 - There is usually just a single issuer in the `issuer` structure, but there could be more.
@@ -215,10 +180,6 @@ issuers:
 - The issuer metadata (`name`, `url`, `abbreviation` and `email`) is presented on the OrgBook screen about the issuer.
 - An optional logo for the issuer must be found in the repo at the relative location provided.
 - The `endpoint` is the based URL for this agent. In this example, the value comes from an environment variable set elsewhere (perhaps in the `manage` script).
-- The `connection` structure should also be as listed above.
-  - The `sign_target` setting can be set to 1 (true) if out going requests should be signed
-- The `wallet` structure contains information needed to configure the agent's own wallet. Those parameters are documented in Hyperledger Indy and depend on the wallet implementation you use.  BC Gov uses the Postgres implementation that we developed and contributed to the `indy-sdk` repo.
-
 
 ``` YAML
     credential_types:
@@ -307,9 +268,7 @@ verifiers:
     name: BC OrgBook
     connection:
       type: TheOrgBook
-      api_url: $TOB_API_URL
-    wallet:
-      seed: "tob-verifier-wallet-000000000001"
+      agent_admin_url: $TOB_AGENT_ADMIN_URL
 
 proof_requests:
   # This Agent's DID - for proof requests based on this Issuer's Credentials
