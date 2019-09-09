@@ -6,7 +6,7 @@ export HOST_PORT=${HOST_PORT:-5000}
 
 CMD="$@"
 if [ -z "$CMD" ]; then
-  CMD="flask run --host=${HOST_IP} --port=${HOST_PORT} --with-threads --reload --eager-loading"
+  CMD="python ${APP_NAME}.py runserver --host=${HOST_IP}:${HOST_PORT} --threaded"
 fi
 
 echo "Starting server ..."
