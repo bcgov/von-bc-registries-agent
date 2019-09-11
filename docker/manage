@@ -87,13 +87,14 @@ configureEnvironment () {
 
   export COMPOSE_PROJECT_NAME=${COMPOSE_PROJECT_NAME:-"vonx"}
   export LEDGER_URL=${LEDGER_URL-http://$DOCKERHOST:9000}
+  export GENESIS_URL=${GENESIS_URL:-${LEDGER_URL}/genesis}
 
   # bcreg-agent
   export AGENT_HTTP_INTERFACE_PORT=8031
   export AGENT_WS_INTERFACE_PORT=8033
   export AGENT_ADMIN_INTERFACE_PORT=8034
+  export AGENT_WALLET_NAME=${AGENT_WALLET_NAME:-icat_agent_wallet}
   export WALLET_SEED=bc_registries_dev_00000000000000
-  export WEBHOOK_HOST=http://bcreg-controller:${CONTROLLER_PORT}
   export AGENT_NAME="bcreg-agent"
   export AGENT_ENDPOINT=${AGENT_ENDPOINT:-http://$DOCKERHOST:$AGENT_HTTP_INTERFACE_PORT}
   export AGENT_ADMIN_API_KEY=${AGENT_ADMIN_API_KEY}
@@ -108,7 +109,6 @@ configureEnvironment () {
   export TOB_AGENT_ADMIN_INTERFACE_PORT=8024
   export TOB_AGENT_ADMIN_URL=${TOB_AGENT_ADMIN_URL:-http://tob-agent:${TOB_AGENT_ADMIN_INTERFACE_PORT}}
   export TOB_ADMIN_API_KEY=${TOB_ADMIN_API_KEY}
-
   export CONTROLLER_URL=http://bcreg-controller:${CONTROLLER_PORT}
 
   # wallet-db

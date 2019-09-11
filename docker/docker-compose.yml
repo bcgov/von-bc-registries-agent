@@ -54,7 +54,7 @@ services:
   bcreg-agent:
     image: tob-agent
     environment:
-      - GENESIS_URL=${GENESIS_URL:-${LEDGER_URL}/genesis}
+      - GENESIS_URL=${GENESIS_URL}
       - AGENT_WALLET_NAME=${AGENT_WALLET_NAME:-icat_agent_wallet}
       - WALLET_TYPE=${WALLET_TYPE}
       - POSTGRESQL_WALLET_HOST=${POSTGRESQL_WALLET_HOST}
@@ -65,13 +65,11 @@ services:
       - WALLET_ENCRYPTION_KEY=${WALLET_ENCRYPTION_KEY}
       - WALLET_SEED=${WALLET_SEED}
       # - WALLET_DID=${ISSUER_WALLET_DID}
-      - WEBHOOK_URL=${WEBHOOK_HOST}/api/agentcb
+      - WEBHOOK_URL=${CONTROLLER_URL}/api/agentcb
       - HTTP_INTERFACE_PORT=${AGENT_HTTP_INTERFACE_PORT}
       - WS_INTERFACE_PORT=${AGENT_WS_INTERFACE_PORT}
       - ADMIN_INTERFACE_PORT=${AGENT_ADMIN_INTERFACE_PORT}
       - AGENT_NAME=${AGENT_NAME}
-
-
     networks:
       - orgbook
       - bcreg
@@ -87,8 +85,8 @@ services:
         "curl -d '{\"seed\":\"${WALLET_SEED}\", \"role\":\"TRUST_ANCHOR\", \"alias\":\"${AGENT_NAME}\"}' -X POST ${LEDGER_URL}/register; \
         sleep 3; \
         aca-py start \
-        --inbound-transport http '0.0.0.0' ${HTTP_INTERFACE_PORT} \
-        --inbound-transport ws '0.0.0.0' ${WS_INTERFACE_PORT} \
+        --inbound-transport http '0.0.0.0' ${AGENT_HTTP_INTERFACE_PORT} \
+        --inbound-transport ws '0.0.0.0' ${AGENT_WS_INTERFACE_PORT} \
         --endpoint ${AGENT_ENDPOINT} \
         --outbound-transport ws \
         --outbound-transport http \
@@ -107,7 +105,7 @@ services:
         --wallet-storage-config '{\"url\":\"${POSTGRESQL_WALLET_HOST}:${POSTGRESQL_WALLET_PORT}\",\"max_connections\":5,\"wallet_scheme\":\"MultiWalletSingleTable\"}' \
         --wallet-storage-creds '{\"account\":\"${POSTGRESQL_USER}\",\"password\":\"${POSTGRESQL_PASSWORD}\",\"admin_account\":\"postgres\",\"admin_password\":\"${POSTGRESQL_ADMIN_PASSWORD}\"}' \
         --seed '${WALLET_SEED}' \
-        --admin '0.0.0.0' ${ADMIN_INTERFACE_PORT} \
+        --admin '0.0.0.0' ${AGENT_ADMIN_INTERFACE_PORT} \
         --${AGENT_ADMIN_MODE} \
         --label ${AGENT_NAME} \
         --protocol indy_catalyst_issuer_registration",
