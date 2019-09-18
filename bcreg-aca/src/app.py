@@ -22,6 +22,10 @@ class BCRegController(Flask):
 app = BCRegController()
 wsgi_app = app.wsgi_app
 
+@app.route('/health', methods=['GET'])
+def health_check():
+    return make_response(jsonify({'success': True}), 200)
+
 @app.errorhandler(404)
 def not_found(error):
     return make_response(jsonify({'error': 'Not found'}), 404)

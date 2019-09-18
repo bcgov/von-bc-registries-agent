@@ -30,14 +30,10 @@ services:
       CONFIG_ROOT: ../config
       HOST_PORT: ${CONTROLLER_PORT}
       ENVIRONMENT: ${ENVIRONMENT:-default}
-      ENABLE_GUNICORN: ${ENABLE_GUNICORN:-0}
-      LOG_LEVEL: ${LOG_LEVEL}
-      PYTHON_ENV: ${PYTHON_ENV:-development}
       AGENT_ADMIN_URL: http://bcreg-agent:${AGENT_ADMIN_INTERFACE_PORT}
       AGENT_ADMIN_API_KEY: ${AGENT_ADMIN_API_KEY}
       TOB_AGENT_ADMIN_URL: ${TOB_AGENT_ADMIN_URL}
       TOB_ADMIN_API_KEY: ${TOB_ADMIN_API_KEY}
-      # ISSUERS: ${ISSUERS}
     networks:
       - orgbook
       - bcreg
