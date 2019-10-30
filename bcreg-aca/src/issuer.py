@@ -293,6 +293,7 @@ def get_credential_response(cred_exch_id):
 
 
 TOPIC_CONNECTIONS = "connections"
+TOPIC_CONNECTIONS_ACTIVITY = "connections_actvity"
 TOPIC_CREDENTIALS = "credentials"
 TOPIC_PRESENTATIONS = "presentations"
 TOPIC_GET_ACTIVE_MENU = "get-active-menu"
@@ -301,7 +302,7 @@ TOPIC_ISSUER_REGISTRATION = "issuer_registration"
 TOPIC_PROBLEM_REPORT = "problem-report"
 
 # max 15 second wait for a credential response (prevents blocking forever)
-MAX_CRED_RESPONSE_TIMEOUT = 15
+MAX_CRED_RESPONSE_TIMEOUT = 45
 
 
 def handle_connections(state, message):
