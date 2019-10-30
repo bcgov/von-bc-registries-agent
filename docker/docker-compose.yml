@@ -175,8 +175,7 @@ services:
       - mara-data:/var/lib/pgsql/data
 
   bcreg-wallet-db:
-    #image: registry.access.redhat.com/rhscl/postgresql-95-rhel7:9.5
-    image: postgresql
+    image: registry.access.redhat.com/rhscl/postgresql-95-rhel7:9.5
     environment:
       - POSTGRESQL_USER=${POSTGRESQL_USER}
       - POSTGRESQL_PASSWORD=${POSTGRESQL_PASSWORD}

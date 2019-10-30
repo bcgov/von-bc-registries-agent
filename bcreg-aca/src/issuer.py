@@ -25,6 +25,8 @@ synced = {}
 
 
 class StartupProcessingThread(threading.Thread):
+    global app_config
+
     def __init__(self, ENV):
         threading.Thread.__init__(self)
         self.ENV = ENV
@@ -49,7 +51,8 @@ class StartupProcessingThread(threading.Thread):
 
         # get public DID from our agent
         response = requests.get(
-            agent_admin_url + "/wallet/did/public"
+            agent_admin_url + "/wallet/did/public",
+            headers=ADMIN_REQUEST_HEADERS,
         )
         result = response.json()
         did = result["result"]
@@ -439,6 +442,7 @@ def handle_send_credential(cred_input):
     """
     # construct and send the credential
     # print("Received credentials", cred_input)
+    global app_config
 
     agent_admin_url = app_config["AGENT_ADMIN_URL"]
 
