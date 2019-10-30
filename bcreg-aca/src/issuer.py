@@ -190,6 +190,7 @@ class StartupProcessingThread(threading.Thread):
                 },
             }
 
+            print(json.dumps(issuer_request))
             response = requests.post(
                 agent_admin_url + "/issuer_registration/send",
                 json.dumps(issuer_request),
