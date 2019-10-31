@@ -88,6 +88,7 @@ configureEnvironment () {
   export COMPOSE_PROJECT_NAME=${COMPOSE_PROJECT_NAME:-"vonx"}
   export LEDGER_URL=${LEDGER_URL-http://$DOCKERHOST:9000}
   export GENESIS_URL=${GENESIS_URL:-${LEDGER_URL}/genesis}
+  #export AGENT_ADMIN_API_KEY=${AGENT_ADMIN_API_KEY:-R2D2HfPM5Zwd69IjclQiuFmcMV6}
 
   # bcreg-agent
   export AGENT_HTTP_INTERFACE_PORT=8031

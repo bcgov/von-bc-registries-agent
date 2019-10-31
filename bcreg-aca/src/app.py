@@ -59,6 +59,9 @@ def agent_callback(topic):
             return issuer.handle_connections(message["state"], message)
         return jsonify({})
 
+    elif topic == issuer.TOPIC_CONNECTIONS_ACTIVITY:
+        return jsonify({})
+
     elif topic == issuer.TOPIC_CREDENTIALS:
         if "state" in message:
             return issuer.handle_credentials(message["state"], message)
