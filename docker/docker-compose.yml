@@ -105,7 +105,6 @@ services:
         --admin '0.0.0.0' ${AGENT_ADMIN_INTERFACE_PORT} \
         --${AGENT_ADMIN_MODE} \
         --label ${AGENT_NAME} \
-        --log-level 'debug' \
         --protocol indy_catalyst_issuer_registration",
       ]
 
