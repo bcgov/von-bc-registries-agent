@@ -32,9 +32,9 @@ from bcreg.rocketchat_hooks import log_error, log_warning, log_info
 AGENT_URL = os.environ.get('CONTROLLER_URL', 'http://localhost:5002')
 NOTIFY_OF_CREDENTIAL_POSTING_ERRORS = os.environ.get('NOTIFY_OF_CREDENTIAL_POSTING_ERRORS', 'false')
 
-CREDS_BATCH_SIZE = 3000
-CREDS_REQUEST_SIZE = 20
-MAX_CREDS_REQUESTS = 16
+CREDS_BATCH_SIZE = int(os.getenv('CREDS_BATCH_SIZE', '3000'))
+CREDS_REQUEST_SIZE = int(os.getenv('CREDS_REQUEST_SIZE', '20'))
+MAX_CREDS_REQUESTS = int(os.getenv('MAX_CREDS_REQUESTS', '16'))
 
 def notify_error(message):
     # Use NOTIFY_OF_CREDENTIAL_POSTING_ERRORS to turn error notification on(true)/off(false); off by default.
