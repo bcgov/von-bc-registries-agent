@@ -33,8 +33,8 @@ AGENT_URL = os.environ.get('CONTROLLER_URL', 'http://localhost:5002')
 NOTIFY_OF_CREDENTIAL_POSTING_ERRORS = os.environ.get('NOTIFY_OF_CREDENTIAL_POSTING_ERRORS', 'false')
 
 CREDS_BATCH_SIZE = 3000
-CREDS_REQUEST_SIZE = 20
-MAX_CREDS_REQUESTS = 16
+CREDS_REQUEST_SIZE = 5
+MAX_CREDS_REQUESTS = 32
 
 def notify_error(message):
     # Use NOTIFY_OF_CREDENTIAL_POSTING_ERRORS to turn error notification on(true)/off(false); off by default.
@@ -119,7 +119,8 @@ async def post_credentials(http_client, conn, credentials):
         #print("Posted = ", len(credentials), ", results = ", len(results))
     except (Exception) as error:
         # everything failed :-(
-        print("log exception to database", str(error))
+        print("log exception to database:", str(error))
+        print(error)
         res = str(error)
         if 0 == len(res):
             res = "Unspecified error posting to OrgBook"
@@ -381,6 +382,7 @@ class CredsSubmitter:
                 print('>>> Processing {} of {} credentials.'.format(i, cred_count))
                 processing_time = time.perf_counter() - start_time
                 print('Processing: ' + str(processing_time))
+                print(60*cred_count/processing_time, "credentials per minute")
 
                 cur = self.conn.cursor()
                 cur.execute(sql1a)
