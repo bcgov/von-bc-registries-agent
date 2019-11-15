@@ -217,7 +217,7 @@ credential_requests = {}
 credential_responses = {}
 credential_threads = {}
 
-USE_LOCK = True
+USE_LOCK = os.getenv('USE_LOCK', 'True').lower() == 'true'
 
 def set_credential_thread_id(cred_exch_id, thread_id):
     start_time = time.perf_counter()
