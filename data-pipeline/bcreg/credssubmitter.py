@@ -35,6 +35,10 @@ NOTIFY_OF_CREDENTIAL_POSTING_ERRORS = os.environ.get('NOTIFY_OF_CREDENTIAL_POSTI
 CREDS_BATCH_SIZE = int(os.getenv('CREDS_BATCH_SIZE', '3000'))
 CREDS_REQUEST_SIZE = int(os.getenv('CREDS_REQUEST_SIZE', '5'))
 MAX_CREDS_REQUESTS = int(os.getenv('MAX_CREDS_REQUESTS', '16'))
+# max time to process (minutes)
+MAX_PROCESSING_MINS = int(os.getenv('MAX_PROCESSING_MINS', '10'))
+# how often to report status (# credentials)
+PROCESS_LOOP_REPORT_CT = int(os.getenv('PROCESS_LOOP_REPORT_CT', '100'))
 
 def notify_error(message):
     # Use NOTIFY_OF_CREDENTIAL_POSTING_ERRORS to turn error notification on(true)/off(false); off by default.
@@ -241,6 +245,7 @@ class CredsSubmitter:
                       SELECT RECORD_ID
                       FROM CREDENTIAL_LOG 
                       WHERE PROCESS_DATE is null
+                      AND RECORD_ID > %s
                       ORDER BY RECORD_ID
                       LIMIT """ + str(CREDS_BATCH_SIZE) + """
                   )
@@ -248,7 +253,8 @@ class CredsSubmitter:
 
         sql1a = """SELECT count(*) cnt
                    FROM CREDENTIAL_LOG 
-                   WHERE PROCESS_DATE is null"""
+                   WHERE PROCESS_DATE is null
+                   AND RECORD_ID > %s"""
 
         sql1_active = """SELECT RECORD_ID, 
                              SYSTEM_TYPE_CD, 
@@ -269,6 +275,7 @@ class CredsSubmitter:
                              SELECT RECORD_ID
                              FROM CREDENTIAL_LOG 
                              WHERE CORP_STATE = 'ACT' and PROCESS_DATE is null
+                             AND RECORD_ID > %s
                              ORDER BY RECORD_ID
                              LIMIT """ + str(CREDS_BATCH_SIZE) + """
                          )                  
@@ -276,7 +283,8 @@ class CredsSubmitter:
 
         sql1a_active = """SELECT count(*) cnt
                           FROM CREDENTIAL_LOG 
-                          WHERE corp_state = 'ACT' and PROCESS_DATE is null;"""
+                          WHERE corp_state = 'ACT' and PROCESS_DATE is null
+                          AND RECORD_ID > %s;"""
 
         """ Connect to the PostgreSQL database server """
         #conn = None
@@ -289,12 +297,13 @@ class CredsSubmitter:
             pool = mpool.ThreadPool(MAX_CREDS_REQUESTS)
             loop = asyncio.get_event_loop()
             tasks = []
+            max_rec_id = 0
             http_client = aiohttp.ClientSession()
 
             # create a cursor
             cred_count = 0
             cur = self.conn.cursor()
-            cur.execute(sql1a)
+            cur.execute(sql1a, (max_rec_id,))
             row = cur.fetchone()
             if row is not None:
                 cred_count = row[0]
@@ -306,12 +315,13 @@ class CredsSubmitter:
             start_time = time.perf_counter()
             processing_time = 0
             processed_count = 0
-            max_processing_time = 10 * 60
+            perf_proc_count = 0
+            max_processing_time = 60 * MAX_PROCESSING_MINS
 
             while 0 < cred_count_remaining and processing_time < max_processing_time:
                 active_cred_count = 0
                 cur = self.conn.cursor()
-                cur.execute(sql1a_active)
+                cur.execute(sql1a_active, (max_rec_id,))
                 row = cur.fetchone()
                 if row is not None:
                     active_cred_count = row[0]
@@ -321,16 +331,17 @@ class CredsSubmitter:
                 # create a cursor
                 cur = self.conn.cursor()
                 if 0 < active_cred_count:
-                    cur.execute(sql1_active)
+                    cur.execute(sql1_active, (max_rec_id,))
                 else:
-                    cur.execute(sql1)
+                    cur.execute(sql1, (max_rec_id,))
                 row = cur.fetchone()
                 credentials = []
                 cred_owner_id = ''
                 while row is not None:
                     i = i + 1
                     processed_count = processed_count + 1
-                    if processed_count >= 100:
+                    perf_proc_count = perf_proc_count + 1
+                    if processed_count >= PROCESS_LOOP_REPORT_CT:
                       print('>>> Processing {} of {} credentials.'.format(i, cred_count))
                       processing_time = time.perf_counter() - start_time
                       print('Processing: ' + str(processing_time))
@@ -338,6 +349,8 @@ class CredsSubmitter:
                     credential = {'RECORD_ID':row[0], 'SYSTEM_TYP_CD':row[1], 'PREV_EVENT':row[2], 'LAST_EVENT':row[3], 'CORP_NUM':row[4], 'CORP_STATE':row[5],
                                   'CREDENTIAL_TYPE_CD':row[6], 'CREDENTIAL_ID':row[7], 'CREDENTIAL_JSON':row[8], 'CREDENTIAL_REASON':row[9], 
                                   'SCHEMA_NAME':row[10], 'SCHEMA_VERSION':row[11], 'ENTRY_DATE':row[12]}
+                    if max_rec_id < row[0]:
+                        max_rec_id = row[0]
 
                     # make sure to include all credentials for the same client id within the same batch
                     if CREDS_REQUEST_SIZE <= len(credentials) and credential['CORP_NUM'] != cred_owner_id:
@@ -375,22 +388,31 @@ class CredsSubmitter:
                     cred_owner_id = ''
 
                 # wait for the current batch of credential posts to complete
-                for response in await asyncio.gather(*tasks):
-                    pass # print('response:' + response)
-                tasks = []
-
                 print('>>> Processing {} of {} credentials.'.format(i, cred_count))
                 processing_time = time.perf_counter() - start_time
-                print('Processing: ' + str(processing_time))
-                print(60*cred_count/processing_time, "credentials per minute")
+                print('*** Processing: ' + str(processing_time))
+                if perf_proc_count > 2*(CREDS_REQUEST_SIZE*MAX_CREDS_REQUESTS):
+                    cpm = 60*(perf_proc_count-(0.5*CREDS_REQUEST_SIZE*MAX_CREDS_REQUESTS))/processing_time
+                    print(cpm, "credentials per minute")
 
                 cur = self.conn.cursor()
-                cur.execute(sql1a)
+                cur.execute(sql1a, (max_rec_id,))
                 row = cur.fetchone()
                 if row is not None:
                     cred_count_remaining = row[0]
                 cur.close()
                 cur = None
+
+            # wait for the current batch of credential posts to complete
+            print(">>> Waiting for all outstanding tasks to complete ...")
+            for response in await asyncio.gather(*tasks):
+                pass # print('response:' + response)
+            tasks = []
+
+            print('>>> Completed.')
+            processing_time = time.perf_counter() - start_time
+            print('Processing: ' + str(processing_time))
+            print(60*perf_proc_count/processing_time, "credentials per minute")
 
         except (Exception, psycopg2.DatabaseError) as error:
             print(error)
