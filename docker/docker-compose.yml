@@ -105,6 +105,7 @@ services:
         --admin '0.0.0.0' ${AGENT_ADMIN_INTERFACE_PORT} \
         --${AGENT_ADMIN_MODE} \
         --label ${AGENT_NAME} \
+        --timing \
         --plugin indy_catalyst_issuer_registration",
       ]
 
