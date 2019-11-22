@@ -218,9 +218,10 @@ credential_responses = {}
 credential_threads = {}
 
 USE_LOCK = os.getenv('USE_LOCK', 'True').lower() == 'true'
+# need to specify an env variable RECORD_TIMINGS=True to get method timings
+RECORD_TIMINGS = os.getenv('RECORD_TIMINGS', 'False').lower() == 'true'
 
 timing_lock = threading.Lock()
-record_timings = True
 timings = {}
 
 def clear_stats():
@@ -239,7 +240,7 @@ def get_stats():
         timing_lock.release()
 
 def log_timing_method(method, start_time, end_time, success, data=None):
-    if not record_timings:
+    if not RECORD_TIMINGS:
         return
 
     timing_lock.acquire()
@@ -496,7 +497,8 @@ class SendCredentialThread(threading.Thread):
                         'thread_id':cred_data["thread_id"], 
                         'credential_exchange_id':cred_data["credential_exchange_id"], 
                         'Error': 'Timeout',
-                        'elapsed_time': (end_time-start_time)}
+                        'elapsed_time': (end_time-start_time)
+                    }
                 )
             else:
                 #print(

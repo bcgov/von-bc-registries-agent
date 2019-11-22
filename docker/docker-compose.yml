@@ -34,6 +34,7 @@ services:
       AGENT_ADMIN_API_KEY: ${AGENT_ADMIN_API_KEY}
       TOB_AGENT_ADMIN_URL: ${TOB_AGENT_ADMIN_URL}
       TOB_ADMIN_API_KEY: ${TOB_ADMIN_API_KEY}
+      #RECORD_TIMINGS: 'true'
     networks:
       - orgbook
       - bcreg
