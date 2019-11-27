@@ -256,36 +256,6 @@ class CredsSubmitter:
                    WHERE PROCESS_DATE is null
                    AND RECORD_ID > %s"""
 
-        sql1_active = """SELECT RECORD_ID, 
-                             SYSTEM_TYPE_CD, 
-                             PREV_EVENT, 
-                             LAST_EVENT, 
-                             CORP_NUM, 
-                             CORP_STATE, 
-                             CREDENTIAL_TYPE_CD, 
-                             CREDENTIAL_ID, 
-                             CREDENTIAL_JSON, 
-                             CREDENTIAL_REASON, 
-                             SCHEMA_NAME, 
-                             SCHEMA_VERSION, 
-                             ENTRY_DATE
-                         FROM CREDENTIAL_LOG 
-                         WHERE RECORD_ID IN
-                         (
-                             SELECT RECORD_ID
-                             FROM CREDENTIAL_LOG 
-                             WHERE CORP_STATE = 'ACT' and PROCESS_DATE is null
-                             AND RECORD_ID > %s
-                             ORDER BY RECORD_ID
-                             LIMIT """ + str(CREDS_BATCH_SIZE) + """
-                         )                  
-                         ORDER BY RECORD_ID;"""
-
-        sql1a_active = """SELECT count(*) cnt
-                          FROM CREDENTIAL_LOG 
-                          WHERE corp_state = 'ACT' and PROCESS_DATE is null
-                          AND RECORD_ID > %s;"""
-
         """ Connect to the PostgreSQL database server """
         #conn = None
         cur = None
@@ -319,21 +289,9 @@ class CredsSubmitter:
             max_processing_time = 60 * MAX_PROCESSING_MINS
 
             while 0 < cred_count_remaining and processing_time < max_processing_time:
-                active_cred_count = 0
-                cur = self.conn.cursor()
-                cur.execute(sql1a_active, (max_rec_id,))
-                row = cur.fetchone()
-                if row is not None:
-                    active_cred_count = row[0]
-                cur.close()
-                cur = None
-
                 # create a cursor
                 cur = self.conn.cursor()
-                if 0 < active_cred_count:
-                    cur.execute(sql1_active, (max_rec_id,))
-                else:
-                    cur.execute(sql1, (max_rec_id,))
+                cur.execute(sql1, (max_rec_id,))
                 row = cur.fetchone()
                 credentials = []
                 cred_owner_id = ''
