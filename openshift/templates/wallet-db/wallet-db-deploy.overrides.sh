@@ -1,28 +1,19 @@
+_includeFile=$(type -p overrides.inc)
+if [ ! -z ${_includeFile} ]; then
+  . ${_includeFile}
+else
+  _red='\033[0;31m'; _yellow='\033[1;33m'; _nc='\033[0m'; echo -e \\n"${_red}overrides.inc could not be found on the path.${_nc}\n${_yellow}Please ensure the openshift-developer-tools are installed on and registered on your path.${_nc}\n${_yellow}https://github.com/BCDevOps/openshift-developer-tools${_nc}"; exit 1;
+fi
+
 # ======================================================
 # Special Deployment Parameters needed for DB Deployment
 # ------------------------------------------------------
 # The results need to be encoded as OpenShift template
 # parameters for use with oc process.
 # ======================================================
-
-generateUsername() {
-  # Generate a random username and Base64 encode the result ...
-  _userName=USER_$( cat /dev/urandom | LC_CTYPE=C tr -dc 'a-zA-Z0-9' | fold -w 4 | head -n 1 )
-  _userName=$(echo -n "${_userName}"|base64)
-  echo ${_userName}
-}
-
-generatePassword() {
-  # Generate a random password and Base64 encode the result ...
-  _password=$( cat /dev/urandom | LC_CTYPE=C tr -dc 'a-zA-Z0-9_' | fold -w 16 | head -n 1 )
-  _password=$(echo -n "${_password}"|base64)  
-  echo ${_password}
-}
-
 _userName=$(generateUsername)
 _password=$(generatePassword)
 _adminPassword=$(generatePassword)
 
 SPECIALDEPLOYPARMS="-p POSTGRESQL_USER=${_userName} -p POSTGRESQL_PASSWORD=${_password} -p POSTGRESQL_ADMIN_PASSWORD=${_adminPassword}"
 echo ${SPECIALDEPLOYPARMS}
-
