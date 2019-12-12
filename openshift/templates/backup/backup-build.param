@@ -1,7 +1,7 @@
 #=========================================================
 # OpenShift template parameters for:
 # Component: .
-# Template File: templates/backup/backup-build.json
+# Template File: ../openshift/templates/backup/backup-build.json
 #=========================================================
 NAME=backup
 GIT_REPO_URL=https://github.com/BCDevOps/backup-container.git

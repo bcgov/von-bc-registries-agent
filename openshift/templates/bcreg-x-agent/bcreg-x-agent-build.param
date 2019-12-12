@@ -1,7 +1,7 @@
 #=========================================================
 # OpenShift template parameters for:
 # Component: .
-# Template File: templates/bcreg-x-agent/bcreg-x-agent-build.json
+# Template File: ../openshift/templates/bcreg-x-agent/bcreg-x-agent-build.json
 #=========================================================
 NAME=bcreg-x-agent
 GIT_REPO_URL=https://github.com/bcgov/von-bc-registries-agent.git

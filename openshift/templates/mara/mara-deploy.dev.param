@@ -1,9 +1,12 @@
 #=========================================================
 # OpenShift template parameters for:
 # Component: .
-# Template File: templates/mara/mara-deploy.json
+# Template File: ../openshift/templates/mara/mara-deploy.json
 #=========================================================
 # NAME=mara
+# SUFFIX=
+# APP_NAME=BC-Reg-X-Agent
+# APP_GROUP=bcreg-x-agent
 # IMAGE_NAMESPACE=devex-von-bc-registries-agent-tools
 TAG_NAME=dev
 # HOST_NAME=0.0.0.0
@@ -16,14 +19,15 @@ TAG_NAME=dev
 # EVENT_PROC_DB_PORT=5432
 # EVENT_PROC_DB_DATABASE=bc_reg_db
 # MARA_DB_HOST=mara-db
-# MARA_DB_PORT=5432s
+# MARA_DB_PORT=5432
 # MARA_DB_DATABASE=mara_db
 # START_CRON=
 # WEBHOOK_URL=
 # WEBHOOK_LEVEL=2
 PROJECT_NAME=devex-von-bc-registries-agent-dev
 FRIENDLY_PROJECT_NAME=BC Registries Agent (dev)
-# CPU_REQUEST=0m
+# NOTIFY_OF_CREDENTIAL_POSTING_ERRORS=false
+# CPU_REQUEST=10m
 # CPU_LIMIT=1000m
-# MEMORY_REQUEST=0Mi
+# MEMORY_REQUEST=10Mi
 # MEMORY_LIMIT=2Gi

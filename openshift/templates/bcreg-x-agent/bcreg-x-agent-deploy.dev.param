@@ -1,9 +1,12 @@
 #=========================================================
 # OpenShift template parameters for:
 # Component: .
-# Template File: templates/bcreg-x-agent/bcreg-x-agent-deploy.json
+# Template File: ../openshift/templates/bcreg-x-agent/bcreg-x-agent-deploy.json
 #=========================================================
 # NAME=bcreg-x-agent
+# SUFFIX=
+# APP_NAME=BC-Reg-X-Agent
+# APP_GROUP=bcreg-x-agent
 # IMAGE_NAMESPACE=devex-von-bc-registries-agent-tools
 TAG_NAME=dev
 APPLICATION_URL=https://bcreg-x-proxy-devex-von-bc-registries-agent-dev.pathfinder.gov.bc.ca

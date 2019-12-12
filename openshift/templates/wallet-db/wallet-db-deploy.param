@@ -1,9 +1,12 @@
 #=========================================================
 # OpenShift template parameters for:
 # Component: .
-# Template File: templates/wallet-db/wallet-db-deploy.json
+# Template File: ../openshift/templates/wallet-db/wallet-db-deploy.json
 #=========================================================
 NAME=wallet-db
+SUFFIX=
+APP_NAME=BC-Reg-X-Agent
+APP_GROUP=bcreg-x-agent
 IMAGE_NAMESPACE=devex-von-bc-registries-agent-tools
 SOURCE_IMAGE_NAME=postgresql
 TAG_NAME=dev

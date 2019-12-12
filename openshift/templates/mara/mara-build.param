@@ -1,7 +1,7 @@
 #=========================================================
 # OpenShift template parameters for:
 # Component: .
-# Template File: templates/mara/mara-build.json
+# Template File: ../openshift/templates/mara/mara-build.json
 #=========================================================
 NAME=mara
 GIT_REPO_URL=https://github.com/bcgov/von-bc-registries-agent.git

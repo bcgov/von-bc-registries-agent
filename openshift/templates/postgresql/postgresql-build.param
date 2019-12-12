@@ -1,7 +1,7 @@
 #=========================================================
 # OpenShift template parameters for:
 # Component: .
-# Template File: templates/postgresql/postgresql-build.json
+# Template File: ../openshift/templates/postgresql/postgresql-build.json
 #=========================================================
 NAME=postgresql
 OUTPUT_IMAGE_TAG=latest

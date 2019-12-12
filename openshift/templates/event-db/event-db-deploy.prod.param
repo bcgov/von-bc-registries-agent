@@ -1,9 +1,12 @@
 #=========================================================
 # OpenShift template parameters for:
 # Component: .
-# Template File: templates/event-db/event-db-deploy.json
+# Template File: ../openshift/templates/event-db/event-db-deploy.json
 #=========================================================
 # NAME=event-db
+# SUFFIX=
+# APP_NAME=BC-Reg-X-Agent
+# APP_GROUP=bcreg-x-agent
 # IMAGE_NAMESPACE=devex-von-bc-registries-agent-tools
 # SOURCE_IMAGE_NAME=postgresql
 TAG_NAME=prod

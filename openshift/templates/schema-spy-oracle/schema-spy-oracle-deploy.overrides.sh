@@ -22,8 +22,27 @@ OUTPUT_FILE=caddy-configmap_DeploymentConfig.json
 printStatusMsg "Generating ConfigMap; ${CONFIG_MAP_NAME} ..."
 generateConfigMap "${CONFIG_MAP_NAME}" "${SOURCE_FILE}" "${OUTPUT_FORMAT}" "${OUTPUT_FILE}"
 
-_userName=$(generateUsername)
-_password=$(generatePassword)
-SPECIALDEPLOYPARMS="-p SCHEMASPY_USER=${_userName} -p SCHEMASPY_PASSWORD=${_password}"
-echo ${SPECIALDEPLOYPARMS}
+if createOperation; then
+  # Randomly generate a set of credentials without asking ...
+  printStatusMsg "Creating a set of random user credentials ..."
+  writeParameter "SCHEMASPY_USER" $(generateUsername) "false"
+  writeParameter "SCHEMASPY_PASSWORD" $(generatePassword) "false"
 
+  readParameter "DATABASE_NAME - Please provide the database name." DATABASE_NAME "" "false"
+  readParameter "DATABASE_SCHEMA - Please provide the schema name." DATABASE_SCHEMA "" "false"
+  readParameter "DATABASE_CATALOG - Please provide the database catalogue name.  Typically the listener service name.  Values are case sensitive." DATABASE_CATALOG "" "false"
+  readParameter "DATABASE_HOST - Please provide the host name and port number.  Port number is required.  You may need to use the host IP address." DATABASE_HOST "" "false"
+else
+  # Secrets are removed from the configurations during update operations ...
+  printStatusMsg "Update operation detected ...\nSkipping the generation of random user credentials ...\n"
+  writeParameter "SCHEMASPY_USER" "generation_skipped" "false"
+  writeParameter "SCHEMASPY_PASSWORD" "generation_skipped" "false"
+
+  readParameter "DATABASE_NAME - Please provide the database name." DATABASE_NAME "" "false"
+  readParameter "DATABASE_SCHEMA - Please provide the schema name." DATABASE_SCHEMA "" "false"
+  readParameter "DATABASE_CATALOG - Please provide the database catalogue name.  Typically the listener service name.  Values are case sensitive." DATABASE_CATALOG "" "false"
+  readParameter "DATABASE_HOST - Please provide the host name and port number.  Port number is required.  You may need to use the host IP address." DATABASE_HOST "" "false"
+fi
+
+SPECIALDEPLOYPARMS="--param-file=${_overrideParamFile}"
+echo ${SPECIALDEPLOYPARMS}
