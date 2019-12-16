@@ -16,8 +16,10 @@
                 "name": "${NAME}",
                 "generation": 1,
                 "labels": {
-                    "app": "${NAME}-persistent",
-                    "template": "${NAME}-persistent-template"
+                    "name": "${NAME}${SUFFIX}",
+                    "app": "${APP_NAME}${SUFFIX}",
+                    "app-group": "${APP_GROUP}",
+                    "template": "${NAME}${SUFFIX}-persistent-template"
                 }
             },
             "spec": {
@@ -56,7 +58,9 @@
                 "template": {
                     "metadata": {
                         "labels": {
-                            "name": "${NAME}"
+                            "name": "${NAME}${SUFFIX}",
+                            "app": "${APP_NAME}${SUFFIX}",
+                            "app-group": "${APP_GROUP}"
                         }
                     },
                     "spec": {
@@ -176,8 +180,10 @@
             "metadata": {
                 "name": "${NAME}",
                 "labels": {
-                    "app": "${NAME}-persistent",
-                    "template": "${NAME}-persistent-template"
+                    "name": "${NAME}${SUFFIX}",
+                    "app": "${APP_NAME}${SUFFIX}",
+                    "app-group": "${APP_GROUP}",
+                    "template": "${NAME}${SUFFIX}-persistent-template"
                 }
             },
             "spec": {
@@ -198,7 +204,9 @@
             "metadata": {
                 "name": "${NAME}",
                 "labels": {
-                    "app": "${NAME}-persistent"
+                    "name": "${NAME}${SUFFIX}",
+                    "app": "${APP_NAME}${SUFFIX}",
+                    "app-group": "${APP_GROUP}"
                 }
             },
             "data": {
@@ -214,8 +222,10 @@
             "metadata": {
                 "name": "${NAME}",
                 "labels": {
-                    "app": "${NAME}-persistent",
-                    "template": "${NAME}-persistent-template"
+                    "name": "${NAME}${SUFFIX}",
+                    "app": "${APP_NAME}${SUFFIX}",
+                    "app-group": "${APP_GROUP}",
+                    "template": "${NAME}${SUFFIX}-persistent-template"
                 },
                 "annotations": {
                     "template.openshift.io/expose-uri": "postgres://{.spec.clusterIP}:{.spec.ports[?(.name==\"postgresql\")].port}"
@@ -245,6 +255,27 @@
             "description": "The name assigned to all of the OpenShift resources associated to the server instance.",
             "required": true,
             "value": "wallet-db"
+        },
+        {
+            "name": "SUFFIX",
+            "displayName": "Suffix",
+            "description": "A name suffix used for all objects",
+            "required": false,
+            "value": ""
+        },
+        {
+            "name": "APP_NAME",
+            "displayName": "App Name",
+            "description": "Used to group components together in the OpenShift console.",
+            "required": true,
+            "value": "BC-Reg-X-Agent"
+        },
+        {
+            "name": "APP_GROUP",
+            "displayName": "App Group",
+            "description": "The name assigned to all of the deployments in this project.",
+            "required": true,
+            "value": "bcreg-x-agent"
         },
         {
             "name": "IMAGE_NAMESPACE",

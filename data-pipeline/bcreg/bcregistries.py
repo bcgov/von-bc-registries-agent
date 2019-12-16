@@ -843,6 +843,7 @@ class BCRegistries:
         for sql in sqls:
             cur = None
             try:
+                print("Executing: " + sql + " with", last_event_dt)
                 cur = self.conn.cursor()
                 cur.execute(sql, (last_event_dt,))
                 row = cur.fetchone()
@@ -867,7 +868,11 @@ class BCRegistries:
         # since the event may affect more than one corp, check corp_state to see if there are any other corps to bring into scope
         sql = """SELECT corp_num from """ + BC_REGISTRIES_TABLE_PREFIX + """corp_state
                 where start_event_id = %s or end_event_id = %s"""
+        i = 0
         for event_id in event_ids:
+            i = i + 1
+            if (i % 1000 == 0):
+                print("Processing", i, "of", len(event_ids))
             cur = None
             try:
                 cur = self.conn.cursor()
