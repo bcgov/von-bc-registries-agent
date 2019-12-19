@@ -26,8 +26,11 @@ try:
 
             # get unprocessed corps (there are about 2700)
             print("Get unprocessed corps")
-            last_event_dt = bc_registries.get_event_effective_date(prev_event_id)
-            max_event_dt = bc_registries.get_event_effective_date(max_event_id)
+            if prev_event_id == 0:
+                last_event_dt = datetime.datetime(datetime.MINYEAR, 1, 1)
+            else:
+                last_event_dt = prev_event_date # bc_registries.get_event_effective_date(prev_event_id)
+            max_event_dt = max_event_date # bc_registries.get_event_effective_date(max_event_id)
             corps = bc_registries.get_unprocessed_corps(prev_event_id, last_event_dt, max_event_id, max_event_dt)
             print("Unprocessed corps count is", len(corps))
 

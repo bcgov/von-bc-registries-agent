@@ -214,6 +214,7 @@ specific_corps = [
                     'FM0514501',
                     'A0067332',
                     'C1224093',
+                    'S0001569',
                     ]
 """
                     'FM0783403',  # latest batch of test data

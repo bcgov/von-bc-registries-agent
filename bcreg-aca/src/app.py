@@ -24,7 +24,10 @@ wsgi_app = app.wsgi_app
 
 @app.route('/health', methods=['GET'])
 def health_check():
-    return make_response(jsonify({'success': True}), 200)
+    if issuer.tob_connection_synced():
+        return make_response(jsonify({'success': True}), 200)
+    else:
+        abort(503, "Connection not yet synced")
 
 @app.route('/status/reset', methods=['GET'])
 def clear_status():
@@ -44,6 +47,9 @@ def submit_credential():
     """
     Exposed method to proxy credential issuance requests.
     """
+    if not issuer.tob_connection_synced():
+        abort(503, "Connection not yet synced")
+
     start_time = time.perf_counter()
     method = 'submit_credential.batch'
 
