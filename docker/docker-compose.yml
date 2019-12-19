@@ -45,7 +45,7 @@ services:
     entrypoint: >
       /bin/bash -c "
         echo sleeping ...;
-        sleep 10;
+        sleep 15;
         ../docker-entrypoint.sh;"
 
   bcreg-agent:
@@ -80,7 +80,7 @@ services:
     command: [
         "-c",
         "curl -d '{\"seed\":\"${WALLET_SEED}\", \"role\":\"TRUST_ANCHOR\", \"alias\":\"${AGENT_NAME}\"}' -X POST ${LEDGER_URL}/register; \
-        sleep 5; \
+        sleep 2; \
         aca-py start \
         --inbound-transport http '0.0.0.0' ${AGENT_HTTP_INTERFACE_PORT} \
         --inbound-transport ws '0.0.0.0' ${AGENT_WS_INTERFACE_PORT} \
