@@ -66,11 +66,12 @@ def agent_schemas_cred_defs(agent_admin_url):
         )
         response.raise_for_status()
         schema = response.json()["schema_json"]
-        schema_key = schema["name"] + "::" + schema["version"]
-        ret_schemas[schema_key] = {
-            "schema": schema,
-            "schema_id": str(schema["seqNo"])
-        }
+        if schema:
+            schema_key = schema["name"] + "::" + schema["version"]
+            ret_schemas[schema_key] = {
+                "schema": schema,
+                "schema_id": str(schema["seqNo"])
+            }
 
     response = requests.get(
         agent_admin_url + "/credential-definitions/created",
@@ -85,10 +86,11 @@ def agent_schemas_cred_defs(agent_admin_url):
         )
         response.raise_for_status()
         cred_def = response.json()["credential_definition"]
-        for schema_key in ret_schemas:
-            if ret_schemas[schema_key]["schema_id"] == cred_def["schemaId"]:
-                ret_schemas[schema_key]["cred_def"] = cred_def
-                break
+        if cred_def:
+            for schema_key in ret_schemas:
+                if ret_schemas[schema_key]["schema_id"] == cred_def["schemaId"]:
+                    ret_schemas[schema_key]["cred_def"] = cred_def
+                    break
 
     return ret_schemas
 
@@ -446,6 +448,7 @@ def get_credential_response(cred_exch_id):
         credential_lock.acquire()
     try:
         if cred_exch_id in credential_responses:
+            thread_id = None
             response = credential_responses[cred_exch_id]
             del credential_responses[cred_exch_id]
             if cred_exch_id in credential_threads:
@@ -453,6 +456,8 @@ def get_credential_response(cred_exch_id):
                 #print("cleaning out cred_exch_id, thread_id", cred_exch_id, thread_id)
                 del credential_threads[cred_exch_id]
                 del credential_threads[thread_id]
+                # override returned id with thread_id, if we have it
+                response["result"] = thread_id
             return response
         else:
             return None

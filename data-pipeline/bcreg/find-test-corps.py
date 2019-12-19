@@ -5,7 +5,6 @@ from bcreg.config import config
 from bcreg.eventprocessor import EventProcessor, CORP_TYPES_IN_SCOPE
 from bcreg.bcregistries import BCRegistries, system_type
 
-"""
 specific_corps = [ 
                     '0641655',
                     '0820416',
@@ -142,8 +141,6 @@ specific_corps = [
                     '1198849',
                     '0149514',
                     '0390058',
-                    """
-specific_corps = [ 
                     # more test data from the additional company types
                     '1071287', # very short credential effective periods
                     '1001845',
