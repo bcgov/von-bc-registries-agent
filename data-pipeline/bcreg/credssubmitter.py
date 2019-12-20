@@ -40,6 +40,10 @@ MAX_PROCESSING_MINS = int(os.getenv('MAX_PROCESSING_MINS', '10'))
 # how often to report status (# credentials)
 PROCESS_LOOP_REPORT_CT = int(os.getenv('PROCESS_LOOP_REPORT_CT', '100'))
 
+MAX_CORPS = 10000
+CRAZY_MAX_CORPS = 100000
+
+
 def notify_error(message):
     # Use NOTIFY_OF_CREDENTIAL_POSTING_ERRORS to turn error notification on(true)/off(false); off by default.
     # It's recommended to have this off during bulk data loads as errors in these situations
@@ -374,7 +378,7 @@ class CredsSubmitter:
 
         except (Exception, psycopg2.DatabaseError) as error:
             print(error)
-            notify_error('An exception was encountered while processing the credential queue:\n{}'.format(str(error)))
+            log_error('An exception was encountered while processing the credential queue:\n{}'.format(str(error)))
             print(traceback.print_exc())
         finally:
             await http_client.close()

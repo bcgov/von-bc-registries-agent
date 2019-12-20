@@ -68,6 +68,10 @@ def post_msg_to_webhook(level, message):
             (status, text) = run_coroutine_with_args(_post_url, webhook_url, payload)
             print(">>> Posted webhook level", level, "with message", message)
             print(">>> Returned", status, text)
+        else:
+            print(">>> NOT Posted webhook level", level, "(", log_level, "), message", message)
+    else:
+        print(">>> NOT Posted webhook level", level, "message", message, "no webhook_url")
 
 
 def log_info(message):
