@@ -8,8 +8,11 @@ import data_integration
 import data_integration.config
 from mara_app.monkey_patch import patch
 from bcreg.bcreg_pipelines import bc_reg_root_pipeline
+from bcreg.eventprocessor import EventProcessor
 from bcreg.rocketchat_hooks import log_error, log_warning, log_info
 
+MAX_CORPS = 10000
+CRAZY_MAX_CORPS = 100000
 
 patch(data_integration.config.system_statistics_collection_period)(lambda: 15)
 
@@ -32,6 +35,13 @@ try:
     if success:
         run_pipeline(child_pipeline)
         log_info("Ran bc_reg_event_processor - complete.")
+
+        with EventProcessor() as eventprocessor:
+            corps_ct = eventprocessor.get_outstanding_corps_record_count()
+            if CRAZY_MAX_CORPS < corps_ct:
+                log_error("bc-reg-pipeline More than cRaZy MaX corps outstanding: " + str(corps_ct))
+            elif MAX_CORPS < corps_ct:
+                log_warning("bc-reg-pipeline More than max corps outstanding: " + str(corps_ct))
     else:
         print("Pipeline not found")
         log_error("Pipeline not found for:" + "bc_reg_event_processor")
