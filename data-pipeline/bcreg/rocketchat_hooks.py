@@ -1,6 +1,7 @@
 from os import environ
 import asyncio
 import aiohttp
+import concurrent.futures
 
 import time
 import datetime
@@ -44,30 +45,23 @@ async def _post_url(the_url, payload):
             r_text = await resp.text()
             return (r_status, r_text)
 
+pool = concurrent.futures.ThreadPoolExecutor()
 
-def run_coroutine_with_args(coroutine, *args):
-    new_event_loop = True
-    loop = asyncio.get_event_loop()
-    if loop.is_running:
-        new_event_loop = False
-    try:
-        if new_event_loop:
-            return loop.run_until_complete(coroutine(*args))
-        else:
-            loop.create_task(coroutine(*args))
-            return ('0', 'Message queued.')
-    finally:
-        if new_event_loop:
-            loop.close()
+def synchronous_post_url(webhook_url, payload):
+    return pool.submit(asyncio.run, _post_url(webhook_url, payload)).result(timeout=30)
 
 
 def post_msg_to_webhook(level, message):
     if webhook_url and 0 < len(webhook_url):
         if level and level <= log_level:
             payload = get_webhook_payload(level, message)
-            (status, text) = run_coroutine_with_args(_post_url, webhook_url, payload)
-            print(">>> Posted webhook level", level, "with message", message)
-            print(">>> Returned", status, text)
+            #(status, text) = run_coroutine_with_args(_post_url, webhook_url, payload)
+            try:
+                (status, text) = synchronous_post_url(webhook_url, payload)
+                print(">>> Posted webhook level", level, "with message", message)
+                print(">>> Returned", status, text)
+            except Exception as e:
+                print(">>> NOT posted webhook, error:", str(e))
         else:
             print(">>> NOT Posted webhook level", level, "(", log_level, "), message", message)
     else:
