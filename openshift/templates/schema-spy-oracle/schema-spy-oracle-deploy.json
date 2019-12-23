@@ -20,7 +20,7 @@
           "app-group": "${APP_GROUP}"
         }
       },
-      "data": {
+      "stringData": {
         "password": "${SCHEMASPY_PASSWORD}",
         "user": "${SCHEMASPY_USER}"
       },
@@ -312,28 +312,28 @@
       "displayName": "Database Name",
       "required": true,
       "description": "Name of the deployed database (see environment variables in deployed database).",
-      "value": "CUAT"
+      "value": ""
     },
     {
       "name": "DATABASE_SCHEMA",
       "displayName": "Database Schema",
       "required": true,
       "description": "Name of the database schema.",
-      "value": "COLIN_MGR_UAT"
+      "value": ""
     },
     {
       "name": "DATABASE_CATALOG",
       "displayName": "Database Catalog",
       "required": true,
       "description": "Name of the database catalog.",
-      "value": "CUAT.bcgov"
+      "value": ""
     },
     {
       "name": "DATABASE_HOST",
       "displayName": "Database Host",
       "required": true,
       "description": "The host name (or ip address) for the database server; override to match your environment.  In the case of Oracle databases this must be a <hostname|ipaddress>:<port> pair even if using the default Oracle port; a requirement of the Oracle Thin SchemaSpy process.",
-      "value": "142.34.88.17:1521"
+      "value": ""
     },
     {
       "name": "DATABASE_DRIVER",
