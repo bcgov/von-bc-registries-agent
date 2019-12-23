@@ -55,7 +55,6 @@ def post_msg_to_webhook(level, message):
     if webhook_url and 0 < len(webhook_url):
         if level and level <= log_level:
             payload = get_webhook_payload(level, message)
-            #(status, text) = run_coroutine_with_args(_post_url, webhook_url, payload)
             try:
                 (status, text) = synchronous_post_url(webhook_url, payload)
                 print(">>> Posted webhook level", level, "with message", message)
