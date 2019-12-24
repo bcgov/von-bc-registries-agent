@@ -9,7 +9,8 @@
 gunicorn
 
 # downloading data from s3
-awscli<1.14.0
+#awscli<1.14.0
 JSONBender
 aiohttp
 pytz
+cffi>=1.13

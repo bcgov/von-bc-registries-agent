@@ -1,7 +1,7 @@
 FROM ubuntu:16.04
 
 # mara-base section
-ARG python_version=3.6
+ARG python_version=3.8
 
 RUN apt-get update -y \
     && apt-get install -y \
