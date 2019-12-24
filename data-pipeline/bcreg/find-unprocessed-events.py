@@ -7,6 +7,7 @@ from bcreg.bcregistries import BCRegistries, system_type
 from bcreg.rocketchat_hooks import log_error, log_warning, log_info
 
 MAX_CORPS = 10000
+CRAZY_MAX_CORPS = 100000
 
 try:
     with BCRegistries() as bc_registries:
@@ -50,7 +51,9 @@ try:
                 raise Exception('max event date unreasonable: {}'.format(max_event_dt))
 
             # reasonability test on the number of outstanding records
-            if MAX_CORPS < len(corps):
+            if CRAZY_MAX_CORPS < len(corps):
+                log_error("find-unpocessed-events More than cRaZy MaX corps: " + str(len(corps)))
+            elif MAX_CORPS < len(corps):
                 log_warning("find-unpocessed-events More than max corps: " + str(len(corps)))
 
             print("Update our queue")
