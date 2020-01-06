@@ -215,15 +215,23 @@ with EventProcessor() as event_processor:
 
 print("Got all corp audits", datetime.datetime.now())
 
+corp_types = ""
+for corp_type in CORP_TYPES_IN_SCOPE:
+    if 0 > len(corp_types):
+        corp_types = corp_types + ", "
+    corp_types = corp_types + "'" + corp_type + "'"
+
 # now check counts
 evp_corp_history_count = 0
 evp_credential_count = 0
 with EventProcessor() as event_processor:
     sql1 = """
-    SELECT count(*) FROM CORP_AUDIT_LOG;
+    SELECT count(*) FROM CORP_AUDIT_LOG
+    WHERE corp_type in (""" + corp_types + """);
     """
     sql2 = """
-    SELECT count(*) FROM CORP_AUDIT_LOG WHERE last_credential_id is not null;
+    SELECT count(*) FROM CORP_AUDIT_LOG WHERE last_credential_id is not null
+    AND corp_type in (""" + corp_types + """);
     """
     evp_corp_history_count = event_processor.get_sql_record_count(sql1)
     evp_credential_count = event_processor.get_sql_record_count(sql2)
@@ -231,14 +239,14 @@ with EventProcessor() as event_processor:
 if evp_corp_history_count != bc_reg_count:
     print("Error missing corps in Event Processor", bc_reg_count, evp_corp_history_count)
     if ERROR_THRESHOLD_COUNT < abs(evp_corp_history_count - bc_reg_count):
-        log_error("Error missing corps in Event Processor: reg={} evp={}".format(bc_reg_count, evp_corp_history_count))
+        log_error("Error missing corps in Event Processor: BCReg={} EvP={}".format(bc_reg_count, evp_corp_history_count))
     else:
-        log_warning("Warning missing corps in Event Processor: reg={} evp={}".format(bc_reg_count, evp_corp_history_count))
+        log_warning("Warning missing corps in Event Processor: BCReg={} EvP={}".format(bc_reg_count, evp_corp_history_count))
 
 if evp_credential_count != evp_corp_history_count:
     print("Error missing credentials in Event Processor", evp_corp_history_count, evp_credential_count)
     if ERROR_THRESHOLD_COUNT < abs(evp_credential_count - evp_corp_history_count):
-        log_error("Error missing credentials in Event Processor: evp corps={} evp creds={}".format(evp_corp_history_count, evp_credential_count))
+        log_error("Error missing credentials in Event Processor: EvP corps={} EvP creds={}".format(evp_corp_history_count, evp_credential_count))
     else:
-        log_warning("Warning missing credentials in Event Processor: evp corps={} evp creds={}".format(evp_corp_history_count, evp_credential_count))
+        log_warning("Warning missing credentials in Event Processor: EvP corps={} EvP creds={}".format(evp_corp_history_count, evp_credential_count))
 
