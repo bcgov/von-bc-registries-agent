@@ -217,7 +217,7 @@ print("Got all corp audits", datetime.datetime.now())
 
 corp_types = ""
 for corp_type in CORP_TYPES_IN_SCOPE:
-    if 0 > len(corp_types):
+    if 0 < len(corp_types):
         corp_types = corp_types + ", "
     corp_types = corp_types + "'" + corp_type + "'"
 
