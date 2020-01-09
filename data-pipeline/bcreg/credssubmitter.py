@@ -68,7 +68,8 @@ async def submit_cred_batch(http_client, creds):
         #print('Response from von-x:\n{}\n'.format(result_json))
         return result_json
     except Exception as exc:
-        print(exc)
+        print(error)
+        print(traceback.print_exc())
         raise
 
 async def submit_cred(http_client, attrs, schema, version):
@@ -86,7 +87,8 @@ async def submit_cred(http_client, attrs, schema, version):
         #print('Response from von-x:\n{}\n'.format(result_json))
         return result_json
     except Exception as exc:
-        print(exc)
+        print(error)
+        print(traceback.print_exc())
         raise 
 
 # add reason code to the submitted credential
@@ -127,8 +129,9 @@ async def post_credentials(http_client, conn, credentials):
         #print("Posted = ", len(credentials), ", results = ", len(results))
     except (Exception) as error:
         # everything failed :-(
-        print("log exception to database:", str(error))
         print(error)
+        print(traceback.print_exc())
+        print("log exception to database:", str(error))
         res = str(error)
         if 0 == len(res):
             res = "Unspecified error posting to OrgBook"
@@ -184,6 +187,8 @@ async def post_credentials(http_client, conn, credentials):
 
     except (Exception) as error:
         # everything failed :-(
+        print(error)
+        print(traceback.print_exc())
         print("log exception to database", str(error))
         res = str(error)
         if 0 == len(res):
@@ -216,6 +221,7 @@ class CredsSubmitter:
             self.conn = psycopg2.connect(**params)
         except (Exception) as error:
             print(error)
+            print(traceback.print_exc())
             self.conn = None
             raise
 
@@ -378,8 +384,8 @@ class CredsSubmitter:
 
         except (Exception, psycopg2.DatabaseError) as error:
             print(error)
-            log_error('An exception was encountered while processing the credential queue:\n{}'.format(str(error)))
             print(traceback.print_exc())
+            log_error('An exception was encountered while processing the credential queue:\n{}'.format(str(error)))
         finally:
             await http_client.close()
 
