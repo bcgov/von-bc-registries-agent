@@ -68,7 +68,7 @@ async def submit_cred_batch(http_client, creds):
         #print('Response from von-x:\n{}\n'.format(result_json))
         return result_json
     except Exception as exc:
-        print(error)
+        print(exc)
         print(traceback.print_exc())
         raise
 
@@ -87,7 +87,7 @@ async def submit_cred(http_client, attrs, schema, version):
         #print('Response from von-x:\n{}\n'.format(result_json))
         return result_json
     except Exception as exc:
-        print(error)
+        print(exc)
         print(traceback.print_exc())
         raise 
 
