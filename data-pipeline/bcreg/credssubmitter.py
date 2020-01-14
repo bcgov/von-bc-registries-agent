@@ -69,7 +69,7 @@ async def submit_cred_batch(http_client, creds):
         return result_json
     except Exception as exc:
         print(exc)
-        print(traceback.print_exc())
+        print(traceback.format_exc())
         raise
 
 async def submit_cred(http_client, attrs, schema, version):
@@ -88,7 +88,7 @@ async def submit_cred(http_client, attrs, schema, version):
         return result_json
     except Exception as exc:
         print(exc)
-        print(traceback.print_exc())
+        print(traceback.format_exc())
         raise 
 
 # add reason code to the submitted credential
@@ -130,7 +130,7 @@ async def post_credentials(http_client, conn, credentials):
     except (Exception) as error:
         # everything failed :-(
         print(error)
-        print(traceback.print_exc())
+        print(traceback.format_exc())
         print("log exception to database:", str(error))
         res = str(error)
         if 0 == len(res):
@@ -188,7 +188,7 @@ async def post_credentials(http_client, conn, credentials):
     except (Exception) as error:
         # everything failed :-(
         print(error)
-        print(traceback.print_exc())
+        print(traceback.format_exc())
         print("log exception to database", str(error))
         res = str(error)
         if 0 == len(res):
@@ -221,7 +221,7 @@ class CredsSubmitter:
             self.conn = psycopg2.connect(**params)
         except (Exception) as error:
             print(error)
-            print(traceback.print_exc())
+            print(traceback.format_exc())
             self.conn = None
             raise
 
@@ -384,7 +384,7 @@ class CredsSubmitter:
 
         except (Exception, psycopg2.DatabaseError) as error:
             print(error)
-            print(traceback.print_exc())
+            print(traceback.format_exc())
             log_error('An exception was encountered while processing the credential queue:\n{}'.format(str(error)))
         finally:
             await http_client.close()
