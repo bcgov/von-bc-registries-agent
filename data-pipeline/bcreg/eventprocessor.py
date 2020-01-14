@@ -706,18 +706,30 @@ class EventProcessor:
             org_name = self.corp_rec_at_effective_date(corp_info['org_names'], office['start_event'])
             if org_name is not None:
                 addr_cred['addressee'] = org_name['corp_nme']
+            else:
+                addr_cred['addressee'] = ''
+        else:
+            addr_cred['addressee'] = ''
         addr_cred['address_type'] = office['office_type']['office_typ_cd']
         addr_cred['civic_address'] = address['local_addr']
         if 'city' in address:
             addr_cred['municipality'] = address['city']
+        else:
+            addr_cred['municipality'] = ''
         if 'province' in address:
             addr_cred['province'] = address['province']
+        else:
+            addr_cred['province'] = ''
         if 'postal_cd' in address:
             addr_cred['postal_code'] = address['postal_cd']
+        else:
+            addr_cred['postal_code'] = ''
         if 'country_typ_cd' in address:
             addr_cred['country'] = address['country_typ_cd']
-        addr_cred['address_effective'] = self.filter_min_date(office['effective_start_date'])
-        addr_cred['effective_date'] = addr_cred['address_effective']
+        else:
+            addr_cred['country'] = ''
+        addr_cred['address_effective_date'] = self.filter_min_date(office['effective_start_date'])
+        addr_cred['effective_date'] = addr_cred['address_effective_date']
         if office['end_event_id'] is not None and office['end_event']['effective_date'] <= corp_info['current_date']:
             addr_cred['expiry_date'] = office['effective_end_date']
         else:

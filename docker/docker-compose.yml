@@ -49,7 +49,7 @@ services:
         ../docker-entrypoint.sh;"
 
   bcreg-agent:
-    image: tob-agent
+    image: vcr-agent
     environment:
       - GENESIS_URL=${GENESIS_URL}
       - AGENT_WALLET_NAME=${AGENT_WALLET_NAME:-icat_agent_wallet}
@@ -202,4 +202,4 @@ networks:
   bcreg:
   orgbook:
     external:
-      name: tob_tob
+      name: vcr_vcr

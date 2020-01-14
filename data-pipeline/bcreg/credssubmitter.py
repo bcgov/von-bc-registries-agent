@@ -34,7 +34,7 @@ NOTIFY_OF_CREDENTIAL_POSTING_ERRORS = os.environ.get('NOTIFY_OF_CREDENTIAL_POSTI
 
 CREDS_BATCH_SIZE = int(os.getenv('CREDS_BATCH_SIZE', '3000'))
 CREDS_REQUEST_SIZE = int(os.getenv('CREDS_REQUEST_SIZE', '5'))
-MAX_CREDS_REQUESTS = int(os.getenv('MAX_CREDS_REQUESTS', '16'))
+MAX_CREDS_REQUESTS = int(os.getenv('MAX_CREDS_REQUESTS', '32'))
 # max time to process (minutes)
 MAX_PROCESSING_MINS = int(os.getenv('MAX_PROCESSING_MINS', '10'))
 # how often to report status (# credentials)
