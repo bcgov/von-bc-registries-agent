@@ -898,6 +898,40 @@ class BCRegistries:
                     cur.close()
         LOGGER.info("Loaded corps: " + str(len(corps)))
 
+        # since a related corp may be impacted by a corp change, check for related corps via corp_party table
+        sql1 = """select corp_num from """ + BC_REGISTRIES_TABLE_PREFIX + """corp_party
+                    where bus_company_num = %s
+                    and party_typ_cd = 'FBO'
+                    union
+                    select bus_company_num from bc_registries.corp_party
+                    where corp_num = %s
+                    and party_typ_cd = 'FBO'"""
+        new_corps = []
+        for corp in corps:
+            cur = None
+            try:
+                #LOGGER.info("Executing: " + sql1 + " with" + str(corp['CORP_NUM']))
+                cur = self.conn.cursor()
+                cur.execute(sql1, (corp['CORP_NUM'],corp['CORP_NUM'],))
+                row = cur.fetchone()
+                while row is not None and row[0] is not None:
+                    if not row[0] in corp_set:
+                        corp_set[row[0]] = row[0]
+                        new_corps.append({'CORP_NUM':row[0],})
+                    row = cur.fetchone()
+                cur.close()
+                cur = None
+            except (Exception, psycopg2.DatabaseError) as error:
+                LOGGER.error(error)
+                LOGGER.error(traceback.print_exc())
+                log_error("BCRegistries exception reading DB: " + str(error))
+                raise
+            finally:
+                if cur is not None:
+                    cur.close()
+        LOGGER.info("Loaded corps: " + str(len(new_corps)))
+        corps.extend(new_corps)
+
         return corps
 
     #return the (unprocessed) event range for each provided corporation
