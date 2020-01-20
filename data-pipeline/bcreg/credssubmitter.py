@@ -26,6 +26,8 @@ import sys
 import aiohttp
 import time
 import traceback
+import logging
+
 from bcreg.config import config
 from bcreg.rocketchat_hooks import log_error, log_warning, log_info
 
@@ -38,6 +40,8 @@ MAX_CREDS_REQUESTS = 16
 
 MAX_CORPS = 10000
 CRAZY_MAX_CORPS = 100000
+
+LOGGER = logging.getLogger(__name__)
 
 
 def notify_error(message):

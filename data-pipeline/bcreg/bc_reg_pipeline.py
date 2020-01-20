@@ -6,6 +6,8 @@ import mara_db.config
 import mara_db.dbs
 import data_integration
 import data_integration.config
+import logging
+
 from mara_app.monkey_patch import patch
 from bcreg.bcreg_pipelines import bc_reg_root_pipeline
 from bcreg.eventprocessor import EventProcessor
@@ -13,6 +15,10 @@ from bcreg.rocketchat_hooks import log_error, log_warning, log_info
 
 MAX_CORPS = 10000
 CRAZY_MAX_CORPS = 100000
+
+LOG_LEVEL = os.environ.get('LOG_LEVEL', 'WARNING').upper()
+logging.basicConfig(level=LOG_LEVEL)
+
 
 patch(data_integration.config.system_statistics_collection_period)(lambda: 15)
 

@@ -4,9 +4,14 @@ import datetime
 import json
 import decimal
 import os 
+import logging
+
 from bcreg.config import config
 from bcreg.eventprocessor import EventProcessor, CORP_TYPES_IN_SCOPE
 from bcreg.rocketchat_hooks import log_error, log_warning, log_info
+
+LOG_LEVEL = os.environ.get('LOG_LEVEL', 'WARNING').upper()
+logging.basicConfig(level=LOG_LEVEL)
 
 
 try:
