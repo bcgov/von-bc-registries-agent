@@ -30,6 +30,17 @@ To force re-process of these companies, run the following sql's:
 
     commit;
 
+Or to insert new records to re-process the entire company history:
+
+    insert into event_by_corp_filing
+    (system_type_cd, corp_num, prev_event_id, prev_event_date, last_event_id, last_event_date, entry_date)
+    select 'BC_REG', corp_num, 0, '0001-01-01 00:00:00', event_id, event_date, now()
+    from CORP_AUDIT_LOG, LAST_EVENT
+    where CORP_AUDIT_LOG.last_credential_id is null
+      and LAST_EVENT.record_id = (select max(record_id) from LAST_EVENT);
+
+    commit;
+
 Then run the following script to re-generate the credentials (note this runs on cached data and does not
 re-query the BC Reg database):
 
@@ -249,4 +260,7 @@ if evp_credential_count != evp_corp_history_count:
         log_error("Error missing credentials in Event Processor: EvP corps={} EvP creds={}".format(evp_corp_history_count, evp_credential_count))
     else:
         log_warning("Warning missing credentials in Event Processor: EvP corps={} EvP creds={}".format(evp_corp_history_count, evp_credential_count))
+<<<<<<< HEAD
 
+=======
+>>>>>>> master

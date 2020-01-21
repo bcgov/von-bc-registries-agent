@@ -9,6 +9,7 @@ import decimal
 import random
 import types
 import traceback
+import logging
 
 from bcreg.config import config
 from bcreg.rocketchat_hooks import log_error, log_warning, log_info
@@ -30,6 +31,8 @@ timezone = pytz.timezone("PST8PDT")
 MIN_START_DATE_TZ = timezone.localize(MIN_START_DATE)
 MAX_END_DATE_TZ   = timezone.localize(MAX_END_DATE)
 DATA_CONVERSION_DATE_TZ = timezone.localize(DATA_CONVERSION_DATE)
+
+LOGGER = logging.getLogger(__name__)
 
 
 def adapt_decimal(d):
@@ -105,8 +108,8 @@ class BCRegistries:
             # connect to in-memory database
             self.cache = sqlite3.connect(':memory:', detect_types=sqlite3.PARSE_DECLTYPES|sqlite3.PARSE_COLNAMES)
         except (Exception) as error:
-            print(error)
-            print(traceback.print_exc())
+            LOGGER.error(error)
+            LOGGER.error(traceback.print_exc())
             self.conn = None
             self.cache = None
             log_error("BCRegistries exception connecting to DB: " + str(error))
@@ -209,8 +212,8 @@ class BCRegistries:
             cursor = None
             return desc
         except (Exception, psycopg2.DatabaseError) as error:
-            print(error)
-            print(traceback.print_exc())
+            LOGGER.error(error)
+            LOGGER.error(traceback.print_exc())
             log_error("BCRegistries exception reading DB: " + str(error))
             raise 
         finally:
@@ -280,8 +283,8 @@ class BCRegistries:
             cache_cursor.close()
             cache_cursor = None
         except (Exception) as error:
-            print(error)
-            print(traceback.print_exc())
+            LOGGER.error(error)
+            LOGGER.error(traceback.print_exc())
             log_error("BCRegistries exception reading DB: " + str(error))
             raise 
         finally:
@@ -425,8 +428,8 @@ class BCRegistries:
                 cache_cursor.close()
                 cache_cursor = None
             except (Exception) as error:
-                print(error)
-                print(traceback.print_exc())
+                LOGGER.error(error)
+                LOGGER.error(traceback.print_exc())
                 log_error("BCRegistries exception reading DB: " + str(error))
                 raise 
             finally:
@@ -447,8 +450,8 @@ class BCRegistries:
             cursor = None
             return rows
         except (Exception) as error:
-            print(error)
-            print(traceback.print_exc())
+            LOGGER.error(error)
+            LOGGER.error(traceback.print_exc())
             log_error("BCRegistries exception reading DB: " + str(error))
             raise 
         finally:
@@ -474,8 +477,8 @@ class BCRegistries:
             cursor.close()
             cursor = None
         except (Exception) as error:
-            print(error)
-            print(traceback.print_exc())
+            LOGGER.error(error)
+            LOGGER.error(traceback.print_exc())
             log_error("BCRegistries exception reading DB: " + str(error))
             raise 
         finally:
@@ -549,7 +552,7 @@ class BCRegistries:
     # load all bc registries data for the specified corps into our in-mem cache
     def cache_bcreg_corp_tables(self, specific_corps, generate_individual_sql=False):
         if self.use_local_cache():
-            print('Caching data for parties and events ...')
+            LOGGER.info('Caching data for parties and events ...')
             self.generated_sqls = []
             self.generated_corp_nums = {}
             # ensure we have a unique list
@@ -591,7 +594,7 @@ class BCRegistries:
                 _rows = self.get_bcreg_table(self.other_tables[2], filing_where, '', True, generate_individual_sql)
                 _rows = self.get_bcreg_table(self.other_tables[3], filing_where, '', True, generate_individual_sql)
 
-            print('Caching data for corporations ...')
+            LOGGER.info('Caching data for corporations ...')
             for corp_nums_list in specific_corps_lists:
                 corp_nums_list = self.id_where_in(corp_nums_list, True)
                 corp_num_where = 'corp_num in (' + corp_nums_list + ')'
@@ -618,7 +621,7 @@ class BCRegistries:
     # load all bc registries data for the specified corps into our in-mem cache
     def cache_bcreg_code_tables(self, generate_individual_sql=False):
         if self.use_local_cache():
-            print('Caching data for code tables ...')
+            LOGGER.info('Caching data for code tables ...')
             self.generated_sqls = []
             self.generated_corp_nums = {}
             for code_table in self.code_tables:
@@ -656,8 +659,8 @@ class BCRegistries:
                 self.cache_bcreg_data(table, desc, rows, generate_individual_sql)
             return rows
         except (Exception, psycopg2.DatabaseError) as error:
-            print(error)
-            print(traceback.print_exc())
+            LOGGER.error(error)
+            LOGGER.error(traceback.print_exc())
             log_error("BCRegistries exception reading DB: " + str(error))
             raise 
         finally:
@@ -702,8 +705,8 @@ class BCRegistries:
             cur = None
             return row[0]
         except (Exception, psycopg2.DatabaseError) as error:
-            print(error)
-            print(traceback.print_exc())
+            LOGGER.error(error)
+            LOGGER.error(traceback.print_exc())
             log_error("BCRegistries exception reading DB: " + str(error))
             raise
         finally:
@@ -722,8 +725,8 @@ class BCRegistries:
             cur = None
             return row[0]
         except (Exception, psycopg2.DatabaseError) as error:
-            print(error)
-            print(traceback.print_exc())
+            LOGGER.error(error)
+            LOGGER.error(traceback.print_exc())
             log_error("BCRegistries exception reading DB: " + str(error))
             raise
         finally:
@@ -742,8 +745,8 @@ class BCRegistries:
             cur = None
             return row[0]
         except (Exception, psycopg2.DatabaseError) as error:
-            print(error)
-            print(traceback.print_exc())
+            LOGGER.error(error)
+            LOGGER.error(traceback.print_exc())
             log_error("BCRegistries exception reading DB: " + str(error))
             raise
         finally:
@@ -771,7 +774,7 @@ class BCRegistries:
             row = cur.fetchone()
             corps = []
             while row is not None:
-                # print(row)
+                # LOGGER.info(row)
                 corps.append({'CORP_NUM':row[0],})
                 row = cur.fetchone()
 
@@ -779,7 +782,7 @@ class BCRegistries:
             cur.execute(sql2, tuple(corp_filter))
             row = cur.fetchone()
             while row is not None:
-                # print(row)
+                # LOGGER.info(row)
                 corps.append({'CORP_NUM':row[0],})
                 row = cur.fetchone()
 
@@ -787,8 +790,8 @@ class BCRegistries:
             cur = None
             return corps
         except (Exception, psycopg2.DatabaseError) as error:
-            print(error)
-            print(traceback.print_exc())
+            LOGGER.error(error)
+            LOGGER.error(traceback.print_exc())
             log_error("BCRegistries exception reading DB: " + str(error))
             raise
         finally:
@@ -807,21 +810,21 @@ class BCRegistries:
         for sql in sqls:
             cur = None
             try:
-                print("Executing: " + sql)
+                LOGGER.info("Executing: " + sql)
                 cur = self.conn.cursor()
                 cur.execute(sql)
                 row = cur.fetchone()
                 while row is not None:
-                    # print(row)
+                    # LOGGER.info(row)
                     corps.append({'CORP_NUM':row[0], 'PREV_EVENT': event_dict(last_event_id, last_event_dt), 
                                                      'LAST_EVENT': event_dict(max_event_id, max_event_dt), })
                     row = cur.fetchone()
                 cur.close()
                 cur = None
-                print("Loaded corps: " + str(len(corps)))
+                LOGGER.info("Loaded corps: " + str(len(corps)))
             except (Exception, psycopg2.DatabaseError) as error:
-                print(error)
-                print(traceback.print_exc())
+                LOGGER.error(error)
+                LOGGER.error(traceback.print_exc())
                 log_error("BCRegistries exception reading DB: " + str(error))
                 raise
             finally:
@@ -843,7 +846,7 @@ class BCRegistries:
         for sql in sqls:
             cur = None
             try:
-                print("Executing: " + sql + " with", last_event_dt)
+                LOGGER.info("Executing: " + sql + " with" + str(last_event_dt))
                 cur = self.conn.cursor()
                 cur.execute(sql, (last_event_dt,))
                 row = cur.fetchone()
@@ -855,10 +858,10 @@ class BCRegistries:
                     row = cur.fetchone()
                 cur.close()
                 cur = None
-                print("Loaded corps: " + str(len(corps)))
+                LOGGER.info("Loaded corps: " + str(len(corps)))
             except (Exception, psycopg2.DatabaseError) as error:
-                print(error)
-                print(traceback.print_exc())
+                LOGGER.error(error)
+                LOGGER.error(traceback.print_exc())
                 log_error("BCRegistries exception reading DB: " + str(error))
                 raise
             finally:
@@ -872,7 +875,7 @@ class BCRegistries:
         for event_id in event_ids:
             i = i + 1
             if (i % 1000 == 0):
-                print("Processing", i, "of", len(event_ids))
+                LOGGER.info("Processing %s of %s", i, len(event_ids))
             cur = None
             try:
                 cur = self.conn.cursor()
@@ -886,14 +889,48 @@ class BCRegistries:
                 cur.close()
                 cur = None
             except (Exception, psycopg2.DatabaseError) as error:
-                print(error)
-                print(traceback.print_exc())
+                LOGGER.error(error)
+                LOGGER.error(traceback.print_exc())
                 log_error("BCRegistries exception reading DB: " + str(error))
                 raise
             finally:
                 if cur is not None:
                     cur.close()
-        print("Loaded corps: " + str(len(corps)))
+        LOGGER.info("Loaded corps: " + str(len(corps)))
+
+        # since a related corp may be impacted by a corp change, check for related corps via corp_party table
+        sql1 = """select corp_num from """ + BC_REGISTRIES_TABLE_PREFIX + """corp_party
+                    where bus_company_num = %s
+                    and party_typ_cd = 'FBO'
+                    union
+                    select bus_company_num from bc_registries.corp_party
+                    where corp_num = %s
+                    and party_typ_cd = 'FBO'"""
+        new_corps = []
+        for corp in corps:
+            cur = None
+            try:
+                #LOGGER.info("Executing: " + sql1 + " with" + str(corp['CORP_NUM']))
+                cur = self.conn.cursor()
+                cur.execute(sql1, (corp['CORP_NUM'],corp['CORP_NUM'],))
+                row = cur.fetchone()
+                while row is not None and row[0] is not None:
+                    if not row[0] in corp_set:
+                        corp_set[row[0]] = row[0]
+                        new_corps.append({'CORP_NUM':row[0],})
+                    row = cur.fetchone()
+                cur.close()
+                cur = None
+            except (Exception, psycopg2.DatabaseError) as error:
+                LOGGER.error(error)
+                LOGGER.error(traceback.print_exc())
+                log_error("BCRegistries exception reading DB: " + str(error))
+                raise
+            finally:
+                if cur is not None:
+                    cur.close()
+        LOGGER.info("Loaded corps: " + str(len(new_corps)))
+        corps.extend(new_corps)
 
         return corps
 
@@ -901,7 +938,7 @@ class BCRegistries:
     def get_unprocessed_corp_events(self, last_event_id, last_event_dt, max_event_id, max_event_dt, corps, max=None):
         for i,corp in enumerate(corps): 
             if (i % 100 == 0) or (i+1 == len(corps)):
-                print('>>> Processing {} of {} corporations.'.format(i+1, len(corps)))
+                LOGGER.info('>>> Processing {} of {} corporations.'.format(i+1, len(corps)))
             corp['PREV_EVENT'] = event_dict(last_event_id, last_event_dt)
             corp['LAST_EVENT'] = event_dict(max_event_id, max_event_dt)
             if max and i >= max:
@@ -929,8 +966,8 @@ class BCRegistries:
             cursor = None
             return recs
         except (Exception, psycopg2.DatabaseError) as error:
-            print(error)
-            print(traceback.print_exc())
+            LOGGER.error(error)
+            LOGGER.error(traceback.print_exc())
             log_error("BCRegistries exception reading DB: " + str(error))
             raise 
         finally:
@@ -964,7 +1001,7 @@ class BCRegistries:
                 ret_date = event['event_timestmp']
 
         if ret_date is None:
-            print('Error ret_date is None', event)
+            LOGGER.error('Error ret_date is None', event)
 
         return ret_date
 
@@ -1018,8 +1055,8 @@ class BCRegistries:
             ret_event['effective_date'] = self.get_event_filing_effective_date(ret_event, corp_type_cd)
             return ret_event
         except (Exception, psycopg2.DatabaseError) as error:
-            print(error)
-            print(traceback.print_exc())
+            LOGGER.error(error)
+            LOGGER.error(traceback.print_exc())
             log_error("BCRegistries exception reading DB: " + str(error))
             raise 
         finally:
@@ -1045,14 +1082,14 @@ class BCRegistries:
                 return conv_event[0]
             # don't check for a cache miss - assume conv_event are all there (most CONV data in dev is missing)
             #if self.use_local_cache() and (not force_query_remote):
-            #   print('Cache miss for conv_event ', event_type)
+            #   LOGGER.error('Cache miss for conv_event ', event_type)
             #    conv_event = self.get_conv_event(corp_num, event_id, event_type, True)
             #    self.add_cache_miss('conv_event', corp_num, event_id, conv_event)
             #    return conv_event
             return {}
         except (Exception, psycopg2.DatabaseError) as error:
-            print(error)
-            print(traceback.print_exc())
+            LOGGER.error(error)
+            LOGGER.error(traceback.print_exc())
             log_error("BCRegistries exception reading DB: " + str(error))
             raise 
         finally:
@@ -1084,8 +1121,8 @@ class BCRegistries:
                 return filing_event
             return {}
         except (Exception, psycopg2.DatabaseError) as error:
-            print(error)
-            print(traceback.print_exc())
+            LOGGER.error(error)
+            LOGGER.error(traceback.print_exc())
             log_error("BCRegistries exception reading DB: " + str(error))
             raise 
         finally:
@@ -1106,9 +1143,9 @@ class BCRegistries:
             if 'end_event_id' not in record or record['end_event_id'] is None:
                 active_id = i
         if flag:
-            print(">>>Data Issue:Same Start Date:" + corp_num + ":" + record_type + ":", records)
+            LOGGER.warning(">>>Data Issue:Same Start Date:" + corp_num + ":" + record_type + ":" + str(records))
         if active_id is not None and active_id != len(sorted_records):
-            print(">>>Data Issue:Active Record:" + corp_num + ":" + record_type + ":", records)
+            LOGGER.warning(">>>Data Issue:Active Record:" + corp_num + ":" + record_type + ":" + str(records))
 
     def flag_start_events_which_are_not_also_end_events(self, corp_num, corp_recs):
         if corp_recs is not None:
@@ -1151,13 +1188,13 @@ class BCRegistries:
                     office['effective_end_date'] = MAX_END_DATE
 
                 #if office['effective_start_date'] > office['effective_end_date']:
-                #    print(">>>Data Issue:Date:" + corp_num + ":Office:", office)
+                #    LOGGER.info(">>>Data Issue:Date:" + corp_num + ":Office:", office)
 
             #self.check_same_start_date(corp_num, 'office', offices, 'effective_start_date')
             return offices
         except (Exception, psycopg2.DatabaseError) as error:
-            print(error)
-            print(traceback.print_exc())
+            LOGGER.error(error)
+            LOGGER.error(traceback.print_exc())
             log_error("BCRegistries exception reading DB: " + str(error))
             raise 
         finally:
@@ -1204,8 +1241,8 @@ class BCRegistries:
                 return address
             return {}
         except (Exception, psycopg2.DatabaseError) as error:
-            print(error)
-            print(traceback.print_exc())
+            LOGGER.error(error)
+            LOGGER.error(traceback.print_exc())
             log_error("BCRegistries exception reading DB: " + str(error))
             raise 
         finally:
@@ -1244,7 +1281,7 @@ class BCRegistries:
                 corp_name['dd_corp_num'] = row[7]
 
                 if corp_name['effective_start_date'] > corp_name['effective_end_date']:
-                    #print(">>>Data Issue:Date:" + corp_num + ":Corp_Name:", corp_name)
+                    #LOGGER.info(">>>Data Issue:Date:" + corp_num + ":Corp_Name:", corp_name)
                     if is_data_conversion_event(corp_name['start_event']) and registration_date is not None:
                         corp_name['start_event']['effective_date'] = registration_date
                         corp_name['effective_start_date'] = registration_date
@@ -1263,8 +1300,8 @@ class BCRegistries:
 
             return names
         except (Exception, psycopg2.DatabaseError) as error:
-            print(error)
-            print(traceback.print_exc())
+            LOGGER.error(error)
+            LOGGER.error(traceback.print_exc())
             log_error("BCRegistries exception reading DB: " + str(error))
             raise 
         finally:
@@ -1290,8 +1327,8 @@ class BCRegistries:
             cursor = None
             return corp_states
         except (Exception, psycopg2.DatabaseError) as error:
-            print(error)
-            print(traceback.print_exc())
+            LOGGER.error(error)
+            LOGGER.error(traceback.print_exc())
             log_error("BCRegistries exception reading DB: " + str(error))
             raise 
         finally:
@@ -1325,7 +1362,7 @@ class BCRegistries:
                         jurisdiction['effective_end_date'] = MAX_END_DATE
 
                     #if jurisdiction['effective_start_date'] > jurisdiction['effective_end_date']:
-                    #    print(">>>Data Issue:Date:" + corp_num + ":Jurisdiction:", jurisdiction)
+                    #    LOGGER.info(">>>Data Issue:Date:" + corp_num + ":Jurisdiction:", jurisdiction)
                 #self.check_same_start_date(corp_num, 'jurisdiction', jurisdictions, 'effective_start_date')
                 jurisdictions = sorted(jurisdictions, key=lambda k: k['effective_end_date'])
                 jurisdictions = sorted(jurisdictions, key=lambda k: int(k['start_event_id']))
@@ -1333,8 +1370,8 @@ class BCRegistries:
                 return jurisdictions
             return []
         except (Exception, psycopg2.DatabaseError) as error:
-            print(error)
-            print(traceback.print_exc())
+            LOGGER.error(error)
+            LOGGER.error(traceback.print_exc())
             log_error("BCRegistries exception reading DB: " + str(error))
             raise 
         finally:
@@ -1359,8 +1396,8 @@ class BCRegistries:
                 return office_type[0]
             return {}
         except (Exception, psycopg2.DatabaseError) as error:
-            print(error)
-            print(traceback.print_exc())
+            LOGGER.error(error)
+            LOGGER.error(traceback.print_exc())
             log_error("BCRegistries exception reading DB: " + str(error))
             raise 
         finally:
@@ -1385,8 +1422,8 @@ class BCRegistries:
                 return corp_type[0]
             return {}
         except (Exception, psycopg2.DatabaseError) as error:
-            print(error)
-            print(traceback.print_exc())
+            LOGGER.error(error)
+            LOGGER.error(traceback.print_exc())
             log_error("BCRegistries exception reading DB: " + str(error))
             raise 
         finally:
@@ -1413,7 +1450,7 @@ class BCRegistries:
             row = cur.fetchone()
             if row is None:
                 # TODO maybe check BC Reg database if the corp is not in the cache?
-                print("No corp rec found for ", corp_num)
+                LOGGER.warning("No corp rec found for " + str(corp_num))
                 corp['corp_num'] = ''
                 corp['corp_typ_cd'] = ''
                 corp['recognition_dts'] = ''
@@ -1462,7 +1499,7 @@ class BCRegistries:
                             corp_state['effective_end_date'] = MAX_END_DATE
 
                         #if corp_state['event_date'] > corp_state['effective_end_date']:
-                        #    print(">>>Data Issue:Date:" + corp_num + ":Corp_State:", corp_state)
+                        #    LOGGER.info(">>>Data Issue:Date:" + corp_num + ":Corp_State:", corp_state)
                     self.flag_start_events_which_are_not_also_end_events(corp_num, corp_states)
 
                     #self.check_same_start_date(corp_num, 'corp_state', corp_states, 'event_date')
@@ -1493,8 +1530,8 @@ class BCRegistries:
 
             return corp
         except (Exception, psycopg2.DatabaseError) as error:
-            print(error)
-            print(traceback.print_exc())
+            LOGGER.error(error)
+            LOGGER.error(traceback.print_exc())
             log_error("BCRegistries exception reading corp info from DB: " + str(error))
             raise 
         finally:
@@ -1569,8 +1606,8 @@ class BCRegistries:
 
             return corp
         except (Exception, psycopg2.DatabaseError) as error:
-            print(error)
-            print(traceback.print_exc())
+            LOGGER.error(error)
+            LOGGER.error(traceback.print_exc())
             log_error("BCRegistries exception reading corp party info from DB: " + str(error))
             raise 
         finally:

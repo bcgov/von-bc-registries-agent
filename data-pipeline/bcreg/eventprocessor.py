@@ -7,6 +7,8 @@ import json
 import time
 import hashlib
 import traceback
+import logging
+
 from bcreg.config import config
 from bcreg.bcregistries import BCRegistries, CustomJsonEncoder, event_dict, is_data_conversion_event
 from bcreg.rocketchat_hooks import log_error, log_warning, log_info
@@ -37,6 +39,9 @@ timezone = pytz.timezone("PST8PDT")
 MIN_START_DATE_TZ = timezone.localize(MIN_START_DATE)
 MIN_VALID_DATE_TZ = timezone.localize(MIN_VALID_DATE)
 MAX_END_DATE_TZ   = timezone.localize(MAX_END_DATE)
+
+LOGGER = logging.getLogger(__name__)
+
 
 CORP_TYPES_IN_SCOPE = {
     "A":   "EXTRA PRO",
@@ -102,8 +107,8 @@ class EventProcessor:
             params = config(section='event_processor')
             self.conn = psycopg2.connect(**params)
         except (Exception) as error:
-            print(error)
-            print(traceback.print_exc())
+            LOGGER.error(error)
+            LOGGER.error(traceback.print_exc())
             self.conn = None
             log_error("EventProcessor exception connecting to DB: " + str(error))
             raise
@@ -380,8 +385,8 @@ class EventProcessor:
             cur.close()
             cur = None
         except (Exception, psycopg2.DatabaseError) as error:
-            print(error)
-            print(traceback.print_exc())
+            LOGGER.error(error)
+            LOGGER.error(traceback.print_exc())
             log_error("EventProcessor exception initializing DB: " + str(error))
             raise
         finally:
@@ -411,8 +416,8 @@ class EventProcessor:
             cursor = None
             return rows
         except (Exception, psycopg2.DatabaseError) as error:
-            print(error)
-            print(traceback.print_exc())
+            LOGGER.error(error)
+            LOGGER.error(traceback.print_exc())
             log_error("Event Processor exception reading DB: " + str(error))
             raise 
         finally:
@@ -435,8 +440,8 @@ class EventProcessor:
             cur.close()
             cur = None
         except (Exception, psycopg2.DatabaseError) as error:
-            print(error)
-            print(traceback.print_exc())
+            LOGGER.error(error)
+            LOGGER.error(traceback.print_exc())
             log_error("EventProcessor exception writing to DB: " + str(error))
             raise
         finally:
@@ -457,8 +462,8 @@ class EventProcessor:
                 prev_event = 0
             return prev_event
         except (Exception, psycopg2.DatabaseError) as error:
-            print(error)
-            print(traceback.print_exc())
+            LOGGER.error(error)
+            LOGGER.error(traceback.print_exc())
             log_error("EventProcessor exception reading DB: " + str(error))
             raise
         finally:
@@ -477,8 +482,8 @@ class EventProcessor:
             prev_event = row[0]
             return prev_event
         except (Exception, psycopg2.DatabaseError) as error:
-            print(error)
-            print(traceback.print_exc())
+            LOGGER.error(error)
+            LOGGER.error(traceback.print_exc())
             log_error("EventProcessor exception reading DB: " + str(error))
             raise
         finally:
@@ -500,8 +505,8 @@ class EventProcessor:
             cur.close()
             cur = None
         except (Exception, psycopg2.DatabaseError) as error:
-            print(error)
-            print(traceback.print_exc())
+            LOGGER.error(error)
+            LOGGER.error(traceback.print_exc())
             log_error("EventProcessor exception updating DB: " + str(error))
             raise
         finally:
@@ -521,8 +526,8 @@ class EventProcessor:
             cur.close()
             cur = None
         except (Exception, psycopg2.DatabaseError) as error:
-            print(error)
-            print(traceback.print_exc())
+            LOGGER.error(error)
+            LOGGER.error(traceback.print_exc())
             log_error("EventProcessor exception updating DB: " + str(error))
             raise
         finally:
@@ -548,8 +553,8 @@ class EventProcessor:
             self.conn.commit()
             cur = None
         except (Exception, psycopg2.DatabaseError) as error:
-            print(error)
-            print(traceback.print_exc())
+            LOGGER.error(error)
+            LOGGER.error(traceback.print_exc())
             log_error("EventProcessor exception updating DB: " + str(error))
             raise
         finally:
@@ -570,8 +575,8 @@ class EventProcessor:
             cur.close()
             cur = None
         except (Exception, psycopg2.DatabaseError) as error:
-            print(error)
-            print(traceback.print_exc())
+            LOGGER.error(error)
+            LOGGER.error(traceback.print_exc())
             log_error("EventProcessor exception updating DB: " + str(error))
             raise
         finally:
@@ -612,12 +617,12 @@ class EventProcessor:
             # re-raise all others
             stre = str(e)
             if "duplicate key value violates unique constraint" in stre and "cl_hash_index" in stre:
-                print("Hash exception, skipping duplicate credential for corp:", corp_num, cred_type, cred_id, e)
+                LOGGER.warning("Hash exception, skipping duplicate credential for corp: %s %s %s %s", corp_num, cred_type, cred_id, str(e))
                 cur.execute("rollback to savepoint save_" + cred_type)
-                #print(cred_json)
+                #LOGGER.info(cred_json)
                 return 0
             else:
-                print(traceback.print_exc())
+                LOGGER.error(traceback.print_exc())
                 log_error("EventProcessor exception updating DB: " + str(error))
                 raise
 
@@ -671,14 +676,14 @@ class EventProcessor:
         
     def check_required_field(self, corp_num, corp_cred, cred_attr):
         if cred_attr not in corp_cred or corp_cred[cred_attr] is None or corp_cred[cred_attr] == '':
-            print(">>>Data Issue:Credential:" + corp_num + ":" + cred_attr + ":", corp_cred)
+            LOGGER.warning(">>>Data Issue:Credential: %s : %s : %s", corp_num, cred_attr, corp_cred)
 
     def compare_dates(self, first_date, op, second_date, msg):
         # check for empty or null strings
         if first_date is None or (isinstance(first_date, str) and 0 == len(first_date)):
-            print(msg, "first date is None or empty string")
+            LOGGER.warning(msg + " first date is None or empty string")
         if second_date is None or (isinstance(second_date, str) and 0 == len(second_date)):
-            print(msg, "second date is None or empty string")
+            LOGGER.warning(msg + " second date is None or empty string")
         # make sure the two variables are the same data type
         if isinstance(first_date, str) and not isinstance(second_date, str):
             second_date = str(second_date)
@@ -695,7 +700,7 @@ class EventProcessor:
             return first_date > second_date
         elif op == ">=":
             return first_date >= second_date
-        print(msg, "invalid date op", op)
+        LOGGER.error(msg + "invalid date op" + op)
         return False
 
     # generate address credential
@@ -746,7 +751,7 @@ class EventProcessor:
                                                                 corp_cred['cred_type'], corp_cred['id'], corp_cred['schema'], corp_cred['version'], 
                                                                 corp_cred['credential'], corp_cred['credential_reason'])
             else:
-                print("Error can't issue a credential with no effective date!")
+                LOGGER.error("Error can't issue a credential with no effective date!")
         return cred_count
 
     def build_credential_dict(self, cred_type, schema, version, cred_id, credential, credential_reason, effective_date):
@@ -784,10 +789,10 @@ class EventProcessor:
             effective_recs.append(rec_summary)
 
         # sort to get in date order, and determine ACT/HIS transition dates
-        #print('>>>>>>>>>> unique_effective_recs start', rec_type)
+        #LOGGER.info('>>>>>>>>>> unique_effective_recs start', rec_type)
         effective_recs = sorted(effective_recs, key=lambda k: k['effective_end_date'])
         effective_recs = sorted(effective_recs, key=lambda k: k['effective_start_date'])
-        #print('<<<<<<<<<< unique_effective_recs end', rec_type)
+        #LOGGER.info('<<<<<<<<<< unique_effective_recs end', rec_type)
 
         return effective_recs
 
@@ -967,36 +972,36 @@ class EventProcessor:
 
     # check if we should build a relationship credential for the given party record
     def should_generate_relationship_credential(self, party, prev_event, last_event, corp_num, corp_info):
-        #print("should_generate_relationship_credential", party['corp_num'], party['bus_company_num'], party['party_typ_cd'])
+        #LOGGER.info("should_generate_relationship_credential", party['corp_num'], party['bus_company_num'], party['party_typ_cd'])
         if not 'corp_info' in party:
-            #print("  --> no corp_info, return False")
+            #LOGGER.info("  --> no corp_info, return False")
             return False;
 
         # only look at FBO's (for now)
         if party['party_typ_cd'] != 'FBO':
-            #print("  --> party['party_typ_cd'] != 'FBO', return False")
+            #LOGGER.info("  --> party['party_typ_cd'] != 'FBO', return False")
             return False
 
         # special case where the corp_num and bus_company_num are the same
         #if 'bus_company_num' in party and party['bus_company_num'] == corp_num:
-        #    print("  --> party['bus_company_num'] == corp_num, return False")
+        #    LOGGER.info("  --> party['bus_company_num'] == corp_num, return False")
         #    return False
 
         # include if this record is within the desired event range ...
         if ((prev_event['event_date'] <= party['start_event']['event_timestmp'] and party['start_event']['event_timestmp'] <= last_event['event_date']) or
             (party['end_event_id'] is not None and prev_event['event_date'] <= party['end_event']['event_timestmp'] and party['end_event']['event_timestmp'] <= last_event['event_date'])):
-            #print("  ---> party record is in our window, check for ownership")
+            #LOGGER.info("  ---> party record is in our window, check for ownership")
 
             # ... AND it belongs to the correct company type/party type logic
             if self.is_owned_sole_prop(party, corp_num, corp_info) or self.is_owner_of_sole_prop(party, corp_num, corp_info):
-                #print("  --->", self.is_owned_sole_prop(party, corp_num, corp_info), self.is_owner_of_sole_prop(party, corp_num, corp_info))
+                #LOGGER.info("  --->", self.is_owned_sole_prop(party, corp_num, corp_info), self.is_owner_of_sole_prop(party, corp_num, corp_info))
                 return True
 
             # TBD check for partnerships and amalgamations
             #if self.is_partnership() or self.is_amalgamation():
             #   return True
 
-        #print("  ---> fall-through, return False")
+        #LOGGER.info("  ---> fall-through, return False")
 
         return False
 
@@ -1009,7 +1014,7 @@ class EventProcessor:
         (for the initial load, prev_event is the genesis date of Jan 1, 0000)
         The event "date" is based on some complicated logic and can come from the event or the related filing.
         """
-        #print("Generate credentials for", corp_num, prev_event, last_event)
+        #LOGGER.info("Generate credentials for", corp_num, prev_event, last_event)
         corp_creds = []
 
         # get events - only generate credentials for events in the past
@@ -1017,7 +1022,7 @@ class EventProcessor:
         #print(corp_num, len(effective_events), len(future_events))
 
         if 0 < len(effective_events):
-            #print('effective_events', effective_events)
+            #LOGGER.info('effective_events', effective_events)
             # build a standard dict for the first and last events in the effective range
             prev_effective_event = event_dict(effective_events[0]['event_id'], effective_events[0]['event_timestmp'])
             last_effective_event = event_dict(effective_events[len(effective_events)-1]['event_id'], effective_events[len(effective_events)-1]['event_timestmp'])
@@ -1037,7 +1042,7 @@ class EventProcessor:
 
             # loop based on start/end events
             for i in range(len(effective_events)):
-                #print('effective_event', effective_events[i])
+                #LOGGER.info('effective_event', effective_events[i])
 
                 loop_start_event = effective_events[i]
                 #print(use_prev_event['event_date'], loop_start_event['event_timestmp'], use_last_event['event_date'])
@@ -1047,7 +1052,7 @@ class EventProcessor:
                 #   - unless it is the most recent event, in which case include it anyways
                 if i < (len(effective_events)-1) and is_data_conversion_event(loop_start_event) and loop_start_event['event_timestmp'] == loop_start_event['effective_date']:
                     # skip data conversion event
-                    #print(" >>> Skip credential for data conversion event", i, len(effective_events)-1, loop_start_event)
+                    #LOGGER.info(" >>> Skip credential for data conversion event", i, len(effective_events)-1, loop_start_event)
                     pass
                 elif use_prev_event['event_date'] <= loop_start_event['event_timestmp']: # and loop_start_event['event_timestmp'] <= use_last_event['event_date']:
                     # event is in the "overlap" range
@@ -1062,7 +1067,7 @@ class EventProcessor:
                     # org_names active at effective date
                     org_name = self.corp_rec_at_effective_date(corp_info['org_names'], loop_start_event)
                     if org_name is not None:
-                        #print('org_name', org_name)
+                        #LOGGER.info('org_name', org_name)
                         corp_cred['entity_name'] = org_name['corp_nme']
                         if is_data_conversion_event(org_name['start_event']) and org_name['effective_start_date'] == org_name['start_event']['event_timestmp']:
                             corp_cred['entity_name_effective'] = ''
@@ -1075,15 +1080,15 @@ class EventProcessor:
                     # check for NOALU/NOALB/NOALC filing type on the org_name end event
                     if self.is_notice_of_alteration_event(org_name):
                         # erase the corp_type in previously created/expired credentials
-                        #print("Cleaning corp type history for 'notice of alteration'", corp_num)
+                        #LOGGER.info("Cleaning corp type history for 'notice of alteration'", corp_num)
                         for cred in corp_creds:
                             cred['credential']['entity_type'] = ''
 
                     # org_name_assumed active at effective date
                     org_name_assumed = self.corp_rec_at_effective_date(corp_info['org_name_assumed'], loop_start_event)
-                    #print("org_name_assumed", org_name_assumed)
+                    #LOGGER.info("org_name_assumed", org_name_assumed)
                     if org_name_assumed is not None:
-                        #print('org_name_assumed', org_name_assumed)
+                        #LOGGER.info('org_name_assumed', org_name_assumed)
                         corp_cred['entity_name_assumed'] = org_name_assumed['corp_nme'] 
                         if is_data_conversion_event(org_name_assumed['start_event']) and org_name_assumed['effective_start_date'] == org_name_assumed['start_event']['event_timestmp']:
                             corp_cred['entity_name_assumed_effective'] = ''
@@ -1096,7 +1101,7 @@ class EventProcessor:
                     # corp_state active at effective date
                     corp_state = self.corp_rec_at_effective_date(corp_info['corp_state'], loop_start_event)
                     if corp_state is not None:
-                        #print('corp_state', corp_state)
+                        #LOGGER.info('corp_state', corp_state)
                         corp_cred['entity_status'] = corp_state['op_state_typ_cd']
                         if is_data_conversion_event(corp_state['start_event']) and corp_state['effective_start_date'] == corp_state['start_event']['event_timestmp']:
                             corp_cred['entity_status_effective'] = ''
@@ -1143,25 +1148,25 @@ class EventProcessor:
                     #self.check_required_field(corp_num, corp_cred, 'entity_status')
 
                     corp_cred = self.build_credential_dict(corp_credential, corp_schema, corp_version, corp_num, corp_cred, reason_description, corp_cred['effective_date'])
-                    #print("corp_cred", corp_cred)
+                    #LOGGER.info("corp_cred", corp_cred)
 
                     # these will be sorted by date, but we need to make sure we are not submitting duplicates
                     # checking against the previously generated credential is sufficient
-                    #print('credential', corp_cred['credential'])
+                    #LOGGER.info('credential', corp_cred['credential'])
                     if (len(corp_creds) == 0) or (len(corp_creds) > 0 and corp_cred['credential'] != corp_creds[len(corp_creds)-1]['credential']):
                         corp_creds.append(corp_cred)
                     else:
-                        #print(" >>> Skip credential for reason Duplicate")
+                        #LOGGER.info(" >>> Skip credential for reason Duplicate")
                         pass
                 else:
                     # skipping event because out of range of start/end period
-                    #print(" >>> Skip event not in range")
-                    #print(use_prev_event['event_date'], loop_start_event['event_timestmp'], use_last_event['event_date'])
+                    #LOGGER.info(" >>> Skip event not in range")
+                    #LOGGER.info(use_prev_event['event_date'], loop_start_event['event_timestmp'], use_last_event['event_date'])
                     pass
 
         else:
             # skip due to no effective dates in range
-            #print(" >>> Skip no effective events in range")
+            #LOGGER.info(" >>> Skip no effective events in range")
             pass
 
         # generate addr credential(s)
@@ -1328,8 +1333,8 @@ class EventProcessor:
                     cur.close()
                     cur = None
                 except (Exception, psycopg2.DatabaseError) as error:
-                    print(error)
-                    print(traceback.print_exc())
+                    LOGGER.error(error)
+                    LOGGER.error(traceback.print_exc())
                     log_error("EventProcessor exception updating DB: " + str(error))
                     raise
                 finally:
@@ -1351,8 +1356,8 @@ class EventProcessor:
                     cur.close()
                     cur = None
                 except (Exception, psycopg2.DatabaseError) as error:
-                    print(error)
-                    print(traceback.print_exc())
+                    LOGGER.error(error)
+                    LOGGER.error(traceback.print_exc())
                     log_error("EventProcessor exception updating DB: " + str(error))
                     raise
                 finally:
@@ -1375,15 +1380,15 @@ class EventProcessor:
                             bc_registries.cache_bcreg_corps(specific_corps)
                         except (Exception, psycopg2.DatabaseError, psycopg2.DataError) as error:
                             # raises a SQL error if error during caching
-                            print(error)
-                            print(traceback.print_exc())
+                            LOGGER.error(error)
+                            LOGGER.error(traceback.print_exc())
                             force_continue = True
                             if max_batch_size == CORP_BATCH_SIZE:
-                                print("Error during caching operation, switching to smaller cache size")
+                                LOGGER.error("Error during caching operation, switching to smaller cache size")
                                 corps = []
                                 max_batch_size = FALLBACK_CORP_BATCH_SIZE
                             else:
-                                print("Error during caching operation, switching to non-cached mode")
+                                LOGGER.error("Error during caching operation, switching to non-cached mode")
                                 corps = []
                                 use_cache = False
 
@@ -1414,8 +1419,8 @@ class EventProcessor:
                                 prev_event_json = event_json(corp['PREV_EVENT'])
                                 last_event_json = event_json(corp['LAST_EVENT'])
                             except (Exception, psycopg2.DatabaseError) as error:
-                                print(error)
-                                print(traceback.print_exc())
+                                LOGGER.error(error)
+                                LOGGER.error(traceback.print_exc())
                                 process_success = False
                                 process_msg = str(error)
                                 #raise
@@ -1448,7 +1453,7 @@ class EventProcessor:
                                 if 0 < len(effective_events):
                                     try:
                                         # generate and store credentials
-                                        #print(" >>> Generate credentials for corp", corp['CORP_NUM'])
+                                        #LOGGER.info(" >>> Generate credentials for corp", corp['CORP_NUM'])
                                         corp_creds = self.generate_credentials(corp['SYSTEM_TYPE_CD'], corp['PREV_EVENT'], corp['LAST_EVENT'], corp['CORP_NUM'], corp_info)
                                         if len(corp_creds) > 0:
                                             cur = self.conn.cursor()
@@ -1461,8 +1466,8 @@ class EventProcessor:
                                             cur.close()
                                             cur = None
                                     except (Exception, psycopg2.DatabaseError) as error:
-                                        print(error)
-                                        print(traceback.print_exc())
+                                        LOGGER.error(error)
+                                        LOGGER.error(traceback.print_exc())
                                         process_success = False
                                         process_msg = str(error)
                                         #raise
@@ -1525,8 +1530,8 @@ class EventProcessor:
                                     cur.close()
                                     cur = None
                                 except (Exception, psycopg2.DatabaseError) as error:
-                                    print(error)
-                                    print(traceback.print_exc())
+                                    LOGGER.error(error)
+                                    LOGGER.error(traceback.print_exc())
                                     process_success = False
                                     process_msg = str(error)
                                     log_error("EventProcessor exception updating DB: " + str(error))
@@ -1557,12 +1562,12 @@ class EventProcessor:
 
                 # if we are generating creds but didn't on the last loop, bail
                 if generate_creds and 0 == saved_creds and not force_continue:
-                    print("Didn't complete any activity this loop, so bail")
+                    LOGGER.warning("Didn't complete any activity this loop, so bail")
                     continue_loop = False
 
                 # if we processed a set of corps in non-cached mode, try to switch back
                 if len(corps) > 0 and not use_cache:
-                    print("Restoring cache mode")
+                    LOGGER.warning("Restoring cache mode")
                     use_cache = use_cache_param
 
 
@@ -1605,8 +1610,8 @@ class EventProcessor:
             cur.close()
             cur = None
         except (Exception, psycopg2.DatabaseError) as error:
-            print(error)
-            print(traceback.print_exc())
+            LOGGER.error(error)
+            LOGGER.error(traceback.print_exc())
             raise
         finally:
             if cur is not None:
@@ -1619,7 +1624,7 @@ class EventProcessor:
         for table in tables:
             process_ct     = self.get_record_count(table, False)
             outstanding_ct = self.get_record_count(table, True)
-            print('Table:', table, 'Processed:', process_ct, 'Outstanding:', outstanding_ct)
+            print('Table:', table, 'Processed:', process_ct, 'Outstanding:', table, process_ct, outstanding_ct)
 
             sql = "select count(*) from " + table + " where process_success = 'N'"
             error_ct = self.get_sql_record_count(sql)
@@ -1655,8 +1660,8 @@ class EventProcessor:
             cur = None
             return ct
         except (Exception, psycopg2.DatabaseError) as error:
-            print(error)
-            print(traceback.print_exc())
+            LOGGER.error(error)
+            LOGGER.error(traceback.print_exc())
             raise
         finally:
             if cur is not None:
@@ -1685,8 +1690,8 @@ class EventProcessor:
             cursor = None
             return rows
         except (Exception, psycopg2.DatabaseError) as error:
-            print(error)
-            print(traceback.print_exc())
+            LOGGER.error(error)
+            LOGGER.error(traceback.print_exc())
             raise
         finally:
             if cursor is not None:
