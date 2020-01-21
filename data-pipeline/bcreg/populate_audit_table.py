@@ -260,7 +260,3 @@ if evp_credential_count != evp_corp_history_count:
         log_error("Error missing credentials in Event Processor: EvP corps={} EvP creds={}".format(evp_corp_history_count, evp_credential_count))
     else:
         log_warning("Warning missing credentials in Event Processor: EvP corps={} EvP creds={}".format(evp_corp_history_count, evp_credential_count))
-<<<<<<< HEAD
-
-=======
->>>>>>> master
