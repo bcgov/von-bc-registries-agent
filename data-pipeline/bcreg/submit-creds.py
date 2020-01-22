@@ -17,8 +17,15 @@
 #
 
 import asyncio
+import io
+import os
+import logging
+
 from bcreg.credssubmitter import CredsSubmitter
 from bcreg.rocketchat_hooks import log_error, log_warning, log_info
+
+LOG_LEVEL = os.environ.get('LOG_LEVEL', 'WARNING').upper()
+logging.basicConfig(level=LOG_LEVEL)
 
 
 try:
