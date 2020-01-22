@@ -1624,7 +1624,7 @@ class EventProcessor:
         for table in tables:
             process_ct     = self.get_record_count(table, False)
             outstanding_ct = self.get_record_count(table, True)
-            print('Table:', table, 'Processed:', process_ct, 'Outstanding:', table, process_ct, outstanding_ct)
+            print('Table:', table, 'Processed:', process_ct, 'Outstanding:', outstanding_ct)
 
             sql = "select count(*) from " + table + " where process_success = 'N'"
             error_ct = self.get_sql_record_count(sql)
