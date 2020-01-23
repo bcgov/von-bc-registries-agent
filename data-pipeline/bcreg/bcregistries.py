@@ -1001,7 +1001,7 @@ class BCRegistries:
                 ret_date = event['event_timestmp']
 
         if ret_date is None:
-            LOGGER.error('Error ret_date is None', event)
+            LOGGER.error('Error ret_date is None %s', str(json.dumps(event)))
 
         return ret_date
 
