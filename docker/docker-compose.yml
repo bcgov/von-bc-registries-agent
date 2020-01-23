@@ -84,7 +84,7 @@ services:
       - EVENT_PROC_DB_DATABASE=${EVENT_PROC_DB_DATABASE:-bc_reg_db}
       - EVENT_PROC_DB_USER=${EVENT_PROC_DB_USER:-bc_reg_db}
       - EVENT_PROC_DB_PASSWORD=
-      - LOG_LEVEL=${LOG_LEVEL:-}
+      - LOG_LEVEL=${LOG_LEVEL}
       # [mara_db]
       - MARA_DB_HOST=${MARA_DB_HOST:-bcregdb}
       - MARA_DB_PORT=${MARA_DB_PORT:-5432}
@@ -149,5 +149,4 @@ networks:
   orgbook:
     external:
       name: tob_tob
-
 
