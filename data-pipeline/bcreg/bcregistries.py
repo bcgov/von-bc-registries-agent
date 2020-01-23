@@ -938,7 +938,7 @@ class BCRegistries:
     def get_unprocessed_corp_events(self, last_event_id, last_event_dt, max_event_id, max_event_dt, corps, max=None):
         for i,corp in enumerate(corps): 
             if (i % 100 == 0) or (i+1 == len(corps)):
-                LOGGER.info('>>> Processing {} of {} corporations.'.format(i+1, len(corps)))
+                print('>>> Processing ' + str(i+1) + ' of ' + str(len(corps)) + ' corporations. ')
             corp['PREV_EVENT'] = event_dict(last_event_id, last_event_dt)
             corp['LAST_EVENT'] = event_dict(max_event_id, max_event_dt)
             if max and i >= max:
@@ -1001,7 +1001,7 @@ class BCRegistries:
                 ret_date = event['event_timestmp']
 
         if ret_date is None:
-            LOGGER.error('Error ret_date is None %s', str(json.dumps(event)))
+            LOGGER.error('Error ret_date is None' + str(event))
 
         return ret_date
 
@@ -1143,9 +1143,9 @@ class BCRegistries:
             if 'end_event_id' not in record or record['end_event_id'] is None:
                 active_id = i
         if flag:
-            LOGGER.warning(">>>Data Issue:Same Start Date:" + corp_num + ":" + record_type + ":" + str(records))
+            LOGGER.info(">>>Data Issue:Same Start Date:" + corp_num + ":" + record_type + ":" + str(records))
         if active_id is not None and active_id != len(sorted_records):
-            LOGGER.warning(">>>Data Issue:Active Record:" + corp_num + ":" + record_type + ":" + str(records))
+            LOGGER.info(">>>Data Issue:Active Record:" + corp_num + ":" + record_type + ":" + str(records))
 
     def flag_start_events_which_are_not_also_end_events(self, corp_num, corp_recs):
         if corp_recs is not None:
@@ -1450,7 +1450,7 @@ class BCRegistries:
             row = cur.fetchone()
             if row is None:
                 # TODO maybe check BC Reg database if the corp is not in the cache?
-                LOGGER.warning("No corp rec found for " + str(corp_num))
+                LOGGER.info("No corp rec found for " + str(corp_num))
                 corp['corp_num'] = ''
                 corp['corp_typ_cd'] = ''
                 corp['recognition_dts'] = ''
