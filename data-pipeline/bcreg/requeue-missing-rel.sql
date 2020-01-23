@@ -2,7 +2,7 @@
 # (i.e. where one side of the relationship has a REL credential and the other doesn't)
 
 insert into event_by_corp_filing
-(system_type_cd, missing_corp_num, prev_event_id, prev_event_date, last_event_id, last_event_date, entry_date)
+(system_type_cd, corp_num, prev_event_id, prev_event_date, last_event_id, last_event_date, entry_date)
 select 'BC_REG', missing_corp_num, 0, '0001-01-01 00:00:00', event_id, event_date, now()
 from (select 
   foo.corp_num as corp_num_1, foo.registration_id as registration_id, 
