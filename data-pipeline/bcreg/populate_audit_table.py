@@ -26,7 +26,9 @@ To force re-process of these companies, run the following sql's:
     set process_success = null, process_date = null, process_msg = null
     where process_success is not null
     and corp_num in
-    (select corp_num from CORP_AUDIT_LOG where LAST_CREDENTIAL_ID is null);
+    (select corp_num from CORP_AUDIT_LOG where LAST_CREDENTIAL_ID is null)
+    and corp_num not in
+    (select corp_num from corp_history_log where process_msg = 'Withdrawn');
 
     commit;
 
@@ -37,7 +39,9 @@ Or to insert new records to re-process the entire company history:
     select 'BC_REG', corp_num, 0, '0001-01-01 00:00:00', event_id, event_date, now()
     from CORP_AUDIT_LOG, LAST_EVENT
     where CORP_AUDIT_LOG.last_credential_id is null
-      and LAST_EVENT.record_id = (select max(record_id) from LAST_EVENT);
+      and LAST_EVENT.record_id = (select max(record_id) from LAST_EVENT)
+      and corp_num not in
+      (select corp_num from corp_history_log where process_msg = 'Withdrawn');
 
     commit;
 
