@@ -617,11 +617,12 @@ class EventProcessor:
             # re-raise all others
             stre = str(e)
             if "duplicate key value violates unique constraint" in stre and "cl_hash_index" in stre:
-                LOGGER.warning("Hash exception, skipping duplicate credential for corp: %s %s %s %s", corp_num, cred_type, cred_id, str(e))
+                #LOGGER.info("Hash exception, skipping duplicate credential for corp: " + corp_num + " " + cred_type + " " + cred_id + " " + str(e))
                 cur.execute("rollback to savepoint save_" + cred_type)
                 #LOGGER.info(cred_json)
                 return 0
             else:
+                LOGGER.error(stre)
                 LOGGER.error(traceback.print_exc())
                 log_error("EventProcessor exception updating DB: " + str(error))
                 raise
@@ -676,14 +677,14 @@ class EventProcessor:
         
     def check_required_field(self, corp_num, corp_cred, cred_attr):
         if cred_attr not in corp_cred or corp_cred[cred_attr] is None or corp_cred[cred_attr] == '':
-            LOGGER.warning(">>>Data Issue:Credential: %s : %s : %s", corp_num, cred_attr, corp_cred)
+            LOGGER.info(">>>Data Issue:Credential: " + corp_num + " " + cred_attr + " " + corp_cred)
 
     def compare_dates(self, first_date, op, second_date, msg):
         # check for empty or null strings
         if first_date is None or (isinstance(first_date, str) and 0 == len(first_date)):
-            LOGGER.warning(msg + " first date is None or empty string")
+            LOGGER.info(msg + " first date is None or empty string")
         if second_date is None or (isinstance(second_date, str) and 0 == len(second_date)):
-            LOGGER.warning(msg + " second date is None or empty string")
+            LOGGER.info(msg + " second date is None or empty string")
         # make sure the two variables are the same data type
         if isinstance(first_date, str) and not isinstance(second_date, str):
             second_date = str(second_date)
@@ -1400,7 +1401,7 @@ class EventProcessor:
                         if (i % 100 == 0) or (i+1 == len(corps)):
                             processing_time = time.perf_counter() - start_time
                             print('Processing: ' + str(processing_time))
-                            print('>>> Processing {} of {} corporations.'.format(i+1, len(corps)))
+                            print('>>> Processing ' + str(i+1) + ' of ' + str(len(corps)) + ' corporations. ')
 
                         # check if we need to load BC Reg data (we need to do this if we are running from the event list)
                         if load_regs:
@@ -1562,12 +1563,12 @@ class EventProcessor:
 
                 # if we are generating creds but didn't on the last loop, bail
                 if generate_creds and 0 == saved_creds and not force_continue:
-                    LOGGER.warning("Didn't complete any activity this loop, so bail")
+                    LOGGER.info("Didn't complete any activity this loop, so bail")
                     continue_loop = False
 
                 # if we processed a set of corps in non-cached mode, try to switch back
                 if len(corps) > 0 and not use_cache:
-                    LOGGER.warning("Restoring cache mode")
+                    LOGGER.info("Restoring cache mode")
                     use_cache = use_cache_param
 
 
