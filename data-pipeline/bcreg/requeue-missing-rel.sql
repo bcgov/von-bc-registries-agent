@@ -23,6 +23,8 @@ from credential_log
 where credential_type_cd = 'REL') as foo
 on c_log.credential_json->>'registration_id' = foo.associated_registration_id
 and c_log.credential_json->>'associated_registration_id' = foo.registration_id
-where c_log.corp_num is null or foo.corp_num is null) as MISSING_CORP_RELN, 
+where c_log.corp_num is null or foo.corp_num is null
+  and c_log.corp_num not in
+  (select corp_num from corp_history_log where process_msg = 'Withdrawn')) as MISSING_CORP_RELN, 
   LAST_EVENT
 where LAST_EVENT.record_id = (select max(record_id) from LAST_EVENT);
