@@ -752,7 +752,7 @@ class EventProcessor:
                                                                 corp_cred['cred_type'], corp_cred['id'], corp_cred['schema'], corp_cred['version'], 
                                                                 corp_cred['credential'], corp_cred['credential_reason'])
             else:
-                LOGGER.error("Error can't issue a credential with no effective date!")
+                LOGGER.error("Error can't issue a credential with no effective date! " + corp_num + " " + corp_cred['cred_type'] + " " + str(corp_cred))
         return cred_count
 
     def build_credential_dict(self, cred_type, schema, version, cred_id, credential, credential_reason, effective_date):
@@ -1230,7 +1230,7 @@ class EventProcessor:
                     dba_cred['effective_date'] = party['effective_start_date']
 
                     # if the start event is 'ADMIN' type and there is only one party record, use the firm effective date
-                    if party['start_event']['event_typ_cd'] == 'ADMIN' and party_count[party['corp_info']['corp_num']] == 1:
+                    if party['start_event']['event_typ_cd'] == 'ADMIN' and party_count[party['corp_info']['corp_num']] == 1 and party['corp_info']['recognition_dts']:
                         dba_cred['effective_date'] = party['corp_info']['recognition_dts']
 
                     dba_cred['relationship_status_effective'] = self.filter_min_date(dba_cred['effective_date'])
