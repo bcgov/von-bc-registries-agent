@@ -1549,7 +1549,8 @@ class BCRegistries:
                          phone, reason_typ_cd
                       FROM """ + self.get_table_prefix() + """corp_party
                       WHERE (corp_num = """ + self.get_db_sql_param() + """ OR bus_company_num = """ + self.get_db_sql_param() + """)
-                        AND party_typ_cd = 'FBO'"""
+                        """
+                        #AND party_typ_cd = 'FBO'"""
 
         cur = None
         try:

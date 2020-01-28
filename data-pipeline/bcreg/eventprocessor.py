@@ -8,6 +8,7 @@ import time
 import hashlib
 import traceback
 import logging
+import random
 
 from bcreg.config import config
 from bcreg.bcregistries import BCRegistries, CustomJsonEncoder, event_dict, is_data_conversion_event
@@ -25,6 +26,22 @@ addr_version = '1.0.42'
 dba_credential = 'REL'
 dba_schema = 'relationship.registries.ca'
 dba_version = '1.0.42'
+
+bn_credential = 'BNC'
+bn_schema = 'business_number.registries.ca'
+bn_version = '1.0.42'
+
+vp_credential = 'VPC'
+vp_schema = 'verified_individual.registries.ca'
+vp_version = '1.0.42'
+
+vp_rel_credential = 'VPR'
+vp_rel_schema = 'individual_relationship.registries.ca'
+vp_rel_version = '1.0.42'
+
+org_rel_credential = 'OGR'
+org_rel_schema = 'org_relationship.registries.ca'
+org_rel_version = '1.0.42'
 
 CORP_BATCH_SIZE = 3000
 FALLBACK_CORP_BATCH_SIZE = 300
@@ -1007,6 +1024,41 @@ class EventProcessor:
         return False
 
 
+    # randomize name and phone #
+    def random_seed(self, name):
+        seed = 0
+        for ch in name:
+            seed = seed + ord(ch)
+        return seed
+    def random_name(self, name):
+        # need to have a deterministic random function for each name
+        my_random = random.Random(self.random_seed(name))
+        name = name.split()[0].upper()
+        ret_name = ""
+        for ch in name:
+            ret_ch = chr(ord('A') + my_random.randint(0, 25))
+            ret_name = ret_name + ret_ch
+        return ret_name
+    def random_phone(self, fn, ln):
+        name = fn + ln
+        phone_no = "250"
+        while True:
+            for ch in name:
+                phone_no = phone_no + chr(ord('0') + ord(ch) % 10)
+                if len(phone_no) == 10:
+                    return phone_no
+
+    # generate verified person info
+    def get_vp_info(self, party):
+        vp_fn = self.random_name(party["first_nme"])
+        vp_ln = self.random_name(party["last_nme"])
+
+        vp_reg_id = "VP" + vp_fn + vp_ln
+        vp_email = vp_fn + "." + vp_ln + "@MAIL.COM"
+        vp_phone = self.random_phone(vp_fn, vp_ln)
+
+        return (vp_reg_id, vp_fn, vp_ln, vp_email, vp_phone)
+
     # generate credentials for the provided corp
     def generate_credentials(self, system_typ_cd, prev_event, last_event, corp_num, corp_info):
         """
@@ -1240,6 +1292,67 @@ class EventProcessor:
                         dba_cred['expiry_date'] = ''
                     reason_description = self.build_corp_reason_code(party['start_event'])
                     corp_creds.append(self.build_credential_dict(dba_credential, dba_schema, dba_version, dba_cred['registration_id'], dba_cred, reason_description, dba_cred['effective_date']))
+
+        # DEMO generate a BN credential if the corp has a BN
+        if "bn_9" in corp_info and corp_info["bn_9"] and 0 < len(corp_info["bn_9"]):
+            #print(">>> generate a bn credential for", corp_num, corp_info["bn_9"])
+            bn_cred = {}
+            bn_cred["registration_id"] = self.corp_num_with_prefix(corp_info['corp_typ_cd'], corp_info['corp_num'])
+            bn_cred["business_number"] = corp_info["bn_9"]
+            bn_cred["effective_date"] = corp_info["recognition_dts"]
+            bn_cred["expiry_date"] = ""
+            corp_creds.append(self.build_credential_dict(bn_credential, bn_schema, bn_version, bn_cred['registration_id'], bn_cred, '', bn_cred['effective_date']))
+
+        # DEMO generate Verified Individual credentials and relationships (2 way)
+        vi_party_types = {"DIR":"Director", "OFF":"Officer", "FIO":"Firm Owner",}
+        if 'parties' in corp_info and 0 < len(corp_info['parties']):
+            # ensure relationship history is generated correctly
+            corp_parties = sorted(corp_info['parties'], key=lambda k: int(k['start_event_id']))
+            corp_parties = sorted(corp_parties, key=lambda k: k['effective_start_date'])
+            for party in corp_parties:
+                if party["party_typ_cd"] in vi_party_types and party["corp_num"] == corp_num and ("end_event" not in party or party["end_event"] is None):
+                    (vp_reg_id, vp_fn, vp_ln, vp_email, vp_phone) = self.get_vp_info(party)
+
+                    # generate a verified person credential
+                    #print(">>> generate a verified person credential for", vp_reg_id, vp_fn, vp_ln, vp_email, vp_phone)
+                    vp_cred = {}
+                    vp_cred["registration_id"] = vp_reg_id
+                    vp_cred["individual_name"] = vp_fn + " " + vp_ln
+                    vp_cred["entity_status"] = 'ACT'
+                    vp_cred["first_name"] = vp_fn
+                    vp_cred["last_name"] = vp_ln
+                    vp_cred["email_address"] = vp_email
+                    vp_cred["phone_number"] = vp_phone
+                    # TODO hard code the effective date for now
+                    vp_cred["effective_date"] = "2000-01-01"
+                    vp_cred["expiry_date"] = ""
+                    corp_creds.append(self.build_credential_dict(vp_credential, vp_schema, vp_version, vp_cred['registration_id'], vp_cred, '', vp_cred['effective_date']))
+
+                    # generate relationship credentials
+                    #print(">>> generate relationship credentials between", corp_num, party["party_typ_cd"], vp_reg_id, vp_email, vp_phone)
+                    corp_vp_rel_cred = {}
+                    vp_corp_rel_cred = {}
+                    corp_vp_rel_cred["registration_id"] = vp_reg_id
+                    corp_vp_rel_cred["associated_registration_id"] = self.corp_num_with_prefix(corp_info['corp_typ_cd'], corp_info['corp_num'])
+                    corp_vp_rel_cred["associated_registration_name"] = ""
+                    corp_vp_rel_cred["relationship"] = party["party_typ_cd"]
+                    corp_vp_rel_cred["relationship_description"] = vi_party_types[party["party_typ_cd"]]
+                    corp_vp_rel_cred["relationship_status"] = 'ACT'
+                    corp_vp_rel_cred["relationship_status_effective"] = party['effective_start_date']
+                    corp_vp_rel_cred["effective_date"] = party['effective_start_date']
+                    corp_vp_rel_cred["expiry_date"] = ""
+                    corp_creds.append(self.build_credential_dict(vp_rel_credential, vp_rel_schema, vp_rel_version, corp_vp_rel_cred['registration_id'], corp_vp_rel_cred, '', corp_vp_rel_cred['effective_date']))
+
+                    vp_corp_rel_cred["registration_id"] = self.corp_num_with_prefix(corp_info['corp_typ_cd'], corp_info['corp_num'])
+                    vp_corp_rel_cred["associated_registration_id"] = vp_reg_id
+                    vp_corp_rel_cred["associated_registration_name"] = vp_fn + " " + vp_ln
+                    vp_corp_rel_cred["relationship"] = party["party_typ_cd"]
+                    vp_corp_rel_cred["relationship_description"] = vi_party_types[party["party_typ_cd"]]
+                    vp_corp_rel_cred["relationship_status"] = 'ACT'
+                    vp_corp_rel_cred["relationship_status_effective"] = party['effective_start_date']
+                    vp_corp_rel_cred["effective_date"] = party['effective_start_date']
+                    vp_corp_rel_cred["expiry_date"] = ""
+                    corp_creds.append(self.build_credential_dict(org_rel_credential, org_rel_schema, org_rel_version, vp_corp_rel_cred['registration_id'], vp_corp_rel_cred, '', vp_corp_rel_cred['effective_date']))
 
         return corp_creds
 

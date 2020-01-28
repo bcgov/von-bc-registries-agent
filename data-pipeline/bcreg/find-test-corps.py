@@ -294,7 +294,8 @@ specific_corps = [
                     '1236975',
                     '1237281',
                     '1236398',
-                    ]
+]
+
 
 with BCRegistries() as bc_registries:
     # get 5 corps for each type in scope (in addition to the above list)
