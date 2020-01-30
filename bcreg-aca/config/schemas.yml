@@ -177,7 +177,7 @@
       description_en: Reason for credential issue/update
       required: false
 
-- name: business_number.registries.ca
+- name: demo.business_number.registries.ca
   version: '1.0.42'
   description: TODO
   cardinality:
@@ -200,7 +200,7 @@
       description_en: Date Credential expires
       required: false
 
-- name: verified_individual.registries.ca
+- name: demo.verified_person.registries.ca
   version: '1.0.42'
   description: TODO
   attributes:
@@ -208,7 +208,7 @@
       label_en: Registration ID
       description_en: Unique identifer assigned to a party by registrar
       required: true
-    individual_name:
+    full_name:
       label_en: Full Name
       description_en: Full Name
       required: true
@@ -241,7 +241,7 @@
       description_en: Date Credential expires
       required: false
 
-- name: individual_relationship.registries.ca
+- name: demo.person_relationship.registries.ca
   version: '1.0.42'
   description: TODO
   attributes:
@@ -286,7 +286,7 @@
       description_en: Reason for credential issue/update
       required: false
 
-- name: org_relationship.registries.ca
+- name: demo.org_relationship.registries.ca
   version: '1.0.42'
   description: TODO
   attributes:

@@ -34,6 +34,7 @@ services:
       AGENT_ADMIN_API_KEY: ${AGENT_ADMIN_API_KEY}
       TOB_AGENT_ADMIN_URL: ${TOB_AGENT_ADMIN_URL}
       TOB_ADMIN_API_KEY: ${TOB_ADMIN_API_KEY}
+      EXTRA_DEMO_CREDS: ${EXTRA_DEMO_CREDS}
       #RECORD_TIMINGS: 'true'
     networks:
       - orgbook
@@ -134,6 +135,7 @@ services:
       - EVENT_PROC_DB_USER=${EVENT_PROC_DB_USER:-bc_reg_db}
       - EVENT_PROC_DB_PASSWORD=
       - LOG_LEVEL=${LOG_LEVEL}
+      - EXTRA_DEMO_CREDS=${EXTRA_DEMO_CREDS}
       # [mara_db]
       - MARA_DB_HOST=${MARA_DB_HOST:-bcregdb}
       - MARA_DB_PORT=${MARA_DB_PORT:-5432}

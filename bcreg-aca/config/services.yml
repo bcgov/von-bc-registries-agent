@@ -307,7 +307,7 @@ issuers:
                 input: reason_description
                 from: claim
 
-      - schema: business_number.registries.ca
+      - schema: demo.business_number.registries.ca
         issuer_url: $APPLICATION_URL_ADDRESS
         description: TODO
         details:
@@ -339,11 +339,11 @@ issuers:
                 input: business_number
                 from: claim
 
-      - schema: verified_individual.registries.ca
+      - schema: demo.verified_person.registries.ca
         issuer_url: $APPLICATION_URL_ADDRESS
         description: TODO
         details:
-          label_en: Verified Individual
+          label_en: Verified Person
           url_en: $APPLICATION_URL_ADDRESS
         credential:
           effective_date:
@@ -362,16 +362,16 @@ issuers:
             input: registration_id
             from: claim
           type:
-            input: verified_individual.registries.ca
+            input: demo.verified_person.registries.ca
             from: value
         mapping:
           - model: name
             fields:
               type:
-                input: individual_name
+                input: full_name
                 from: value
               text:
-                input: individual_name
+                input: full_name
                 from: claim
           - model: attribute
             fields:
@@ -417,7 +417,7 @@ issuers:
                 input: phone_number
                 from: claim
 
-      - schema: individual_relationship.registries.ca
+      - schema: demo.person_relationship.registries.ca
         issuer_url: $APPLICATION_URL_DBA
         description: TODO
         details:
@@ -441,7 +441,7 @@ issuers:
             input: registration_id
             from: claim
           type:
-            input: verified_individual.registries.ca
+            input: demo.verified_person.registries.ca
             from: value
         cardinality_fields:
           - associated_registration_id
@@ -507,7 +507,7 @@ issuers:
                 input: reason_description
                 from: claim
 
-      - schema: org_relationship.registries.ca
+      - schema: demo.org_relationship.registries.ca
         issuer_url: $APPLICATION_URL_DBA
         description: TODO
         details:
@@ -525,7 +525,7 @@ issuers:
             input: associated_registration_id
             from: claim
           related_type:
-            input: verified_individual.registries.ca
+            input: demo.verified_person.registries.ca
             from: value
           source_id:
             input: registration_id
