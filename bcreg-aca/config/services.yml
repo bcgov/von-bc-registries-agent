@@ -187,6 +187,7 @@ issuers:
             from: value
         cardinality_fields:
           - associated_registration_id
+          - relationship
         mapping:
           - model: attribute
             fields:
@@ -445,6 +446,7 @@ issuers:
             from: value
         cardinality_fields:
           - associated_registration_id
+          - relationship
         mapping:
           - model: attribute
             fields:
@@ -535,6 +537,7 @@ issuers:
             from: value
         cardinality_fields:
           - associated_registration_id
+          - relationship
         mapping:
           - model: attribute
             fields:

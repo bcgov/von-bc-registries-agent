@@ -10,6 +10,7 @@ import traceback
 import logging
 import random
 import os
+import csv
 
 from bcreg.config import config
 from bcreg.bcregistries import BCRegistries, CustomJsonEncoder, event_dict, is_data_conversion_event
@@ -21,9 +22,17 @@ if EXTRA_DEMO_CREDS is not None and EXTRA_DEMO_CREDS.upper() == "TRUE":
     # setup environment to process "extra" cred types
     print("Generating extra 'demo' credentials")
     GENERATE_EXTRA_DEMO_CREDS = True
+
+    try:
+        with open('./bcreg/tests/names-2018.txt', 'r') as f:
+            reader = csv.reader(f)
+            names_list = list(reader)
+    except:
+        names_list = None
 else:
     # default - setup environment to process only "core" cred types
     GENERATE_EXTRA_DEMO_CREDS = False
+    names_list = None
 
 corp_credential = 'REG'
 corp_schema = 'registration.registries.ca'
@@ -1043,12 +1052,15 @@ class EventProcessor:
         return seed
     def random_name(self, name):
         # need to have a deterministic random function for each name
+        name = name.split()[0].upper() if name else "RANDOM"
         my_random = random.Random(self.random_seed(name))
-        name = name.split()[0].upper()
-        ret_name = ""
-        for ch in name:
-            ret_ch = chr(ord('A') + my_random.randint(0, 25))
-            ret_name = ret_name + ret_ch
+        if names_list and 0 < len(names_list):
+            ret_name = names_list[my_random.randint(0, len(names_list)-1)][0].upper()
+        else:
+            ret_name = ""
+            for ch in name:
+                ret_ch = chr(ord('A') + my_random.randint(0, 25))
+                ret_name = ret_name + ret_ch
         return ret_name
     def random_phone(self, fn, ln):
         name = fn + ln
