@@ -19,6 +19,15 @@ TOB_REQUEST_HEADERS = {}
 if TOB_ADMIN_API_KEY is not None:
     TOB_REQUEST_HEADERS = {"x-api-key": TOB_ADMIN_API_KEY}
 
+EXTRA_DEMO_CREDS = os.environ.get("EXTRA_DEMO_CREDS")
+if EXTRA_DEMO_CREDS is not None and EXTRA_DEMO_CREDS.upper() == "TRUE":
+    # setup environment to process "extra" cred types
+    print("Generating extra 'demo' credentials")
+    GENERATE_EXTRA_DEMO_CREDS = True
+else:
+    # default - setup environment to process only "core" cred types
+    GENERATE_EXTRA_DEMO_CREDS = False
+
 # list of cred defs per schema name/version
 app_config = {}
 app_config["schemas"] = {}
@@ -139,55 +148,63 @@ class StartupProcessingThread(threading.Thread):
             schema_name = schema["name"]
             schema_version = schema["version"]
             schema_key = schema_name + "::" + schema_version
-            if schema_key not in existing_schemas:
-                schema_attrs = []
-                schema_descs = {}
-                if isinstance(schema["attributes"], dict):
-                    # each element is a dict
-                    for attr, desc in schema["attributes"].items():
-                        schema_attrs.append(attr)
-                        schema_descs[attr] = desc
+
+            # check if we are in demo mode
+            if schema_name.startswith("demo."):
+                register_schema = GENERATE_EXTRA_DEMO_CREDS
+            else:
+                register_schema = True
+
+            if register_schema:
+                if schema_key not in existing_schemas:
+                    schema_attrs = []
+                    schema_descs = {}
+                    if isinstance(schema["attributes"], dict):
+                        # each element is a dict
+                        for attr, desc in schema["attributes"].items():
+                            schema_attrs.append(attr)
+                            schema_descs[attr] = desc
+                    else:
+                        # assume it's an array
+                        for attr in schema["attributes"]:
+                            schema_attrs.append(attr)
+
+                    # register our schema(s) and credential definition(s)
+                    schema_request = {
+                        "schema_name": schema_name,
+                        "schema_version": schema_version,
+                        "attributes": schema_attrs,
+                    }
+                    response = agent_post_with_retry(
+                        agent_admin_url + "/schemas",
+                        json.dumps(schema_request),
+                        headers=ADMIN_REQUEST_HEADERS,
+                    )
+                    response.raise_for_status()
+                    schema_id = response.json()
                 else:
-                    # assume it's an array
-                    for attr in schema["attributes"]:
-                        schema_attrs.append(attr)
+                    schema_id = {"schema_id": existing_schemas[schema_key]["schema"]["id"]}
+                app_config["schemas"]["SCHEMA_" + schema_name] = schema
+                app_config["schemas"][
+                    "SCHEMA_" + schema_name + "_" + schema_version
+                ] = schema_id["schema_id"]
+                print("Registered schema: ", schema_id)
 
-                # register our schema(s) and credential definition(s)
-                schema_request = {
-                    "schema_name": schema_name,
-                    "schema_version": schema_version,
-                    "attributes": schema_attrs,
-                }
-                response = agent_post_with_retry(
-                    agent_admin_url + "/schemas",
-                    json.dumps(schema_request),
-                    headers=ADMIN_REQUEST_HEADERS,
-                )
-                response.raise_for_status()
-                schema_id = response.json()
-            else:
-                schema_id = {"schema_id": existing_schemas[schema_key]["schema"]["id"]}
-            app_config["schemas"]["SCHEMA_" + schema_name] = schema
-            app_config["schemas"][
-                "SCHEMA_" + schema_name + "_" + schema_version
-            ] = schema_id["schema_id"]
-            print("Registered schema: ", schema_id)
-
-            if schema_key not in existing_schemas or "cred_def" not in existing_schemas[schema_key]:
-                cred_def_request = {"schema_id": schema_id["schema_id"]}
-                response = agent_post_with_retry(
-                    agent_admin_url + "/credential-definitions",
-                    json.dumps(cred_def_request),
-                    headers=ADMIN_REQUEST_HEADERS,
-                )
-                response.raise_for_status()
-                credential_definition_id = response.json()
-            else:
-                credential_definition_id = {"credential_definition_id": existing_schemas[schema_key]["cred_def"]["id"]}
-            app_config["schemas"][
-                "CRED_DEF_" + schema_name + "_" + schema_version
-            ] = credential_definition_id["credential_definition_id"]
-            print("Registered credential definition: ", credential_definition_id)
+                if schema_key not in existing_schemas or "cred_def" not in existing_schemas[schema_key]:
+                    cred_def_request = {"schema_id": schema_id["schema_id"]}
+                    response = agent_post_with_retry(
+                        agent_admin_url + "/credential-definitions",
+                        json.dumps(cred_def_request),
+                        headers=ADMIN_REQUEST_HEADERS,
+                    )
+                    response.raise_for_status()
+                    credential_definition_id = response.json()
+                else:
+                    credential_definition_id = {"credential_definition_id": existing_schemas[schema_key]["cred_def"]["id"]}
+                app_config["schemas"][
+                    "CRED_DEF_" + schema_name + "_" + schema_version
+                ] = credential_definition_id["credential_definition_id"]
+                print("Registered credential definition: ", credential_definition_id)
 
         # what is the TOB connection name?
         tob_connection_params = config_services["verifiers"]["bctob"]
@@ -249,20 +266,28 @@ class StartupProcessingThread(threading.Thread):
             credential_types = []
             for credential_type in issuer_info["credential_types"]:
                 schema_name = credential_type["schema"]
-                schema_info = app_config["schemas"]["SCHEMA_" + schema_name]
-                ctype_config = {
-                    "schema_name": schema_name,
-                    "schema_version": schema_version,
-                    "issuer_url": issuer_config["url"],
-                    "config_root": config_root,
-                    "credential_def_id": app_config["schemas"][
-                        "CRED_DEF_" + schema_name + "_" + schema_info["version"]
-                    ],
-                }
-                ctype_config.update(credential_type)
-                ctype = config.assemble_credential_type_spec(ctype_config)
-                if ctype is not None:
-                    credential_types.append(ctype)
+
+                # check if we are in demo mode
+                if schema_name.startswith("demo."):
+                    register_schema = GENERATE_EXTRA_DEMO_CREDS
+                else:
+                    register_schema = True
+
+                if register_schema:
+                    schema_info = app_config["schemas"]["SCHEMA_" + schema_name]
+                    ctype_config = {
+                        "schema_name": schema_name,
+                        "schema_version": schema_version,
+                        "issuer_url": issuer_config["url"],
+                        "config_root": config_root,
+                        "credential_def_id": app_config["schemas"][
+                            "CRED_DEF_" + schema_name + "_" + schema_info["version"]
+                        ],
+                    }
+                    ctype_config.update(credential_type)
+                    ctype = config.assemble_credential_type_spec(ctype_config)
+                    if ctype is not None:
+                        credential_types.append(ctype)
 
             issuer_request = {
                 "connection_id": app_config["TOB_CONNECTION"],
@@ -479,7 +504,7 @@ TOPIC_ISSUER_REGISTRATION = "issuer_registration"
 TOPIC_PROBLEM_REPORT = "problem-report"
 
 # seconds to wait for a credential response (prevents blocking forever)
-MAX_CRED_RESPONSE_TIMEOUT = int(os.getenv('MAX_CRED_RESPONSE_TIMEOUT', '90'))
+MAX_CRED_RESPONSE_TIMEOUT = int(os.getenv('MAX_CRED_RESPONSE_TIMEOUT', '120'))
 
 def handle_connections(state, message):
     # TODO auto-accept?

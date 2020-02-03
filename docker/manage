@@ -111,6 +111,8 @@ configureEnvironment () {
   export TOB_AGENT_ADMIN_URL=${TOB_AGENT_ADMIN_URL:-http://vcr-agent:${TOB_AGENT_ADMIN_INTERFACE_PORT}}
   export TOB_ADMIN_API_KEY=${TOB_ADMIN_API_KEY:-R2D2HfPM5Zwd69IjclQiuFmcMV6}
   export CONTROLLER_URL=http://bcreg-controller:${CONTROLLER_PORT}
+  export EXTRA_DEMO_CREDS=${EXTRA_DEMO_CREDS}
+
 
   # wallet-db
   export WALLET_TYPE="postgres_storage"
