@@ -95,7 +95,6 @@ services:
         --log-level 'error'; \
         sleep 5; \
         aca-py start \
-        --dev-provision \
         --inbound-transport http '0.0.0.0' ${AGENT_HTTP_INTERFACE_PORT} \
         --inbound-transport ws '0.0.0.0' ${AGENT_WS_INTERFACE_PORT} \
         --endpoint ${AGENT_ENDPOINT} \
