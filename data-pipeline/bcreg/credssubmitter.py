@@ -38,6 +38,9 @@ CREDS_BATCH_SIZE = 3000
 CREDS_REQUEST_SIZE = 20
 MAX_CREDS_REQUESTS = 16
 
+# seconds to wait for a credential response (prevents blocking forever)
+MAX_CRED_POSTING_TIMEOUT = int(os.getenv('MAX_CRED_POSTING_TIMEOUT', '240'))
+
 MAX_CORPS = 10000
 CRAZY_MAX_CORPS = 100000
 
@@ -55,10 +58,10 @@ def notify_error(message):
 
 async def submit_cred_batch(http_client, creds):
     try:
-        response = await http_client.post(
+        response = await asyncio.wait_for(http_client.post(
             '{}/issue-credential'.format(AGENT_URL),
             json=creds
-        )
+        ), timeout=MAX_CRED_POSTING_TIMEOUT)
         if response.status != 200:
             raise RuntimeError(
                 'Credentials could not be processed: {}'.format(await response.text())
@@ -317,7 +320,7 @@ class CredsSubmitter:
                                   'SCHEMA_NAME':row[10], 'SCHEMA_VERSION':row[11], 'ENTRY_DATE':row[12]}
 
                     # make sure to include all credentials for the same client id within the same batch
-                    if CREDS_REQUEST_SIZE <= len(credentials) and credential['CORP_NUM'] != cred_owner_id:
+                    if (CREDS_REQUEST_SIZE <= len(credentials) and credential['CORP_NUM'] != cred_owner_id) or (len(credentials) >= 2*CREDS_REQUEST_SIZE):
                         post_creds = credentials.copy()
                         creds_task = loop.create_task(post_credentials(http_client, self.conn, post_creds))
                         tasks.append(creds_task)
