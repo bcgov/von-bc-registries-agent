@@ -75,6 +75,7 @@ def agent_callback(topic):
     """
     start_time = time.perf_counter()
     method = 'agent_callback.' + topic
+    print(method)
 
     if not request.json:
         end_time = time.perf_counter()
@@ -99,6 +100,7 @@ def agent_callback(topic):
             method = method + '.' + message["state"]
             response =  issuer.handle_credentials(message["state"], message)
         else:
+            print(message)
             response =  jsonify({})
 
     elif topic == issuer.TOPIC_PRESENTATIONS:
