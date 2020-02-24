@@ -512,14 +512,13 @@ def handle_connections(state, message):
 
 def handle_credentials(state, message):
     # TODO auto-respond to proof requests
-    print(state)
     if "thread_id" in message:
-        print(datetime.now(), ">>> handle_credentials()", state, message["credential_exchange_id"], "thread:", message["thread_id"])
+        #print(datetime.now(), ">>> handle_credentials()", state, message["credential_exchange_id"], "thread:", message["thread_id"])
         set_credential_thread_id(
             message["credential_exchange_id"], message["thread_id"]
         )
     else:
-        print(datetime.now(), ">>> handle_credentials()", state, message["credential_exchange_id"])
+        #print(datetime.now(), ">>> handle_credentials()", state, message["credential_exchange_id"])
         pass
     if state == "credential_acked":
         response = {"success": True, "result": message["credential_exchange_id"]}
@@ -702,13 +701,7 @@ def handle_send_credential(cred_input):
     for credential in cred_input:
         cred_def_key = "CRED_DEF_" + credential["schema"] + "_" + credential["version"]
         credential_definition_id = app_config["schemas"][cred_def_key]
-        # old:
-        #cred_offer = {
-        #    "connection_id": app_config["TOB_CONNECTION"],
-        #    "credential_definition_id": credential_definition_id,
-        #    "credential_values": credential["attributes"],
-        #}
-        # new:
+
         credential_attributes = []
         for attribute in credential["attributes"]:
             credential_attributes.append({
