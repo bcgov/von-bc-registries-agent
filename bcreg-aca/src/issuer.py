@@ -188,7 +188,6 @@ class StartupProcessingThread(threading.Thread):
                 app_config["schemas"][
                     "SCHEMA_" + schema_name + "_" + schema_version
                 ] = schema_id["schema_id"]
-                print("Registered schema: ", schema_id)
 
                 if schema_key not in existing_schemas or "cred_def" not in existing_schemas[schema_key]:
                     cred_def_request = {"schema_id": schema_id["schema_id"]}
@@ -204,7 +203,6 @@ class StartupProcessingThread(threading.Thread):
                 app_config["schemas"][
                     "CRED_DEF_" + schema_name + "_" + schema_version
                 ] = credential_definition_id["credential_definition_id"]
-                print("Registered credential definition: ", credential_definition_id)
 
         # what is the TOB connection name?
         tob_connection_params = config_services["verifiers"]["bctob"]
@@ -496,7 +494,7 @@ def get_credential_response(cred_exch_id):
 
 TOPIC_CONNECTIONS = "connections"
 TOPIC_CONNECTIONS_ACTIVITY = "connections_actvity"
-TOPIC_CREDENTIALS = "credentials"
+TOPIC_CREDENTIALS = "issue_credential"
 TOPIC_PRESENTATIONS = "presentations"
 TOPIC_GET_ACTIVE_MENU = "get-active-menu"
 TOPIC_PERFORM_MENU_ACTION = "perform-menu-action"
@@ -522,7 +520,7 @@ def handle_credentials(state, message):
     else:
         #print(datetime.now(), ">>> handle_credentials()", state, message["credential_exchange_id"])
         pass
-    if state == "stored":
+    if state == "credential_acked":
         response = {"success": True, "result": message["credential_exchange_id"]}
         add_credential_response(message["credential_exchange_id"], response)
     #if "thread_id" in message:
@@ -703,15 +701,34 @@ def handle_send_credential(cred_input):
     for credential in cred_input:
         cred_def_key = "CRED_DEF_" + credential["schema"] + "_" + credential["version"]
         credential_definition_id = app_config["schemas"][cred_def_key]
+
+        credential_attributes = []
+        for attribute in credential["attributes"]:
+            credential_attributes.append({
+                "name": attribute,
+                "mime-type": "text/plain",
+                "value": credential["attributes"][attribute]
+                })
         cred_offer = {
-            "connection_id": app_config["TOB_CONNECTION"],
-            "credential_definition_id": credential_definition_id,
-            "credential_values": credential["attributes"],
+          "schema_id": app_config["schemas"][
+                    "SCHEMA_" + credential["schema"] + "_" + credential["version"]
+                ],
+          "schema_name": credential["schema"],
+          "issuer_did": app_config["DID"],
+          "schema_version": credential["version"],
+          "credential_proposal": {
+            "@type": "did:sov:BzCbsNYhMrjHiqZDTUASHg;spec/issue-credential/1.0/credential-preview",
+            "attributes": credential_attributes
+          },
+          "schema_issuer_did": app_config["DID"],
+          "cred_def_id": credential_definition_id,
+          "comment": "",
+          "connection_id": app_config["TOB_CONNECTION"]
         }
         thread = SendCredentialThread(
             credential_definition_id,
             cred_offer,
-            agent_admin_url + "/credential_exchange/send",
+            agent_admin_url + "/issue-credential/send",
             ADMIN_REQUEST_HEADERS,
         )
         thread.start()
