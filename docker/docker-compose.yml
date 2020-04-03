@@ -46,7 +46,7 @@ services:
     entrypoint: >
       /bin/bash -c "
         echo sleeping ...;
-        sleep 15;
+        sleep 20;
         ../docker-entrypoint.sh;"
 
   bcreg-agent:
@@ -81,7 +81,19 @@ services:
     command: [
         "-c",
         "curl -d '{\"seed\":\"${WALLET_SEED}\", \"role\":\"TRUST_ANCHOR\", \"alias\":\"${AGENT_NAME}\"}' -X POST ${LEDGER_URL}/register; \
-        sleep 2; \
+        sleep 5; \
+        aca-py provision \
+        --endpoint ${AGENT_ENDPOINT} \
+        --genesis-url '${GENESIS_URL}' \
+        --wallet-type 'indy' \
+        --wallet-name 'icat_agent_wallet' \
+        --wallet-key '${WALLET_ENCRYPTION_KEY}' \
+        --wallet-storage-type '${WALLET_TYPE}' \
+        --wallet-storage-config '{\"url\":\"${POSTGRESQL_WALLET_HOST}:${POSTGRESQL_WALLET_PORT}\",\"max_connections\":5}' \
+        --wallet-storage-creds '{\"account\":\"${POSTGRESQL_USER}\",\"password\":\"${POSTGRESQL_PASSWORD}\",\"admin_account\":\"postgres\",\"admin_password\":\"${POSTGRESQL_ADMIN_PASSWORD}\"}' \
+        --seed '${WALLET_SEED}' \
+        --log-level 'error'; \
+        sleep 5; \
         aca-py start \
         --inbound-transport http '0.0.0.0' ${AGENT_HTTP_INTERFACE_PORT} \
         --inbound-transport ws '0.0.0.0' ${AGENT_WS_INTERFACE_PORT} \
@@ -162,7 +174,7 @@ services:
     entrypoint: >
       /bin/bash -c "
         echo sleeping ...;
-        sleep 5;
+        sleep 10;
         ./docker-entrypoint.sh;"
 
   bcregdb:
