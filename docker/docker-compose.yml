@@ -71,6 +71,7 @@ services:
     networks:
       - orgbook
       - bcreg
+      - efk_net
     ports:
       - ${AGENT_HTTP_INTERFACE_PORT}:${AGENT_HTTP_INTERFACE_PORT}
       - ${AGENT_WS_INTERFACE_PORT}:${AGENT_WS_INTERFACE_PORT}
@@ -119,6 +120,12 @@ services:
         --admin '0.0.0.0' ${AGENT_ADMIN_INTERFACE_PORT} \
         --${AGENT_ADMIN_MODE} \
         --label ${AGENT_NAME} \
+        --log-level 'error' \
+        --timing \
+        --trace \
+        --trace-target 'http://fluentd:8088/' \
+        --trace-tag 'acapy.events' \
+        --trace-label ${AGENT_NAME} \
         --plugin indy_catalyst_issuer_registration",
       ]
 
@@ -182,9 +189,9 @@ services:
       context: ../data-pipeline
       dockerfile: docker/postgres/Dockerfile
     environment:
-      - POSTGRES_USER=${POSTGRESQL_USER}
-      - POSTGRES_PASSWORD=${POSTGRESQL_PASSWORD}
-      - POSTGRES_DATABASE=${POSTGRESQL_DATABASE}
+      - POSTGRESQL_USER=${POSTGRESQL_USER}
+      - POSTGRESQL_PASSWORD=${POSTGRESQL_PASSWORD}
+      - POSTGRESQL_DATABASE=${POSTGRESQL_DATABASE}
     networks:
       - orgbook
     ports:
@@ -218,4 +225,8 @@ networks:
   orgbook:
     external:
       name: vcr_vcr
+  efk_net:
+    external:
+      name: efk-stack_efk_net
+
 

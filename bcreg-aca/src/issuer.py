@@ -74,7 +74,7 @@ def agent_schemas_cred_defs(agent_admin_url):
             headers=ADMIN_REQUEST_HEADERS,
         )
         response.raise_for_status()
-        schema = response.json()["schema_json"]
+        schema = response.json()["schema"]
         if schema:
             schema_key = schema["name"] + "::" + schema["version"]
             ret_schemas[schema_key] = {
@@ -723,7 +723,7 @@ def handle_send_credential(cred_input):
           "schema_issuer_did": app_config["DID"],
           "cred_def_id": credential_definition_id,
           "comment": "",
-          "connection_id": app_config["TOB_CONNECTION"]
+          "connection_id": app_config["TOB_CONNECTION"],
         }
         thread = SendCredentialThread(
             credential_definition_id,
