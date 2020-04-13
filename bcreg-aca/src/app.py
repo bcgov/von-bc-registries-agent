@@ -82,6 +82,7 @@ def agent_callback(topic):
         abort(400)
 
     message = request.json
+    issuer.log_timing_event(method, message, start_time, None, False)
 
     # dispatch based on the topic type
     if topic == issuer.TOPIC_CONNECTIONS:
@@ -124,9 +125,11 @@ def agent_callback(topic):
         print("Callback: topic=", topic, ", message=", message)
         end_time = time.perf_counter()
         issuer.log_timing_method(method, start_time, end_time, False)
+        issuer.log_timing_event(method, message, start_time, end_time, False)
         abort(400, {'message': 'Invalid topic: ' + topic})
 
     end_time = time.perf_counter()
     issuer.log_timing_method(method, start_time, end_time, True)
+    issuer.log_timing_event(method, message, start_time, end_time, True)
 
     return response

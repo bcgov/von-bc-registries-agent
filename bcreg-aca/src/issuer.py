@@ -3,6 +3,8 @@ import os
 import threading
 import time
 from datetime import datetime
+import requests
+import logging
 
 import requests
 from flask import jsonify
@@ -27,6 +29,9 @@ if EXTRA_DEMO_CREDS is not None and EXTRA_DEMO_CREDS.upper() == "TRUE":
 else:
     # default - setup environment to process only "core" cred types
     GENERATE_EXTRA_DEMO_CREDS = False
+
+LOGGER = logging.getLogger(__name__)
+DT_FMT = '%Y-%m-%d %H:%M:%S.%f%z'
 
 # list of cred defs per schema name/version
 app_config = {}
@@ -328,6 +333,12 @@ USE_LOCK = os.getenv('USE_LOCK', 'True').lower() == 'true'
 # need to specify an env variable RECORD_TIMINGS=True to get method timings
 RECORD_TIMINGS = os.getenv('RECORD_TIMINGS', 'False').lower() == 'true'
 
+TRACE_EVENTS = os.getenv("TRACE_EVENTS", "True").lower() == "true"
+TRACE_LABEL = os.getenv("TRACE_LABEL", "bcreg.controller")
+TRACE_TAG = os.getenv("TRACE_TAG", "acapy.events")
+TRACE_LOG_TARGET = "log"
+TRACE_TARGET = os.getenv("TRACE_TARGET", TRACE_LOG_TARGET)
+
 timing_lock = threading.Lock()
 timings = {}
 
@@ -380,6 +391,59 @@ def log_timing_method(method, start_time, end_time, success, data=None):
             timings[method]['data'][str(timings[method]['total_count'])] = data
     finally:
         timing_lock.release()
+
+
+def log_timing_event(method, message, start_time, end_time, success, outcome=None):
+    """Record a timing event in the system log or http endpoint."""
+
+    if (not TRACE_EVENTS) and (not message.get("trace")):
+        return
+    if not TRACE_TARGET:
+        return
+
+    msg_id = "N/A"
+    thread_id = message["thread_id"] if message.get("thread_id") else "N/A"
+    handler = TRACE_LABEL
+    ep_time = time.time()
+    str_time = datetime.utcfromtimestamp(ep_time).strftime(DT_FMT)
+    if end_time:
+        str_outcome = method + ".SUCCESS" if success else ".FAIL"
+    else:
+        str_outcome = method + ".START"
+    if outcome:
+        str_outcome = str_outcome + "." + outcome
+    event = {
+        "msg_id": msg_id,
+        "thread_id": thread_id if thread_id else msg_id,
+        "traced_type": method,
+        "timestamp": ep_time,
+        "str_time": str_time,
+        "handler": str(handler),
+        "ellapsed_milli": int(1000 * (end_time - start_time)) if end_time else 0,
+        "outcome": str_outcome,
+    }
+    event_str = json.dumps(event)
+
+    try:
+        if TRACE_TARGET == TRACE_LOG_TARGET:
+            # write to standard log file
+            LOGGER.setLevel(logging.INFO)
+            LOGGER.info(" %s %s", TRACE_TAG, event_str)
+        else:
+            # should be an http endpoint
+            _ = requests.post(
+                TRACE_TARGET + TRACE_TAG,
+                data=event_str,
+                headers={"Content-Type": "application/json"}
+            )
+    except Exception as e:
+        LOGGER.error(
+            "Error logging trace target: %s tag: %s event: %s",
+            TRACE_TARGET,
+            TRACE_TAG,
+            event_str
+        )
+        LOGGER.exception(e)
 
 
 def set_credential_thread_id(cred_exch_id, thread_id):
@@ -576,6 +640,8 @@ class SendCredentialThread(threading.Thread):
         start_time = time.perf_counter()
         method = 'submit_credential.credential'
 
+        log_timing_event("issue_credential", {}, start_time, None, False)
+
         cred_data = None
         try:
             response = requests.post(
@@ -610,6 +676,8 @@ class SendCredentialThread(threading.Thread):
                         'elapsed_time': (end_time-start_time)
                     }
                 )
+                success = False
+                outcome = "timeout"
             else:
                 #print(
                 #    "Got credential response:",
@@ -618,12 +686,16 @@ class SendCredentialThread(threading.Thread):
                 #)
                 end_time = time.perf_counter()
                 log_timing_method(method, start_time, end_time, True)
+                success = True
+                outcome = "success"
                 pass
 
         except Exception as exc:
             print("got credential exception:", exc)
             # if cred_data is not set we don't have a credential to set status for
             end_time = time.perf_counter()
+            success = False
+            outcome = str(exc)
             if cred_data:
                 add_credential_exception_report(
                     cred_data["credential_exchange_id"], exc
@@ -648,6 +720,8 @@ class SendCredentialThread(threading.Thread):
             cred_data["credential_exchange_id"]
         )
         processing_time = end_time - start_time
+        message = {"thread_id": self.cred_response["result"]}
+        log_timing_event("issue_credential", message, start_time, end_time, success, outcome=outcome)
         #print("Got response", self.cred_response, "time=", processing_time)
 
 

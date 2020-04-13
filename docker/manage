@@ -96,7 +96,7 @@ configureEnvironment () {
   export AGENT_ADMIN_INTERFACE_PORT=8034
   export AGENT_WALLET_NAME=${AGENT_WALLET_NAME:-icat_agent_wallet}
   export WALLET_SEED=bc_registries_dev_00000000000000
-  export AGENT_NAME="bcreg-agent"
+  export AGENT_NAME="bcreg.agent"
   export AGENT_ENDPOINT=${AGENT_ENDPOINT:-http://$DOCKERHOST:$AGENT_HTTP_INTERFACE_PORT}
   #export AGENT_ADMIN_API_KEY=${AGENT_ADMIN_API_KEY}
   export AGENT_ADMIN_MODE="admin-insecure-mode"

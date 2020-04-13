@@ -35,10 +35,13 @@ services:
       TOB_AGENT_ADMIN_URL: ${TOB_AGENT_ADMIN_URL}
       TOB_ADMIN_API_KEY: ${TOB_ADMIN_API_KEY}
       EXTRA_DEMO_CREDS: ${EXTRA_DEMO_CREDS}
+      TRACE_events: "true"
+      TRACE_TARGET: "http://fluentd:8088/"
       #RECORD_TIMINGS: 'true'
     networks:
       - orgbook
       - bcreg
+      - efk_net
     ports:
       - ${EXPOSED_CONTROLLER_PORT}:${CONTROLLER_PORT}
     depends_on:
