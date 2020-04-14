@@ -42,7 +42,6 @@ services:
     networks:
       - orgbook
       - bcreg
-      - efk_net
     ports:
       - ${EXPOSED_CONTROLLER_PORT}:${CONTROLLER_PORT}
     depends_on:
@@ -78,7 +77,6 @@ services:
     networks:
       - orgbook
       - bcreg
-      - efk_net
     ports:
       - ${AGENT_HTTP_INTERFACE_PORT}:${AGENT_HTTP_INTERFACE_PORT}
       - ${AGENT_WS_INTERFACE_PORT}:${AGENT_WS_INTERFACE_PORT}
@@ -230,8 +228,5 @@ networks:
   orgbook:
     external:
       name: vcr_vcr
-  efk_net:
-    external:
-      name: efk-stack_efk_net
 
 
