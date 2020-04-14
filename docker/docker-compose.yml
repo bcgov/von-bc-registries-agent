@@ -35,9 +35,10 @@ services:
       TOB_AGENT_ADMIN_URL: ${TOB_AGENT_ADMIN_URL}
       TOB_ADMIN_API_KEY: ${TOB_ADMIN_API_KEY}
       EXTRA_DEMO_CREDS: ${EXTRA_DEMO_CREDS}
-      TRACE_events: "true"
-      TRACE_TARGET: "http://fluentd:8088/"
-      #RECORD_TIMINGS: 'true'
+      RECORD_TIMINGS: ${RECORD_TIMINGS}
+      TRACE_EVENTS: ${TRACE_EVENTS}
+      TRACE_TARGET: ${TRACE_TARGET}
+      TRACE_MSG_PCT: ${TRACE_MSG_PCT}
     networks:
       - orgbook
       - bcreg
@@ -71,6 +72,9 @@ services:
       - WS_INTERFACE_PORT=${AGENT_WS_INTERFACE_PORT}
       - ADMIN_INTERFACE_PORT=${AGENT_ADMIN_INTERFACE_PORT}
       - AGENT_NAME=${AGENT_NAME}
+      - TRACE_TARGET=${TRACE_TARGET}
+      - AGENT_TIMING_MODE=${AGENT_TIMING_MODE}
+      - AGENT_TRACE_MODE=${AGENT_TRACE_MODE}
     networks:
       - orgbook
       - bcreg
@@ -123,10 +127,8 @@ services:
         --admin '0.0.0.0' ${AGENT_ADMIN_INTERFACE_PORT} \
         --${AGENT_ADMIN_MODE} \
         --label ${AGENT_NAME} \
-        --log-level 'error' \
-        --timing \
-        --trace \
-        --trace-target 'http://fluentd:8088/' \
+        --log-level 'error' ${AGENT_TIMING_MODE} ${AGENT_TRACE_MODE} \
+        --trace-target '${TRACE_TARGET}' \
         --trace-tag 'acapy.events' \
         --trace-label ${AGENT_NAME} \
         --plugin indy_catalyst_issuer_registration",

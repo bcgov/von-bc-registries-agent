@@ -5,6 +5,7 @@ import time
 from datetime import datetime
 import requests
 import logging
+import random
 
 import requests
 from flask import jsonify
@@ -338,6 +339,10 @@ TRACE_LABEL = os.getenv("TRACE_LABEL", "bcreg.controller")
 TRACE_TAG = os.getenv("TRACE_TAG", "acapy.events")
 TRACE_LOG_TARGET = "log"
 TRACE_TARGET = os.getenv("TRACE_TARGET", TRACE_LOG_TARGET)
+
+# percentage of credential exchanges to trace, between 0 and 100
+TRACE_MSG_PCT = int(os.getenv("TRACE_MSG_PCT", "0"))
+TRACE_MSG_PCT = max(min(TRACE_MSG_PCT, 100), 0)
 
 timing_lock = threading.Lock()
 timings = {}
@@ -799,6 +804,9 @@ def handle_send_credential(cred_input):
           "comment": "",
           "connection_id": app_config["TOB_CONNECTION"],
         }
+        do_trace = random.randint(1, 100)
+        if do_trace <= TRACE_MSG_PCT:
+            cred_offer["trace"] = True
         thread = SendCredentialThread(
             credential_definition_id,
             cred_offer,
