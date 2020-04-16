@@ -489,6 +489,73 @@ class EventProcessor:
             if cur is not None:
                 cur.close()
 
+    # return unprocessed corporations, based on active or historical
+    # use for initial data load
+    def get_outstanding_audit_corps(self):
+        sql = """select corp_num, 0, '0001-01-01 00:00:00', event_id, event_date
+            from CORP_AUDIT_LOG, LAST_EVENT
+            where CORP_AUDIT_LOG.last_credential_id is null
+              and LAST_EVENT.record_id = (select max(record_id) from LAST_EVENT)
+              and corp_num not in
+              (select corp_num from corp_history_log where process_msg = 'Withdrawn')
+              and corp_num not in
+              (select corp_num from event_by_corp_filing where process_success is null)
+        """
+
+        corps = []
+        cur = None
+        try:
+            LOGGER.info("Executing: " + sql)
+            cur = self.conn.cursor()
+            cur.execute(sql)
+            row = cur.fetchone()
+            while row is not None:
+                # LOGGER.info(row)
+                corps.append({
+                    'corp_num':row[0],
+                    'prev_event_id':row[1], 
+                    'prev_event_date':row[2],
+                    'last_event_id':row[3],
+                    'last_event_date':row[4],
+                })
+                row = cur.fetchone()
+            cur.close()
+            cur = None
+            LOGGER.info("Loaded corps: " + str(len(corps)))
+        except (Exception, psycopg2.DatabaseError) as error:
+            LOGGER.error(error)
+            LOGGER.error(traceback.print_exc())
+            log_error("Event Processor exception reading DB: " + str(error))
+            raise
+        finally:
+            if cur is not None:
+                cur.close()
+
+        return corps
+
+    # update a group of corps into the "unprocessed corp" queue
+    def update_corp_audit_event_queue(self, system_type, corps):
+        sql = """INSERT INTO EVENT_BY_CORP_FILING (SYSTEM_TYPE_CD, PREV_EVENT_ID, PREV_EVENT_DATE, LAST_EVENT_ID, LAST_EVENT_DATE, CORP_NUM, ENTRY_DATE)
+                 VALUES(%s, %s, %s, %s, %s, %s, %s) RETURNING RECORD_ID;"""
+        cur = None
+        try:
+            for i,corp in enumerate(corps): 
+                cur = self.conn.cursor()
+                cur.execute(sql, (system_type, corp['prev_event_id'], corp['prev_event_date'], corp['last_event_id'], corp['last_event_date'], corp['corp_num'], datetime.datetime.now(),))
+                _record_id = cur.fetchone()[0]
+                cur.close()
+                cur = None
+            self.conn.commit()
+            cur = None
+        except (Exception, psycopg2.DatabaseError) as error:
+            LOGGER.error(error)
+            LOGGER.error(traceback.print_exc())
+            log_error("EventProcessor exception updating DB: " + str(error))
+            raise
+        finally:
+            if cur is not None:
+                cur.close()
+
     # insert a record into the "unprocessed corporations" table
     def insert_corporation(self, system_type, prev_event_id, prev_event_dt, last_event_id, last_event_dt, corp_num):
         """ insert a new corps into the corps table """
