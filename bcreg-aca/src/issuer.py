@@ -74,7 +74,7 @@ def agent_schemas_cred_defs(agent_admin_url):
             headers=ADMIN_REQUEST_HEADERS,
         )
         response.raise_for_status()
-        schema = response.json()["schema_json"]
+        schema = response.json()["schema"]
         if schema:
             schema_key = schema["name"] + "::" + schema["version"]
             ret_schemas[schema_key] = {
