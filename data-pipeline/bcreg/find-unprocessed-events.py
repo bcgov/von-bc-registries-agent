@@ -66,6 +66,22 @@ try:
 
             LOGGER.info("Update our queue")
             event_processor.update_corp_event_queue(system_type, corps, max_event_id, max_event_date)
+
+            # process any corps listed as "outstanding" in the audit table
+            # create events in our processing queue
+            LOGGER.info("Check audit report for outstanding/unprocessed corps")
+            audit_corps = event_processor.get_outstanding_audit_corps()
+            LOGGER.info("Unprocessed corps audit count is " + str(len(audit_corps)))
+
+            # reasonability test on the number of outstanding records
+            if CRAZY_MAX_CORPS < len(audit_corps):
+                log_error("find-unpocessed-events More than cRaZy MaX corps: " + str(len(audit_corps)))
+            elif MAX_CORPS < len(audit_corps):
+                log_warning("find-unpocessed-events More than max corps: " + str(len(audit_corps)))
+
+            LOGGER.info("Update our queue")
+            event_processor.update_corp_audit_event_queue(system_type, audit_corps)
+            
 except Exception as e:
     LOGGER.error("Exception: " + str(e))
     log_error("find-unpocessed-events processing exception: " + str(e))
