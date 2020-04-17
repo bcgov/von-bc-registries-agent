@@ -1485,7 +1485,7 @@ class EventProcessor:
                                     future_events = sorted(future_events, key=lambda k: int(k['event_id']))
                                     future_events = sorted(future_events, key=lambda k: k['effective_date'])
                                     cur = self.conn.cursor()
-                                    cur.execute(sql2b, (corp['SYSTEM_TYPE_CD'], future_events[0]['event_id'], future_events[0]['effective_date'], 
+                                    cur.execute(sql2b, (corp['SYSTEM_TYPE_CD'], future_events[0]['event_id'], future_events[0]['event_timestmp'], 
                                                         future_events[len(future_events)-1]['event_id'], future_events[len(future_events)-1]['effective_date'],  
                                                         corp['CORP_NUM'], datetime.datetime.now(),))
                                     cur.close()
