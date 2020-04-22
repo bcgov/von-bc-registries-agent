@@ -41,7 +41,9 @@ Or to insert new records to re-process the entire company history:
     where CORP_AUDIT_LOG.last_credential_id is null
       and LAST_EVENT.record_id = (select max(record_id) from LAST_EVENT)
       and corp_num not in
-      (select corp_num from corp_history_log where process_msg = 'Withdrawn');
+      (select corp_num from corp_history_log where process_msg = 'Withdrawn')
+      and corp_num not in
+      (select corp_num from event_by_corp_filing where process_success is null);
 
     commit;
 

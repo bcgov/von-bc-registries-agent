@@ -289,7 +289,7 @@ class StartupProcessingThread(threading.Thread):
                         ],
                     }
                     ctype_config.update(credential_type)
-                    ctype = config.assemble_credential_type_spec(ctype_config)
+                    ctype = config.assemble_credential_type_spec(ctype_config, schema_info.get("attributes"))
                     if ctype is not None:
                         credential_types.append(ctype)
 
