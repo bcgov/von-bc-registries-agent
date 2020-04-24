@@ -88,21 +88,7 @@ configureEnvironment () {
   export COMPOSE_PROJECT_NAME=${COMPOSE_PROJECT_NAME:-"vonx"}
   export LEDGER_URL=${LEDGER_URL-http://$DOCKERHOST:9000}
   export GENESIS_URL=${GENESIS_URL:-${LEDGER_URL}/genesis}
-  export AGENT_ADMIN_API_KEY=${AGENT_ADMIN_API_KEY:-R2D2HfPM5Zwd69IjclQiuFmcMV6}
-
-  # bcreg-agent
-  export AGENT_HTTP_INTERFACE_PORT=8031
-  export AGENT_WS_INTERFACE_PORT=8033
-  export AGENT_ADMIN_INTERFACE_PORT=8034
-  export AGENT_WALLET_NAME=${AGENT_WALLET_NAME:-icat_agent_wallet}
-  export WALLET_SEED=bc_registries_dev_00000000000000
-  export AGENT_NAME="bcreg-agent"
-  export AGENT_ENDPOINT=${AGENT_ENDPOINT:-http://$DOCKERHOST:$AGENT_HTTP_INTERFACE_PORT}
-  export AGENT_ADMIN_API_KEY=${AGENT_ADMIN_API_KEY}
-  export AGENT_ADMIN_MODE="admin-insecure-mode"
-  if [ ! -z "${AGENT_ADMIN_API_KEY}" ]; then
-    AGENT_ADMIN_MODE="admin-api-key ${AGENT_ADMIN_API_KEY}"
-  fi
+  #export AGENT_ADMIN_API_KEY=${AGENT_ADMIN_API_KEY:-R2D2HfPM5Zwd69IjclQiuFmcMV6}
 
   # bcreg-controller
   export CONTROLLER_PORT=5000
@@ -113,6 +99,33 @@ configureEnvironment () {
   export CONTROLLER_URL=http://bcreg-controller:${CONTROLLER_PORT}
   export EXTRA_DEMO_CREDS=${EXTRA_DEMO_CREDS}
 
+  export RECORD_TIMINGS=${RECORD_TIMINGS:-false}
+  export TRACE_EVENTS=${TRACE_EVENTS:-false}
+  export TRACE_TARGET=${TRACE_TARGET-http://$DOCKERHOST:8088/}
+  # set this one manually to trace a percentage of issued credential exchanges
+  export TRACE_MSG_PCT=${TRACE_MSG_PCT}
+
+  # bcreg-agent
+  export AGENT_HTTP_INTERFACE_PORT=8031
+  export AGENT_WS_INTERFACE_PORT=8033
+  export AGENT_ADMIN_INTERFACE_PORT=8034
+  export AGENT_WALLET_NAME=${AGENT_WALLET_NAME:-icat_agent_wallet}
+  export WALLET_SEED=bc_registries_dev_00000000000000
+  export AGENT_NAME="bcreg.agent"
+  export AGENT_ENDPOINT=${AGENT_ENDPOINT:-http://$DOCKERHOST:$AGENT_HTTP_INTERFACE_PORT}
+  #export AGENT_ADMIN_API_KEY=${AGENT_ADMIN_API_KEY}
+  export AGENT_ADMIN_MODE="admin-insecure-mode"
+  if [ ! -z "${AGENT_ADMIN_API_KEY}" ]; then
+    AGENT_ADMIN_MODE="admin-api-key ${AGENT_ADMIN_API_KEY}"
+  fi
+  export AGENT_TIMING_MODE=""
+  if [ "${RECORD_TIMINGS}" = "true" ]; then
+    AGENT_TIMING_MODE="--timing"
+  fi
+  export AGENT_TRACE_MODE=""
+  if [ "${TRACE_EVENTS}" = "true" ]; then
+    AGENT_TRACE_MODE="--trace"
+  fi
 
   # wallet-db
   export WALLET_TYPE="postgres_storage"
