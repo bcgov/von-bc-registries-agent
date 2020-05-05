@@ -145,7 +145,7 @@
       description_en: Registry id(s) of associated organizations/individuals
       required: true
     associated_registration_name:
-      label_en: Associated Registration Namwe
+      label_en: Associated Registration Name
       description_en: Registered name of associated organizations/individuals
       required: false
     relationship:
@@ -254,7 +254,7 @@
       description_en: Registry id(s) of associated organizations/individuals
       required: true
     associated_registration_name:
-      label_en: Associated Registration Namwe
+      label_en: Associated Registration Name
       description_en: Registered name of associated organizations/individuals
       required: false
     relationship:
@@ -299,7 +299,7 @@
       description_en: Registry id(s) of associated organizations/individuals
       required: true
     associated_registration_name:
-      label_en: Associated Registration Namwe
+      label_en: Associated Registration Name
       description_en: Registered name of associated organizations/individuals
       required: false
     relationship:
