@@ -45,6 +45,9 @@ PROCESS_LOOP_REPORT_CT = int(os.getenv('PROCESS_LOOP_REPORT_CT', '100'))
 # seconds to wait for a credential response (prevents blocking forever)
 MAX_CRED_POSTING_TIMEOUT = int(os.getenv('MAX_CRED_POSTING_TIMEOUT', '240'))
 
+# seconds to wait for a credential response (prevents blocking forever)
+MAX_CRED_POSTING_TIMEOUT = int(os.getenv('MAX_CRED_POSTING_TIMEOUT', '240'))
+
 MAX_CORPS = 10000
 CRAZY_MAX_CORPS = 100000
 
@@ -62,7 +65,6 @@ def notify_error(message):
 
 async def submit_cred_batch(http_client, creds):
     try:
-        #print("Posting to:", '{}/issue-credential'.format(AGENT_URL))
         response = await asyncio.wait_for(http_client.post(
             '{}/issue-credential'.format(AGENT_URL),
             json=creds
