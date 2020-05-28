@@ -83,6 +83,7 @@ services:
       - EVENT_PROC_DB_PORT=${EVENT_PROC_DB_PORT:-5432}
       - EVENT_PROC_DB_DATABASE=${EVENT_PROC_DB_DATABASE:-bc_reg_db}
       - EVENT_PROC_DB_USER=${EVENT_PROC_DB_USER:-bc_reg_db}
+      - EVENT_PROC_DB_PASSWORD=${EVENT_PROC_DB_PASSWORD:-bc_reg_db_pwd}
       - EVENT_PROC_DB_PASSWORD=
       - LOG_LEVEL=${LOG_LEVEL}
       # [mara_db]
@@ -90,6 +91,7 @@ services:
       - MARA_DB_PORT=${MARA_DB_PORT:-5432}
       - MARA_DB_DATABASE=${MARA_DB_DATABASE:-mara_db}
       - MARA_DB_USER=${MARA_DB_USER:-mara_db}
+      - MARA_DB_PASSWORD=${MARA_DB_PASSWORD:-mara_db_pwd}
       # orgbook DB
       - ORGBOOK_DB_HOST=${ORGBOOK_DB_HOST:-tob-db}
       - ORGBOOK_DB_PORT=${ORGBOOK_DB_PORT:-5432}
@@ -113,9 +115,9 @@ services:
       context: ../data-pipeline
       dockerfile: docker/postgres/Dockerfile
     environment:
-      - POSTGRESQL_USER=${POSTGRESQL_USER}
-      - POSTGRESQL_PASSWORD=${POSTGRESQL_PASSWORD}
-      - POSTGRESQL_DATABASE=${POSTGRESQL_DATABASE}
+      - POSTGRES_USER=${POSTGRESQL_USER}
+      - POSTGRES_PASSWORD=${POSTGRESQL_PASSWORD}
+      - POSTGRES_DATABASE=${POSTGRESQL_DATABASE}
     networks:
       - orgbook
     ports:

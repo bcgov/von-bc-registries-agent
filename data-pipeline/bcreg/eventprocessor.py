@@ -47,6 +47,7 @@ CORP_TYPES_IN_SCOPE = {
     "A":   "EXTRA PRO",
     "B":   "EXTRA PRO",
     "BC":  "BC COMPANY",
+    "BEN": "BENEFIT COMPANY",
     "C":   "CONTINUE IN",
     "CC":  "BC CCC",
     "CP":  "COOP",
