@@ -13,13 +13,13 @@ from flask import jsonify
 import config
 
 AGENT_ADMIN_API_KEY = os.environ.get("AGENT_ADMIN_API_KEY")
-ADMIN_REQUEST_HEADERS = {}
-if AGENT_ADMIN_API_KEY is not None:
-    ADMIN_REQUEST_HEADERS = {"x-api-key": AGENT_ADMIN_API_KEY}
+ADMIN_REQUEST_HEADERS = {"Content-Type": "application/json"}
+if AGENT_ADMIN_API_KEY is not None and 0 < len(AGENT_ADMIN_API_KEY):
+    ADMIN_REQUEST_HEADERS["x-api-key"] = AGENT_ADMIN_API_KEY
 
 TOB_ADMIN_API_KEY = os.environ.get("TOB_ADMIN_API_KEY")
 TOB_REQUEST_HEADERS = {}
-if TOB_ADMIN_API_KEY is not None:
+if TOB_ADMIN_API_KEY is not None and 0 < len(TOB_ADMIN_API_KEY):
     TOB_REQUEST_HEADERS = {"x-api-key": TOB_ADMIN_API_KEY}
 
 EXTRA_DEMO_CREDS = os.environ.get("EXTRA_DEMO_CREDS")
@@ -49,6 +49,7 @@ def agent_post_with_retry(url, payload, headers=None):
             # test code to test exception handling
             #if retries < MAX_RETRIES:
             #    raise Exception("Fake exception!!!")
+            print("agent_post_with_retry():", url, payload, headers)
             response = requests.post(
                 url,
                 payload,
@@ -301,6 +302,7 @@ class StartupProcessingThread(threading.Thread):
                 },
             }
 
+            print("issuer_registration:", json.dumps(issuer_request))
             response = requests.post(
                 agent_admin_url + "/issuer_registration/send",
                 json.dumps(issuer_request),
