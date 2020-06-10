@@ -62,7 +62,8 @@ def notify_error(message):
 
 async def submit_cred_batch(http_client, creds):
     try:
-        response = await asyncio.wait_for(http_client.post(
+        local_http_client = aiohttp.ClientSession()
+        response = await asyncio.wait_for(local_http_client.post(
             '{}/issue-credential'.format(AGENT_URL),
             json=creds
         ), timeout=MAX_CRED_POSTING_TIMEOUT)
@@ -77,10 +78,13 @@ async def submit_cred_batch(http_client, creds):
         print(exc)
         print(traceback.format_exc())
         raise
+    finally:
+        await local_http_client.close()
 
 async def submit_cred(http_client, attrs, schema, version):
     try:
-        response = await http_client.post(
+        local_http_client = aiohttp.ClientSession()
+        response = await local_http_client.post(
             '{}/issue-credential'.format(AGENT_URL),
             params={'schema': schema, 'version': version},
             json=attrs
@@ -96,6 +100,8 @@ async def submit_cred(http_client, attrs, schema, version):
         print(exc)
         print(traceback.format_exc())
         raise 
+    finally:
+        await local_http_client.close()
 
 # add reason code to the submitted credential
 def inject_reason(attributes, reason):
