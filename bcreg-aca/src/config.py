@@ -253,12 +253,15 @@ def assemble_issuer_spec(config: dict) -> dict:
         "url": urls[deflang],
         "endpoint": config.get("endpoint"),
     }
+    spec["abbreviations"] = {}
     for k, v in abbrevs.items():
-        spec["abbreviation_{}".format(k)] = v
+        spec["abbreviations"][k] = v
+    spec["labels"] = {}
     for k, v in labels.items():
-        spec["label_{}".format(k)] = v
+        spec["labels"][k] = v
+    spec["urls"] = {}
     for k, v in urls.items():
-        spec["url_{}".format(k)] = v
+        spec["urls"][k] = v
 
     return spec
 
@@ -308,10 +311,12 @@ def assemble_credential_type_spec(config: dict, schema_attrs: dict) -> dict:
         "topic": (config["topic"] if isinstance(config["topic"], list) else [config["topic"],]),
         "logo_b64": logo_b64,
     }
+    ctype["labels"] = {}
     for k in labels:
-        ctype["label_{}".format(k)] = labels[k]
+        ctype["labels"][k] = labels[k]
+    ctype["endpoints"] = {}
     for k in urls:
-        ctype["endpoint_{}".format(k)] = urls[k]
+        ctype["endpoints"][k] = urls[k]
     for k in CRED_TYPE_PARAMETERS:
         if k != "details" and k in config and k not in ctype:
             ctype[k] = config[k]
