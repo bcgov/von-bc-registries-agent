@@ -31,6 +31,9 @@ else:
     # default - setup environment to process only "core" cred types
     GENERATE_EXTRA_DEMO_CREDS = False
 
+LOG_LEVEL = os.environ.get('LOG_LEVEL', 'WARNING').upper()
+logging.basicConfig(level=LOG_LEVEL)
+
 LOGGER = logging.getLogger(__name__)
 DT_FMT = '%Y-%m-%d %H:%M:%S.%f%z'
 
@@ -648,6 +651,7 @@ class SendCredentialThread(threading.Thread):
         method = 'submit_credential.credential'
 
         log_timing_event("issue_credential", {}, start_time, None, False)
+        LOGGER.info("Sending credential offer: %s", json.dumps(self.cred_offer))
 
         cred_data = None
         try:

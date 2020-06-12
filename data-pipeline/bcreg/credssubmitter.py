@@ -60,9 +60,10 @@ def notify_error(message):
         log_error(message)
 
 
-async def submit_cred_batch(http_client, creds):
+async def submit_cred_batch(creds):
     try:
-        response = await asyncio.wait_for(http_client.post(
+        local_http_client = aiohttp.ClientSession()
+        response = await asyncio.wait_for(local_http_client.post(
             '{}/issue-credential'.format(AGENT_URL),
             json=creds
         ), timeout=MAX_CRED_POSTING_TIMEOUT)
@@ -77,10 +78,13 @@ async def submit_cred_batch(http_client, creds):
         print(exc)
         print(traceback.format_exc())
         raise
+    finally:
+        await local_http_client.close()
 
-async def submit_cred(http_client, attrs, schema, version):
+async def submit_cred(attrs, schema, version):
     try:
-        response = await http_client.post(
+        local_http_client = aiohttp.ClientSession()
+        response = await local_http_client.post(
             '{}/issue-credential'.format(AGENT_URL),
             params={'schema': schema, 'version': version},
             json=attrs
@@ -96,13 +100,15 @@ async def submit_cred(http_client, attrs, schema, version):
         print(exc)
         print(traceback.format_exc())
         raise 
+    finally:
+        await local_http_client.close()
 
 # add reason code to the submitted credential
 def inject_reason(attributes, reason):
   attributes['reason_description'] = reason
   return attributes
 
-async def post_credentials(http_client, conn, credentials):
+async def post_credentials(conn, credentials):
     sql2 = """UPDATE CREDENTIAL_LOG
               SET PROCESS_DATE = %s, PROCESS_SUCCESS = 'Y', PROCESS_MSG = %s
               WHERE RECORD_ID = %s"""
@@ -116,21 +122,14 @@ async def post_credentials(http_client, conn, credentials):
     post_creds = []
     for credential in credentials:
       # need to inject reason into this process
-      #if credential['CREDENTIAL_REASON'] is not None and 0 < len(credential['CREDENTIAL_REASON']):
       credential['CREDENTIAL_JSON'] = inject_reason(credential['CREDENTIAL_JSON'], credential['CREDENTIAL_REASON'])
       post_creds.append({"schema":credential['SCHEMA_NAME'], "version":credential['SCHEMA_VERSION'], "attributes":credential['CREDENTIAL_JSON']})
 
     # post credential
-    #print('Post credential ...')
     cur2 = None
     try:
-        #print('=============')
-        #print(post_creds)
-        #print('=============')
-        # old code for submitting one credential at a time
-        # result_json = await submit_cred(http_client, credential['CREDENTIAL_JSON'], credential['SCHEMA_NAME'], credential['SCHEMA_VERSION'])
         results = None
-        results = await submit_cred_batch(http_client, post_creds)
+        results = await submit_cred_batch(post_creds)
 
         #print("Posted = ", len(credentials), ", results = ", len(results))
     except (Exception) as error:
@@ -284,7 +283,6 @@ class CredsSubmitter:
             loop = asyncio.get_event_loop()
             tasks = []
             max_rec_id = 0
-            http_client = aiohttp.ClientSession()
 
             # create a cursor
             cred_count = 0
@@ -330,7 +328,7 @@ class CredsSubmitter:
                     # but also - limit batch size to avoid timeouts
                     if (CREDS_REQUEST_SIZE <= len(credentials) and credential['CORP_NUM'] != cred_owner_id) or (len(credentials) >= 2*CREDS_REQUEST_SIZE):
                         post_creds = credentials.copy()
-                        creds_task = loop.create_task(post_credentials(http_client, self.conn, post_creds))
+                        creds_task = loop.create_task(post_credentials(self.conn, post_creds))
                         tasks.append(creds_task)
                         #await asyncio.sleep(1)
                         if single_thread:
@@ -358,7 +356,7 @@ class CredsSubmitter:
 
                 if 0 < len(credentials):
                     post_creds = credentials.copy()
-                    tasks.append(loop.create_task(post_credentials(http_client, self.conn, post_creds)))
+                    tasks.append(loop.create_task(post_credentials(self.conn, post_creds)))
                     credentials = []
                     cred_owner_id = ''
 
@@ -394,8 +392,6 @@ class CredsSubmitter:
             print(traceback.format_exc())
             log_error('An exception was encountered while processing the credential queue:\n{}'.format(str(error)))
         finally:
-            await http_client.close()
-
             # Gather all remaining tasks that were spawned during processing ...
             remaining_tasks = asyncio.Task.all_tasks()
             for task in external_tasks:
