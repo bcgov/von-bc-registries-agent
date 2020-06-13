@@ -100,6 +100,8 @@ class BCRegistries:
         try:
             params = config(section='bc_registries')
             self.conn = psycopg2.connect(**params)
+            self.conn.set_session(readonly=True)
+            self.conn.set_isolation_level(psycopg2.extensions.ISOLATION_LEVEL_READ_COMMITTED)
 
             # Register the adapter
             sqlite3.register_adapter(decimal.Decimal, adapt_decimal)
