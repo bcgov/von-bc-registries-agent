@@ -32,9 +32,10 @@ else:
     GENERATE_EXTRA_DEMO_CREDS = False
 
 LOG_LEVEL = os.environ.get('LOG_LEVEL', 'WARNING').upper()
-logging.basicConfig(level=LOG_LEVEL)
 
 LOGGER = logging.getLogger(__name__)
+if LOG_LEVEL and 0 < len(LOG_LEVEL):
+    LOGGER.setLevel(LOG_LEVEL)
 DT_FMT = '%Y-%m-%d %H:%M:%S.%f%z'
 
 # list of cred defs per schema name/version
@@ -52,7 +53,6 @@ def agent_post_with_retry(url, payload, headers=None):
             # test code to test exception handling
             #if retries < MAX_RETRIES:
             #    raise Exception("Fake exception!!!")
-            print("agent_post_with_retry():", url, payload, headers)
             response = requests.post(
                 url,
                 payload,
@@ -61,7 +61,7 @@ def agent_post_with_retry(url, payload, headers=None):
             response.raise_for_status()
             return response
         except Exception as e:
-            print("Error posting", url, e)
+            LOGGER.error("Error posting %s %s", url, str(e))
             retries = retries + 1
             if retries > MAX_RETRIES:
                 raise e
@@ -129,9 +129,6 @@ class StartupProcessingThread(threading.Thread):
             config_root + "/services.yml", env=self.ENV
         )
 
-        # print("schemas.yml -->", json.dumps(config_schemas))
-        # print("services.yml -->", json.dumps(config_services))
-
         agent_admin_url = self.ENV.get("AGENT_ADMIN_URL")
         if not agent_admin_url:
             raise RuntimeError(
@@ -146,12 +143,11 @@ class StartupProcessingThread(threading.Thread):
         )
         result = response.json()
         did = result["result"]
-        print("Fetched DID from agent: ", did)
+        LOGGER.info("Fetched DID from agent: %s", did)
         app_config["DID"] = did["did"]
 
         # determine pre-registered schemas and cred defs
         existing_schemas = agent_schemas_cred_defs(agent_admin_url)
-        #print("Existing schemas:", json.dumps(existing_schemas))
 
         # register schemas and credential definitions
         for schema in config_schemas:
@@ -255,7 +251,7 @@ class StartupProcessingThread(threading.Thread):
             response.raise_for_status()
             tob_connection = response.json()
 
-            print("Established tob connection: ", tob_connection)
+            LOGGER.info("Established tob connection: %s", json.dumps(tob_connection))
             time.sleep(5)
 
         app_config["TOB_CONNECTION"] = tob_connection["connection_id"]
@@ -305,7 +301,6 @@ class StartupProcessingThread(threading.Thread):
                 },
             }
 
-            print("issuer_registration:", json.dumps(issuer_request))
             response = requests.post(
                 agent_admin_url + "/issuer_registration/send",
                 json.dumps(issuer_request),
@@ -313,7 +308,7 @@ class StartupProcessingThread(threading.Thread):
             )
             response.raise_for_status()
             response.json()
-            print("Registered issuer: ", issuer_name)
+            LOGGER.info("Registered issuer: %s", issuer_name)
 
         synced[tob_connection["connection_id"]] = True
         print("Connection {} is synchronized".format(tob_connection))
@@ -462,7 +457,6 @@ def set_credential_thread_id(cred_exch_id, thread_id):
         credential_lock.acquire()
     try:
         # add 2 records so we can x-ref
-        #print("Set cred_exch_id, thread_id", cred_exch_id, thread_id, len(credential_requests))
         credential_threads[thread_id] = cred_exch_id
         credential_threads[cred_exch_id] = thread_id
     finally:
@@ -470,7 +464,7 @@ def set_credential_thread_id(cred_exch_id, thread_id):
             credential_lock.release()
     processing_time = time.perf_counter() - start_time
     if processing_time > 0.001:
-        print(">>> lock time =", processing_time)
+        LOGGER.warn(">>> lock time = %s", str(processing_time))
 
 
 def add_credential_request(cred_exch_id):
@@ -490,7 +484,7 @@ def add_credential_request(cred_exch_id):
             credential_lock.release()
     processing_time = time.perf_counter() - start_time
     if processing_time > 0.001:
-        print(">>> lock time =", processing_time)
+        LOGGER.warn(">>> lock time = %s", str(processing_time))
 
 
 def add_credential_response(cred_exch_id, response):
@@ -508,33 +502,33 @@ def add_credential_response(cred_exch_id, response):
             credential_lock.release()
     processing_time = time.perf_counter() - start_time
     if processing_time > 0.001:
-        print(">>> lock time =", processing_time)
+        LOGGER.warn(">>> lock time = %s", str(processing_time))
 
 
 def add_credential_problem_report(thread_id, response):
-    print(datetime.now(), "get problem report for thread", thread_id, len(credential_requests))
+    LOGGER.error("get problem report for thread %s %s", thread_id, str(len(credential_requests)))
     if thread_id in credential_threads:
         cred_exch_id = credential_threads[thread_id]
         add_credential_response(cred_exch_id, response)
     else:
-        print("thread_id not found", thread_id)
+        LOGGER.error("thread_id not found %s", thread_id)
         # hack for now
         if 1 == len(list(credential_requests.keys())):
             cred_exch_id = list(credential_requests.keys())[0]
             add_credential_response(cred_exch_id, response)
         else:
-            print("darn, too many outstanding requests :-(")
-            print(credential_requests)
+            LOGGER.error("darn, too many outstanding requests :-(")
+            LOGGER.error(credential_requests)
 
 
 def add_credential_timeout_report(cred_exch_id):
-    print("add timeout report for cred", cred_exch_id)
+    LOGGER.error("add timeout report for cred %s", cred_exch_id)
     response = {"success": False, "result": cred_exch_id + "::Error thread timeout"}
     add_credential_response(cred_exch_id, response)
 
 
 def add_credential_exception_report(cred_exch_id, exc):
-    print("add exception report for cred", cred_exch_id)
+    LOGGER.error("add exception report for cred %s", cred_exch_id)
     response = {"success": False, "result": cred_exch_id + "::" + str(exc)}
     add_credential_response(cred_exch_id, response)
 
@@ -550,7 +544,6 @@ def get_credential_response(cred_exch_id):
             del credential_responses[cred_exch_id]
             if cred_exch_id in credential_threads:
                 thread_id = credential_threads[cred_exch_id]
-                #print("cleaning out cred_exch_id, thread_id", cred_exch_id, thread_id)
                 del credential_threads[cred_exch_id]
                 del credential_threads[thread_id]
                 # override returned id with thread_id, if we have it
@@ -563,7 +556,7 @@ def get_credential_response(cred_exch_id):
             credential_lock.release()
     processing_time = time.perf_counter() - start_time
     if processing_time > 0.001:
-        print(">>> lock time =", processing_time)
+        LOGGER.warn(">>> lock time = %s", str(processing_time))
 
 
 TOPIC_CONNECTIONS = "connections"
@@ -580,56 +573,45 @@ MAX_CRED_RESPONSE_TIMEOUT = int(os.getenv('MAX_CRED_RESPONSE_TIMEOUT', '120'))
 
 def handle_connections(state, message):
     # TODO auto-accept?
-    #print("handle_connections()", state)
     return jsonify({"message": state})
 
 
 def handle_credentials(state, message):
     # TODO auto-respond to proof requests
     if "thread_id" in message:
-        #print(datetime.now(), ">>> handle_credentials()", state, message["credential_exchange_id"], "thread:", message["thread_id"])
         set_credential_thread_id(
             message["credential_exchange_id"], message["thread_id"]
         )
     else:
-        #print(datetime.now(), ">>> handle_credentials()", state, message["credential_exchange_id"])
         pass
     if state == "credential_acked":
         response = {"success": True, "result": message["credential_exchange_id"]}
         add_credential_response(message["credential_exchange_id"], response)
-    #if "thread_id" in message:
-    #    print(datetime.now(), "<<< handle_credentials()", state, message["credential_exchange_id"], "thread:", message["thread_id"])
-    #else:
-    #    print(datetime.now(), "<<< handle_credentials()", state, message["credential_exchange_id"])
     return jsonify({"message": state})
 
 
 def handle_presentations(state, message):
     # TODO auto-respond to proof requests
-    #print("handle_presentations()", state)
     return jsonify({"message": state})
 
 
 def handle_get_active_menu(message):
     # TODO add/update issuer info?
-    #print("handle_get_active_menu()", message)
     return jsonify({})
 
 
 def handle_perform_menu_action(message):
     # TODO add/update issuer info?
-    #print("handle_perform_menu_action()", message)
     return jsonify({})
 
 
 def handle_register_issuer(message):
     # TODO add/update issuer info?
-    #print("handle_register_issuer()")
     return jsonify({})
 
 
 def handle_problem_report(message):
-    print("handle_problem_report()", message)
+    LOGGER.error("handle_problem_report() %s", json.dumps(message))
 
     msg = message["~thread"]["thid"] + "::" + message["explain-ltxt"]
     response = {"success": False, "result": msg}
@@ -663,17 +645,12 @@ class SendCredentialThread(threading.Thread):
             result_available = add_credential_request(
                 cred_data["credential_exchange_id"]
             )
-            #print(
-            #    "Sent credential offer",
-            #    cred_data["credential_exchange_id"],
-            #    cred_data["connection_id"],
-            #)
 
             # wait for confirmation from the agent, which will include the credential exchange id
             if result_available and not result_available.wait(MAX_CRED_RESPONSE_TIMEOUT):
                 add_credential_timeout_report(cred_data["credential_exchange_id"])
-                print(
-                    "Got credential TIMEOUT:",
+                LOGGER.error(
+                    "Got credential TIMEOUT: %s %s %s",
                     cred_data["thread_id"],
                     cred_data["credential_exchange_id"],
                     cred_data["connection_id"],
@@ -690,11 +667,6 @@ class SendCredentialThread(threading.Thread):
                 success = False
                 outcome = "timeout"
             else:
-                #print(
-                #    "Got credential response:",
-                #    cred_data["credential_exchange_id"],
-                #    cred_data["connection_id"],
-                #)
                 end_time = time.perf_counter()
                 log_timing_method(method, start_time, end_time, True)
                 success = True
@@ -702,7 +674,7 @@ class SendCredentialThread(threading.Thread):
                 pass
 
         except Exception as exc:
-            print("got credential exception:", exc)
+            LOGGER.error("got credential exception: %s", str(exc))
             # if cred_data is not set we don't have a credential to set status for
             end_time = time.perf_counter()
             success = False
@@ -733,7 +705,6 @@ class SendCredentialThread(threading.Thread):
         processing_time = end_time - start_time
         message = {"thread_id": self.cred_response["result"]}
         log_timing_event("issue_credential", message, start_time, end_time, success, outcome=outcome)
-        #print("Got response", self.cred_response, "time=", processing_time)
 
 
 def handle_send_credential(cred_input):
@@ -772,7 +743,6 @@ def handle_send_credential(cred_input):
     ]
     """
     # construct and send the credential
-    # print("Received credentials", cred_input)
     global app_config
 
     agent_admin_url = app_config["AGENT_ADMIN_URL"]
