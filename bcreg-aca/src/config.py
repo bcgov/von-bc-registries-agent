@@ -308,9 +308,21 @@ def assemble_credential_type_spec(config: dict, schema_attrs: dict) -> dict:
         "credential_def_id": config.get("credential_def_id"),
         "name": labels[deflang],
         "endpoint": urls[deflang],
-        "topic": (config["topic"] if isinstance(config["topic"], list) else [config["topic"],]),
+        "topic": [],
         "logo_b64": logo_b64,
     }
+    topics = (config["topic"] if isinstance(config["topic"], list) else [config["topic"],])
+    for config_topic in topics:
+        cred_topic = {}
+        has_label = False
+        for k, v in config_topic.items():
+            if not k.startswith("label"):
+                cred_topic[k] = v
+            else:
+                has_label = True
+        if has_label:
+            cred_topic["labels"] = extract_translated(config_topic, "label", None, deflang)
+        ctype["topic"].append(cred_topic)
     ctype["labels"] = {}
     for k in labels:
         ctype["labels"][k] = labels[k]
