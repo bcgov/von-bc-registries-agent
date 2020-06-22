@@ -31,7 +31,7 @@ import logging
 from bcreg.config import config
 from bcreg.rocketchat_hooks import log_error, log_warning, log_info
 
-AGENT_URL = os.environ.get('CONTROLLER_URL', 'http://localhost:5002')
+CONTROLLER_URL = os.environ.get('CONTROLLER_URL', 'http://localhost:5002')
 NOTIFY_OF_CREDENTIAL_POSTING_ERRORS = os.environ.get('NOTIFY_OF_CREDENTIAL_POSTING_ERRORS', 'false')
 
 CREDS_BATCH_SIZE = int(os.getenv('CREDS_BATCH_SIZE', '3000'))
@@ -45,10 +45,48 @@ PROCESS_LOOP_REPORT_CT = int(os.getenv('PROCESS_LOOP_REPORT_CT', '100'))
 # seconds to wait for a credential response (prevents blocking forever)
 MAX_CRED_POSTING_TIMEOUT = int(os.getenv('MAX_CRED_POSTING_TIMEOUT', '240'))
 
+# url for controller health check (returns 200 status if ok)
+CONTROLLER_HEALTH_URL = os.environ.get('CONTROLLER_HEALTH_URL', CONTROLLER_URL + '/health')
+# number of seconds to wait if controller is not available
+CONTROLLER_HEALTH_WAIT = int(os.getenv('CONTROLLER_HEALTH_WAIT', '15'))
+# max wait before timeout in seconds
+CONTROLLER_HEALTH_TIMEOUT = int(os.getenv('CONTROLLER_HEALTH_TIMEOUT', str(2 * MAX_CRED_POSTING_TIMEOUT)))
+# max number of failed credentials we will tolerate before we bail (per batch)
+CONTROLLER_MAX_ERRORS = int(os.getenv('CONTROLLER_MAX_ERRORS', str(int(CREDS_BATCH_SIZE / 10))))
+
 MAX_CORPS = 10000
 CRAZY_MAX_CORPS = 100000
 
 LOGGER = logging.getLogger(__name__)
+
+
+async def check_controller_health(wait=False) -> bool:
+    """
+    Ping the controller's health url to make sure the controller is running and 
+    able to receive requests.
+    If "wait" is True, wait for up to CONTROLLER_HEALTH_TIMEOUT seconds.
+    """
+    start_time = time.perf_counter()
+    async with aiohttp.ClientSession() as local_http_client:
+        while True:
+            try:
+                response = await asyncio.wait_for(local_http_client.get(
+                    '{}'.format(CONTROLLER_HEALTH_URL)
+                ), timeout=CONTROLLER_HEALTH_WAIT)
+                if response.status == 200:
+                    return True
+                if not wait:
+                    return False
+            except Exception as exc:
+                if not wait:
+                    return False
+
+            processing_time = time.perf_counter() - start_time
+            if processing_time < CONTROLLER_HEALTH_TIMEOUT:
+                print(" ... waiting for Issuer Controller ...")
+                await asyncio.sleep(CONTROLLER_HEALTH_WAIT)
+            else:
+                return False
 
 
 def notify_error(message):
@@ -62,46 +100,40 @@ def notify_error(message):
 
 async def submit_cred_batch(creds):
     try:
-        local_http_client = aiohttp.ClientSession()
-        response = await asyncio.wait_for(local_http_client.post(
-            '{}/issue-credential'.format(AGENT_URL),
-            json=creds
-        ), timeout=MAX_CRED_POSTING_TIMEOUT)
-        if response.status != 200:
-            raise RuntimeError(
-                'Credentials could not be processed: {}'.format(await response.text())
-            )
-        result_json = await response.json()
-        #print('Response from von-x:\n{}\n'.format(result_json))
-        return result_json
+        async with aiohttp.ClientSession() as local_http_client:
+            response = await asyncio.wait_for(local_http_client.post(
+                '{}/issue-credential'.format(CONTROLLER_URL),
+                json=creds
+            ), timeout=MAX_CRED_POSTING_TIMEOUT)
+            if response.status != 200:
+                raise RuntimeError(
+                    'Credentials could not be processed: {}'.format(await response.text())
+                )
+            result_json = await response.json()
+            return result_json
     except Exception as exc:
         print(exc)
         print(traceback.format_exc())
         raise
-    finally:
-        await local_http_client.close()
 
 async def submit_cred(attrs, schema, version):
     try:
-        local_http_client = aiohttp.ClientSession()
-        response = await local_http_client.post(
-            '{}/issue-credential'.format(AGENT_URL),
-            params={'schema': schema, 'version': version},
-            json=attrs
-        )
-        if response.status != 200:
-            raise RuntimeError(
-                'Credential could not be processed: {}'.format(await response.text())
+        async with aiohttp.ClientSession() as local_http_client:
+            response = await local_http_client.post(
+                '{}/issue-credential'.format(CONTROLLER_URL),
+                params={'schema': schema, 'version': version},
+                json=attrs
             )
-        result_json = await response.json()
-        #print('Response from von-x:\n{}\n'.format(result_json))
-        return result_json
+            if response.status != 200:
+                raise RuntimeError(
+                    'Credential could not be processed: {}'.format(await response.text())
+                )
+            result_json = await response.json()
+            return result_json
     except Exception as exc:
         print(exc)
         print(traceback.format_exc())
         raise 
-    finally:
-        await local_http_client.close()
 
 # add reason code to the submitted credential
 def inject_reason(attributes, reason):
@@ -131,31 +163,34 @@ async def post_credentials(conn, credentials):
         results = None
         results = await submit_cred_batch(post_creds)
 
-        #print("Posted = ", len(credentials), ", results = ", len(results))
     except (Exception) as error:
-        # everything failed :-(
-        print(error)
-        print(traceback.format_exc())
-        print("log exception to database:", str(error))
-        res = str(error)
-        if 0 == len(res):
-            res = "Unspecified error posting to OrgBook"
-        elif 255 < len(res):
-            res = res[:250] + '...'
-        if cur2 is not None:
+        # posting to the controller failed :-(
+        # log error only if Issuer Controller is available (otherwise we will retry posting later)
+        if await check_controller_health():
+            print(error)
+            print(traceback.format_exc())
+            print("log exception to database:", str(error))
+            res = str(error)
+            if 0 == len(res):
+                res = "Unspecified error posting to OrgBook"
+            elif 255 < len(res):
+                res = res[:250] + '...'
+            if cur2 is not None:
+                cur2.close()
+                cur2 = None
+            cur2 = conn.cursor()
+            for i in range(len(credentials)):
+                credential = credentials[i]
+                cur2.execute(sql3, (datetime.datetime.now(), res, credential['RECORD_ID'],))
+                failed = failed + 1
+            conn.commit()
             cur2.close()
             cur2 = None
-        cur2 = conn.cursor()
-        for i in range(len(credentials)):
-            credential = credentials[i]
-            cur2.execute(sql3, (datetime.datetime.now(), res, credential['RECORD_ID'],))
-            failed = failed + 1
-        conn.commit()
-        cur2.close()
-        cur2 = None
+        else:
+            failed = len(credentials)
 
         notify_error('An exception was encountered while posting credentials:\n{}'.format(res))
-        return '{' + str(success) + ',' + str(failed) + '}'
+        return { 'success': success, 'failed': failed }
     finally:
         if cur2 is not None:
             cur2.close()
@@ -167,7 +202,6 @@ async def post_credentials(conn, credentials):
             result = results[i]
 
             if result['success']:
-                #print("log success to database")
                 cur2 = conn.cursor()
                 cur2.execute(sql2, (datetime.datetime.now(), result['result'], credential['RECORD_ID'],))
                 conn.commit()
@@ -175,9 +209,8 @@ async def post_credentials(conn, credentials):
                 cur2 = None
                 success = success + 1
             else:
-                print("log error to database")
-                #print(result['result'])
-                #print(credential)
+                # the controller reported an error from the aca-py agent or aries-vcr
+                print("log aca-py error to database")
                 cur2 = conn.cursor()
                 if 255 < len(result['result']):
                     res = result['result'][:250] + '...'
@@ -191,7 +224,7 @@ async def post_credentials(conn, credentials):
                 notify_error('An error was encountered while posting a credential:\n{}'.format(res))
 
     except (Exception) as error:
-        # everything failed :-(
+        # failed saving status to database :-( is the database available?
         print(error)
         print(traceback.format_exc())
         print("log exception to database", str(error))
@@ -216,7 +249,8 @@ async def post_credentials(conn, credentials):
     finally:
         if cur2 is not None:
             cur2.close()
-    return '{' + str(success) + ',' + str(failed) + '}'
+
+    return { 'success': success, 'failed': failed }
 
 
 class CredsSubmitter:
@@ -284,6 +318,10 @@ class CredsSubmitter:
             tasks = []
             max_rec_id = 0
 
+            # ensure controller is available
+            if not await check_controller_health(wait=True):
+                raise Excecption("Error Issuer Controller is not available")
+
             # create a cursor
             cred_count = 0
             cur = self.conn.cursor()
@@ -301,8 +339,9 @@ class CredsSubmitter:
             processed_count = 0
             perf_proc_count = 0
             max_processing_time = 60 * MAX_PROCESSING_MINS
+            failed_count = 0
 
-            while 0 < cred_count_remaining and processing_time < max_processing_time:
+            while 0 < cred_count_remaining and processing_time < max_processing_time and failed_count <= CONTROLLER_MAX_ERRORS:
                 # create a cursor
                 cur = self.conn.cursor()
                 cur.execute(sql1, (max_rec_id,))
@@ -314,10 +353,10 @@ class CredsSubmitter:
                     processed_count = processed_count + 1
                     perf_proc_count = perf_proc_count + 1
                     if processed_count >= PROCESS_LOOP_REPORT_CT:
-                      print('>>> Processing {} of {} credentials.'.format(i, cred_count))
-                      processing_time = time.perf_counter() - start_time
-                      print('Processing: ' + str(processing_time))
-                      processed_count = 0
+                        print('>>> Processing {} of {} credentials.'.format(i, cred_count))
+                        processing_time = time.perf_counter() - start_time
+                        print('Processing: ' + str(processing_time))
+                        processed_count = 0
                     credential = {'RECORD_ID':row[0], 'SYSTEM_TYP_CD':row[1], 'PREV_EVENT':row[2], 'LAST_EVENT':row[3], 'CORP_NUM':row[4], 'CORP_STATE':row[5],
                                   'CREDENTIAL_TYPE_CD':row[6], 'CREDENTIAL_ID':row[7], 'CREDENTIAL_JSON':row[8], 'CREDENTIAL_REASON':row[9], 
                                   'SCHEMA_NAME':row[10], 'SCHEMA_VERSION':row[11], 'ENTRY_DATE':row[12]}
@@ -332,17 +371,19 @@ class CredsSubmitter:
                         tasks.append(creds_task)
                         #await asyncio.sleep(1)
                         if single_thread:
-                          # running single threaded - wait for each task to complete
-                          await creds_task
+                            # running single threaded - wait for each task to complete
+                            await creds_task
                         else:
-                          # multi-threaded, check if we are within MAX_CREDS_REQUESTS active requests
-                          active_tasks = len([task for task in tasks if not task.done()])
-                          #print("Added task - active = ", active_tasks, ", posted creds = ", len(post_creds))
-                          while active_tasks >= MAX_CREDS_REQUESTS:
-                            #await asyncio.gather(*tasks)
-                            done, pending = await asyncio.wait(tasks, return_when=asyncio.FIRST_COMPLETED)
-                            active_tasks = len(pending)
-                            # print("Waited task - active = ", active_tasks)
+                            # multi-threaded, check if we are within MAX_CREDS_REQUESTS active requests
+                            active_tasks = len([task for task in tasks if not task.done()])
+                            failed_count = 0
+                            while active_tasks >= MAX_CREDS_REQUESTS:
+                                #await asyncio.gather(*tasks)
+                                done, pending = await asyncio.wait(tasks, return_when=asyncio.FIRST_COMPLETED)
+                                active_tasks = len(pending)
+                                for finished in done:
+                                    done_result = finished.result()
+                                    failed_count = failed_count + done_result['failed']
                         credentials = []
                         cred_owner_id = ''
 
@@ -368,6 +409,10 @@ class CredsSubmitter:
                     cpm = 60*(perf_proc_count-(0.5*CREDS_REQUEST_SIZE*MAX_CREDS_REQUESTS))/processing_time
                     print(cpm, "credentials per minute")
 
+                # ensure controller is (still) available
+                if 0 < failed_count and not await check_controller_health(wait=True):
+                    raise Excecption("Error Issuer Controller is not available")
+
                 cur = self.conn.cursor()
                 cur.execute(sql1a, (max_rec_id,))
                 row = cur.fetchone()
@@ -379,7 +424,7 @@ class CredsSubmitter:
             # wait for the current batch of credential posts to complete
             print(">>> Waiting for all outstanding tasks to complete ...")
             for response in await asyncio.gather(*tasks):
-                pass # print('response:' + response)
+                pass
             tasks = []
 
             print('>>> Completed.')
