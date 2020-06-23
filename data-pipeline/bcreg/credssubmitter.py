@@ -186,10 +186,10 @@ async def post_credentials(conn, credentials):
             conn.commit()
             cur2.close()
             cur2 = None
+            notify_error('An exception was encountered while posting credentials:\n{}'.format(res))
         else:
             failed = len(credentials)
 
-        notify_error('An exception was encountered while posting credentials:\n{}'.format(res))
         return { 'success': success, 'failed': failed }
     finally:
         if cur2 is not None:
