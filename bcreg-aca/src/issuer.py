@@ -509,6 +509,7 @@ def add_credential_problem_report(thread_id, response):
     LOGGER.error("get problem report for thread %s %s", thread_id, str(len(credential_requests)))
     if thread_id in credential_threads:
         cred_exch_id = credential_threads[thread_id]
+        LOGGER.error(" ... cred_exch_id is %s: %s", cred_exch_id, str(response))
         add_credential_response(cred_exch_id, response)
     else:
         LOGGER.error("thread_id not found %s", thread_id)
@@ -516,8 +517,11 @@ def add_credential_problem_report(thread_id, response):
         if 1 == len(list(credential_requests.keys())):
             cred_exch_id = list(credential_requests.keys())[0]
             add_credential_response(cred_exch_id, response)
+        elif 0 == len(list(credential_requests.keys())):
+            LOGGER.error("NO outstanding requests, can't map problem report to request :-(")
+            LOGGER.error(credential_requests)
         else:
-            LOGGER.error("darn, too many outstanding requests :-(")
+            LOGGER.error("Too many outstanding requests, can't map problem report to request :-(")
             LOGGER.error(credential_requests)
 
 
@@ -546,8 +550,9 @@ def get_credential_response(cred_exch_id):
                 thread_id = credential_threads[cred_exch_id]
                 del credential_threads[cred_exch_id]
                 del credential_threads[thread_id]
-                # override returned id with thread_id, if we have it
-                response["result"] = thread_id
+                # override returned id with thread_id, if we have it (unless we have received a problem report)
+                if not "::" in response["result"]:
+                    response["result"] = thread_id
             return response
         else:
             return None
