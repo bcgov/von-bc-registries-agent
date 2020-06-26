@@ -210,7 +210,7 @@ async def post_credentials(conn, credentials):
                 success = success + 1
             else:
                 # the controller reported an error from the aca-py agent or aries-vcr
-                print("log aca-py error to database")
+                print("log aca-py error to database: ", result)
                 cur2 = conn.cursor()
                 if 255 < len(result['result']):
                     res = result['result'][:250] + '...'
