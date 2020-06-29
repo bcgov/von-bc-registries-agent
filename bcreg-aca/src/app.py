@@ -9,6 +9,9 @@ import yaml
 import config
 import issuer
 
+import signal
+
+
 # Load application settings (environment)
 config_root = os.environ.get('CONFIG_ROOT', '../config')
 ENV = config.load_settings(config_root=config_root)
@@ -22,12 +25,38 @@ class BCRegController(Flask):
 app = BCRegController()
 wsgi_app = app.wsgi_app
 
+signal.signal(signal.SIGINT, issuer.signal_issuer_shutdown)
+signal.signal(signal.SIGTERM, issuer.signal_issuer_shutdown)
+
+
 @app.route('/health', methods=['GET'])
 def health_check():
     if issuer.tob_connection_synced():
         return make_response(jsonify({'success': True}), 200)
     else:
         abort(503, "Connection not yet synced")
+
+@app.route('/readiness', methods=['GET'])
+def readiness_check():
+    """
+    A readiness probe checks if the container is ready to handle requests.
+    A failed readiness probe means that a container should not receive any traffic from a proxy, even if it's running.
+    """
+    if issuer.tob_connection_synced():
+        return make_response(jsonify({'success': True}), 200)
+    else:
+        abort(503, "Connection not ready to process requests")
+
+@app.route('/liveness', methods=['GET'])
+def liveness_check():
+    """
+    A liveness probe checks if the container is still running.
+    If the liveness probe fails, the container is killed.
+    """
+    if issuer.issuer_liveness_check():
+        return make_response(jsonify({'success': True}), 200)
+    else:
+        abort(503, "Connection is not live")
 
 @app.route('/status/reset', methods=['GET'])
 def clear_status():
