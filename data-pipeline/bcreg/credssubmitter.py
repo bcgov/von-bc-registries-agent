@@ -46,7 +46,7 @@ PROCESS_LOOP_REPORT_CT = int(os.getenv('PROCESS_LOOP_REPORT_CT', '100'))
 MAX_CRED_POSTING_TIMEOUT = int(os.getenv('MAX_CRED_POSTING_TIMEOUT', '240'))
 
 # url for controller health check (returns 200 status if ok)
-CONTROLLER_HEALTH_URL = os.environ.get('CONTROLLER_HEALTH_URL', CONTROLLER_URL + '/health')
+CONTROLLER_HEALTH_URL = os.environ.get('CONTROLLER_HEALTH_URL', CONTROLLER_URL + '/readiness')
 # number of seconds to wait if controller is not available
 CONTROLLER_HEALTH_WAIT = int(os.getenv('CONTROLLER_HEALTH_WAIT', '15'))
 # max wait before timeout in seconds
