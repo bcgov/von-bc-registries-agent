@@ -41,6 +41,7 @@ DT_FMT = '%Y-%m-%d %H:%M:%S.%f%z'
 # list of cred defs per schema name/version
 app_config = {}
 app_config["schemas"] = {}
+app_config["running"] = True
 synced = {}
 
 MAX_RETRIES = 3
@@ -315,7 +316,58 @@ class StartupProcessingThread(threading.Thread):
 
 
 def tob_connection_synced():
+    """
+    Return True if the TOB connection is sync'ed, False otherwise.
+    """
+    global app_config
+
     return ("TOB_CONNECTION" in app_config) and (app_config["TOB_CONNECTION"] in synced) and (synced[app_config["TOB_CONNECTION"]])
+
+
+def tob_connection_active():
+    """
+    Return True if there are pending credential requests, False otherwise.
+    Note this will return False if the TOB connection is not yet sync'ed.
+    """
+    if not tob_connection_synced():
+        return False
+    return (0 < len(list(credential_requests.keys())))
+
+
+def issuer_liveness_check():
+    """
+    Check if we can shut down the container - if we have received a shutdown request and there are
+    no outstanding credential requests.
+    """
+    global app_config
+
+    if app_config["running"]:
+        # return True until we get a shutdown request
+        return True
+
+    # return True until the work queue is cleared
+    return tob_connection_active()
+
+
+class ShutdownProcessingThread(threading.Thread):
+    def run(self):
+        while issuer_liveness_check():
+            LOGGER.error("... Waiting for work queue to clear before shutdown ...")
+            time.sleep(1)
+
+
+def signal_issuer_shutdown(signum, frame):
+    """
+    Tell the issuer to do a clean shutdown (finish work queue first).
+    """
+    global app_config
+
+    LOGGER.error(">>> Received shutdown signal!")
+    app_config["running"] = False
+    thread = ShutdownProcessingThread()
+    thread.start()
+    thread.join()
+    LOGGER.error(">>> Shutting down issuer controller process.")
 
 
 def startup_init(ENV):
