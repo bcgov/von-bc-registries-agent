@@ -699,12 +699,16 @@ class SendCredentialThread(threading.Thread):
             )
             response.raise_for_status()
             cred_data = response.json()
-            result_available = add_credential_request(
-                cred_data["credential_exchange_id"]
-            )
+            if "credential_exchange_id" in cred_data:
+                result_available = add_credential_request(
+                    cred_data["credential_exchange_id"]
+                )
+            else:
+                raise Exception(json.dumps(cred_data))
 
             # wait for confirmation from the agent, which will include the credential exchange id
             if result_available and not result_available.wait(MAX_CRED_RESPONSE_TIMEOUT):
+                # no response received so we'll add our own "timeout" response
                 add_credential_timeout_report(cred_data["credential_exchange_id"])
                 LOGGER.error(
                     "Got credential TIMEOUT: %s %s %s",
@@ -724,11 +728,16 @@ class SendCredentialThread(threading.Thread):
                 success = False
                 outcome = "timeout"
             else:
+                # response was received for this cred exchange via a web hook
                 end_time = time.perf_counter()
                 log_timing_method(method, start_time, end_time, True)
                 success = True
                 outcome = "success"
-                pass
+
+            # there should be some form of response available
+            self.cred_response = get_credential_response(
+                cred_data["credential_exchange_id"]
+            )
 
         except Exception as exc:
             LOGGER.error("got credential exception: %s", str(exc))
@@ -754,11 +763,10 @@ class SendCredentialThread(threading.Thread):
             log_timing_method(method, start_time, end_time, False, 
                 data=data
             )
-            # don't re-raise; we want to log the exception as the credential error response
 
-        self.cred_response = get_credential_response(
-            cred_data["credential_exchange_id"]
-        )
+            # don't re-raise; we want to log the exception as the credential error response
+            self.cred_response = {"success": False, "result": str(exc)}
+
         processing_time = end_time - start_time
         message = {"thread_id": self.cred_response["result"]}
         log_timing_event("issue_credential", message, start_time, end_time, success, outcome=outcome)
