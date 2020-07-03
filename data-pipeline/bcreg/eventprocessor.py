@@ -760,6 +760,8 @@ class EventProcessor:
             p_corp_num = 'BC' + corp_num
         elif corp_typ_cd == 'CC':
             p_corp_num = 'BC' + corp_num
+        elif corp_typ_cd == 'BEN':
+            p_corp_num = 'BC' + corp_num
         return p_corp_num
 
     # determine reason for address credential - returns reason code only
