@@ -117,6 +117,7 @@ async def post_credentials(http_client, conn, credentials):
     # post credential
     #print('Post credential ...')
     cur2 = None
+    results = None
     try:
         #print('=============')
         #print(post_creds)
@@ -168,7 +169,7 @@ async def post_credentials(http_client, conn, credentials):
             res = res[:250] + '...'
         for i in range(len(credentials)):
             credential = credentials[i]
-            result = results[i]
+            result = results[i] if results else "Unspecified error"
             cur2.execute(sql3, (datetime.datetime.now(), res, credential['RECORD_ID'],))
             failed = failed + 1
         conn.commit()
