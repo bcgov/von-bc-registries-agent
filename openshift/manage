@@ -60,6 +60,13 @@ usage () {
     requeueProcessedCreds
       - Use with caution.  Requeue any credentials that have already been posted.
 
+    requeueOrganization <corp_num>
+      - Use with caution.  Requeue a specific company that may have already been processed.
+        Where:
+          - <corp_num>, is the corp_num from corp_history_log for the organization to requeue/reprocess.
+        Example:
+          $0 -e dev requeueOrganization 54321
+
     repostFailedCredentials
       - Use with caution.  Repost any failed credentials.  Requeues and posts any credentials that have failed
         posting one at a time to avoid any potential issues (such as deadlocks on the TOB side caused by 
@@ -342,6 +349,30 @@ requeueFailedCorps() {
     "psql -d "'${POSTGRESQL_DATABASE}'" -ac \"update event_by_corp_filing set process_success = null, process_date = null, process_msg = null where corp_num in (${corp_nums});\""
 }
 
+requeueOrganization() {
+  _corpNum=${1}
+  _databasePodName=${2}
+  if [ -z "${_corpNum}" ] || [ -z "${_databasePodName}" ]; then
+    echo -e \\n"requeueOrganization; Missing parameter!"\\n
+    exit 1
+  fi
+
+  # Remove affected credential_log records
+  runInContainer -v \
+    ${_databasePodName} \
+    "psql -d "'${POSTGRESQL_DATABASE}'" -ac \"delete from credential_log where corp_num in (${_corpNum});\""
+
+  # Remove affected corp_history_log records
+  runInContainer -v \
+    ${_databasePodName} \
+    "psql -d "'${POSTGRESQL_DATABASE}'" -ac \"delete from corp_history_log where corp_num in (${_corpNum});\""
+
+  # Requeue affected event_by_corp_filing records
+  runInContainer -v \
+    ${_databasePodName} \
+    "psql -d "'${POSTGRESQL_DATABASE}'" -ac \"update event_by_corp_filing set process_success = null, process_date = null, process_msg = null where corp_num in (${_corpNum});\""
+}
+
 repostFailedCredentials() {
   (
     _databasePodName=${1}
@@ -406,6 +437,11 @@ case "${_cmd}" in
   requeueprocessedcreds)
     dbPodName=${1:-event-db}
     requeueProcessedCreds "${dbPodName}"
+    ;;
+  requeueorganization)
+    corpNum=${1}
+    dbPodName=${2:-event-db}
+    requeueOrganization "${corpNum}" "${dbPodName}"
     ;;
   deletedatabase)
     dbPodName=${1}
