@@ -360,17 +360,17 @@ requeueOrganization() {
   # Remove affected credential_log records
   runInContainer -v \
     ${_databasePodName} \
-    "psql -d "'${POSTGRESQL_DATABASE}'" -ac \"delete from credential_log where corp_num in (${_corpNum});\""
+    "psql -d "'${POSTGRESQL_DATABASE}'" -ac \"delete from credential_log where corp_num in ('${_corpNum}');\""
 
   # Remove affected corp_history_log records
   runInContainer -v \
     ${_databasePodName} \
-    "psql -d "'${POSTGRESQL_DATABASE}'" -ac \"delete from corp_history_log where corp_num in (${_corpNum});\""
+    "psql -d "'${POSTGRESQL_DATABASE}'" -ac \"delete from corp_history_log where corp_num in ('${_corpNum}');\""
 
   # Requeue affected event_by_corp_filing records
   runInContainer -v \
     ${_databasePodName} \
-    "psql -d "'${POSTGRESQL_DATABASE}'" -ac \"update event_by_corp_filing set process_success = null, process_date = null, process_msg = null where corp_num in (${_corpNum});\""
+    "psql -d "'${POSTGRESQL_DATABASE}'" -ac \"update event_by_corp_filing set process_success = null, process_date = null, process_msg = null where corp_num in ('${_corpNum}');\""
 }
 
 repostFailedCredentials() {
