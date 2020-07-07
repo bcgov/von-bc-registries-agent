@@ -60,8 +60,12 @@ usage () {
     requeueProcessedCreds
       - Use with caution.  Requeue any credentials that have already been posted.
 
-    requeueOrganization
+    requeueOrganization <corp_num>
       - Use with caution.  Requeue a specific company that may have already been processed.
+        Where:
+          - <corp_num>, is the corp_num from corp_history_log for the organization to requeue/reprocess.
+        Example:
+          $0 -e dev requeueOrganization 54321
 
     repostFailedCredentials
       - Use with caution.  Repost any failed credentials.  Requeues and posts any credentials that have failed
@@ -348,8 +352,8 @@ requeueFailedCorps() {
 requeueOrganization() {
   _corpNum=${1}
   _databasePodName=${2}
-  if [ -z "${_databasePodName}" ]; then
-    echo -e \\n"requeueFailedEvents; Missing parameter!"\\n
+  if [ -z "${_corpNum}" ] || [ -z "${_databasePodName}" ]; then
+    echo -e \\n"requeueOrganization; Missing parameter!"\\n
     exit 1
   fi
 
@@ -434,7 +438,7 @@ case "${_cmd}" in
     dbPodName=${1:-event-db}
     requeueProcessedCreds "${dbPodName}"
     ;;
-  requeueOrganization)
+  requeueorganization)
     corpNum=${1}
     dbPodName=${2:-event-db}
     requeueOrganization "${corpNum}" "${dbPodName}"
