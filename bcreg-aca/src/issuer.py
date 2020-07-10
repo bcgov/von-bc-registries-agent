@@ -31,10 +31,22 @@ else:
     # default - setup environment to process only "core" cred types
     GENERATE_EXTRA_DEMO_CREDS = False
 
+TRACE_EVENTS = os.getenv("TRACE_EVENTS", "True").lower() == "true"
+TRACE_LABEL = os.getenv("TRACE_LABEL", "bcreg.controller")
+TRACE_TAG = os.getenv("TRACE_TAG", "acapy.events")
+TRACE_LOG_TARGET = "log"
+TRACE_TARGET = os.getenv("TRACE_TARGET", TRACE_LOG_TARGET)
+
+# percentage of credential exchanges to trace, between 0 and 100
+TRACE_MSG_PCT = int(os.getenv("TRACE_MSG_PCT", "0"))
+TRACE_MSG_PCT = max(min(TRACE_MSG_PCT, 100), 0)
+
 LOG_LEVEL = os.environ.get('LOG_LEVEL', 'WARNING').upper()
 
 LOGGER = logging.getLogger(__name__)
-if LOG_LEVEL and 0 < len(LOG_LEVEL):
+if TRACE_EVENTS and TRACE_TARGET == TRACE_LOG_TARGET:
+    LOGGER.setLevel(logging.INFO)
+elif LOG_LEVEL and 0 < len(LOG_LEVEL):
     LOGGER.setLevel(LOG_LEVEL)
 DT_FMT = '%Y-%m-%d %H:%M:%S.%f%z'
 
@@ -386,16 +398,6 @@ USE_LOCK = os.getenv('USE_LOCK', 'True').lower() == 'true'
 # need to specify an env variable RECORD_TIMINGS=True to get method timings
 RECORD_TIMINGS = os.getenv('RECORD_TIMINGS', 'False').lower() == 'true'
 
-TRACE_EVENTS = os.getenv("TRACE_EVENTS", "True").lower() == "true"
-TRACE_LABEL = os.getenv("TRACE_LABEL", "bcreg.controller")
-TRACE_TAG = os.getenv("TRACE_TAG", "acapy.events")
-TRACE_LOG_TARGET = "log"
-TRACE_TARGET = os.getenv("TRACE_TARGET", TRACE_LOG_TARGET)
-
-# percentage of credential exchanges to trace, between 0 and 100
-TRACE_MSG_PCT = int(os.getenv("TRACE_MSG_PCT", "0"))
-TRACE_MSG_PCT = max(min(TRACE_MSG_PCT, 100), 0)
-
 timing_lock = threading.Lock()
 timings = {}
 
@@ -484,8 +486,7 @@ def log_timing_event(method, message, start_time, end_time, success, outcome=Non
     try:
         if TRACE_TARGET == TRACE_LOG_TARGET:
             # write to standard log file
-            LOGGER.setLevel(logging.INFO)
-            LOGGER.info(" %s %s", TRACE_TAG, event_str)
+            LOGGER.error(" %s %s", TRACE_TAG, event_str)
         else:
             # should be an http endpoint
             _ = requests.post(
