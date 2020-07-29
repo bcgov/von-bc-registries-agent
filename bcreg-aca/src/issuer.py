@@ -445,7 +445,9 @@ def log_timing_method(method, start_time, end_time, success, data=None):
             if elapsed_time < timings[method]['min_time']:
                 timings[method]['min_time'] = elapsed_time
             timings[method]['total_time'] = timings[method]['total_time'] + elapsed_time
-            timings[method]['avg_time'] = timings[method]['total_time'] / timings[method]['total_count']
+            timings[method]['avg_time'] = (
+                timings[method]['total_time'] / timings[method]['total_count']
+            )
         if data:
             timings[method]['data'][str(timings[method]['total_count'])] = data
     finally:
@@ -646,6 +648,10 @@ def handle_credentials(state, message):
     else:
         pass
     if state == "credential_acked":
+        # raise 10% errors
+        #do_error = random.randint(1, 100)
+        #if do_error <= 10:
+        #    raise Exception("Fake exception to test error handling: " + message["thread_id"])
         response = {"success": True, "result": message["credential_exchange_id"]}
         add_credential_response(message["credential_exchange_id"], response)
 
