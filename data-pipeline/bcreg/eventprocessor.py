@@ -702,7 +702,7 @@ class EventProcessor:
         try:
             cur.execute("savepoint save_" + cred_type)
             # store address creds with a special status, because we don't want to post them yet
-            if cred_type == addr_credential:
+            if (cred_type == addr_credential) and (not GENERATE_EXTRA_DEMO_CREDS):
                 cur.execute(sql_addr, (system_cd, event_json(prev_event), event_json(last_event), corp_num, corp_state, cred_type, cred_id, 
                             schema_name, schema_version, cred_json, cred_hash, credential_reason, datetime.datetime.now(), datetime.datetime.now(), 'A',))
                 # release credentials with no effective date (for now)
