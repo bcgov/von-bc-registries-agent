@@ -818,27 +818,27 @@ class EventProcessor:
         if 0 < len(corp_info['org_names']):
             org_name = self.corp_rec_at_effective_date(corp_info['org_names'], office['start_event'])
             if org_name is not None:
-                addr_cred['addressee'] = org_name['corp_nme']
+                addr_cred['addressee'] = org_name['corp_nme'] if org_name['corp_nme'] else ''
             else:
                 addr_cred['addressee'] = ''
         else:
             addr_cred['addressee'] = ''
         addr_cred['address_type'] = office['office_type']['office_typ_cd']
-        addr_cred['civic_address'] = address['local_addr']
+        addr_cred['civic_address'] = address['local_addr'] if address['local_addr'] else ''
         if 'city' in address:
-            addr_cred['municipality'] = address['city']
+            addr_cred['municipality'] = address['city'] if address['city'] else ''
         else:
             addr_cred['municipality'] = ''
         if 'province' in address:
-            addr_cred['province'] = address['province']
+            addr_cred['province'] = address['province'] if address['province'] else ''
         else:
             addr_cred['province'] = ''
         if 'postal_cd' in address:
-            addr_cred['postal_code'] = address['postal_cd']
+            addr_cred['postal_code'] = address['postal_cd'] if address['postal_cd'] else ''
         else:
             addr_cred['postal_code'] = ''
         if 'country_typ_cd' in address:
-            addr_cred['country'] = address['country_typ_cd']
+            addr_cred['country'] = address['country_typ_cd'] if address['country_typ_cd'] else ''
         else:
             addr_cred['country'] = ''
         addr_cred['address_effective_date'] = self.filter_min_date(office['effective_start_date'])

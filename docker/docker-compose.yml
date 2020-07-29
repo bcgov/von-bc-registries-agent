@@ -39,7 +39,7 @@ services:
       LOG_LEVEL: ${LOG_LEVEL}
       TRACE_EVENTS: ${TRACE_EVENTS}
       TRACE_TARGET: ${TRACE_TARGET}
-      TRACE_MSG_PCT: ${TRACE_MSG_PCT}
+      TRACE_MSG_PCT: ${TRACE_MSG_PCT:-0}
     networks:
       - orgbook
       - bcreg

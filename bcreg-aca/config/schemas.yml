@@ -199,6 +199,10 @@
       label_en: Credential Expiry Date
       description_en: Date Credential expires
       required: false
+    reason_description:
+      label_en: Credential Issue Reason
+      description_en: Reason for credential issue/update
+      required: false
 
 - name: demo.verified_person.registries.ca
   version: '1.0.42'
@@ -239,6 +243,10 @@
     expiry_date:
       label_en: Credential Expiry Date
       description_en: Date Credential expires
+      required: false
+    reason_description:
+      label_en: Credential Issue Reason
+      description_en: Reason for credential issue/update
       required: false
 
 - name: demo.person_relationship.registries.ca
