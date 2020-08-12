@@ -27,6 +27,7 @@ import aiohttp
 import time
 import traceback
 import logging
+import backoff
 
 from bcreg.config import config
 from bcreg.rocketchat_hooks import log_error, log_warning, log_info
@@ -98,13 +99,16 @@ def notify_error(message):
         log_error(message)
 
 
+@backoff.on_exception(backoff.expo,
+                      (aiohttp.ClientConnectionError,),
+                      max_tries=5)
 async def submit_cred_batch(creds):
     try:
         async with aiohttp.ClientSession() as local_http_client:
-            response = await asyncio.wait_for(local_http_client.post(
+            response = await local_http_client.post(
                 '{}/issue-credential'.format(CONTROLLER_URL),
                 json=creds
-            ), timeout=MAX_CRED_POSTING_TIMEOUT)
+            )
             if response.status != 200:
                 raise RuntimeError(
                     'Credentials could not be processed: {}'.format(await response.text())
