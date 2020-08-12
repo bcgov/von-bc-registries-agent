@@ -10,6 +10,9 @@ import random
 import requests
 from flask import jsonify
 
+from requests.adapters import HTTPAdapter
+from requests.packages.urllib3.util.retry import Retry
+
 import config
 
 AGENT_ADMIN_API_KEY = os.environ.get("AGENT_ADMIN_API_KEY")
@@ -631,6 +634,8 @@ TOPIC_PROBLEM_REPORT = "problem_report"
 # seconds to wait for a credential response (prevents blocking forever)
 MAX_CRED_RESPONSE_TIMEOUT = int(os.getenv('MAX_CRED_RESPONSE_TIMEOUT', '120'))
 
+
+
 def handle_connections(state, message):
     # TODO auto-accept?
     return jsonify({"message": state})
@@ -692,6 +697,41 @@ def handle_problem_report(message):
     return jsonify({})
 
 
+def call_agent_with_retry(agent_url, post_method=True, payload=None, headers=None, retry_count=5, retry_wait=1):
+    """
+    Post with retry - if returned status is 503 unavailable retry a few times.
+    """
+    try:
+        session = requests.Session()
+        retry = Retry(
+            total=retry_count,
+            connect=retry_count,
+            status=retry_count,
+            status_forcelist=[502,503,504],
+            read=0,
+            redirect=0,
+            backoff_factor=retry_wait
+        )
+        adapter = HTTPAdapter(max_retries=retry)
+        session.mount('http://', adapter)
+        session.mount('https://', adapter)
+        if post_method:
+            resp = session.post(
+                agent_url,
+                json=payload,
+                headers=headers,
+            )
+        else:
+            resp = session.get(
+                agent_url,
+                headers=headers,
+            )
+        return resp
+    except Exception as e:
+        LOGGER.error("Agent connection raised exception, raise: " + str(e))
+        raise
+
+
 class SendCredentialThread(threading.Thread):
     def __init__(self, credential_definition_id, cred_offer, url, headers):
         threading.Thread.__init__(self)
@@ -709,8 +749,11 @@ class SendCredentialThread(threading.Thread):
 
         cred_data = None
         try:
-            response = requests.post(
-                self.url, json.dumps(self.cred_offer), headers=self.headers
+            response = call_agent_with_retry(
+                self.url,
+                post_method=True,
+                payload=self.cred_offer,
+                headers=self.headers
             )
             response.raise_for_status()
             cred_data = response.json()
