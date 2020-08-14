@@ -58,6 +58,18 @@ CONTROLLER_MAX_ERRORS = int(os.getenv('CONTROLLER_MAX_ERRORS', str(int(CREDS_BAT
 MAX_CORPS = 10000
 CRAZY_MAX_CORPS = 100000
 
+# factor by which we consider errors vs success in the progressive count
+# progressive count = max(0, PROGRESSIVE_FAIL_FACTOR * errors - successes)
+# max(0, ...) means we discount long periods of success and catch bursts in errors
+# a PROGRESSIVE_FAIL_FACTOR of 5 translates to a tolerance of up to 20% errors (roughly)
+PROGRESSIVE_FAIL_FACTOR = int(os.getenv('PROGRESSIVE_FAIL_FACTOR', '5'))
+# progressive count at which we trigger a reduction in posting threads
+PROGRESSIVE_FAIL_THRESHOLD = int(os.getenv('PROGRESSIVE_FAIL_THRESHOLD', '50'))
+# factor by which we reduce posting threads (in percent)
+FAILURE_REDUCTION_FACTOR = int(os.getenv('FAILURE_REDUCTION_FACTOR', '70'))
+# number of loops with no errors to allow increasing threads back up to initial setting
+SUCCESS_INCREASE_FACTOR = int(os.getenv('SUCCESS_INCREASE_FACTOR', '10'))
+
 LOGGER = logging.getLogger(__name__)
 
 
@@ -343,7 +355,13 @@ class CredsSubmitter:
             processed_count = 0
             perf_proc_count = 0
             max_processing_time = 60 * MAX_PROCESSING_MINS
+            success_count = 0
             failed_count = 0
+            progressive_error_count = 0
+            progressive_success_count = 0
+            progressive_error_factor = 0
+            success_seq = 0
+            current_max_creds_requests = MAX_CREDS_REQUESTS
 
             while 0 < cred_count_remaining and processing_time < max_processing_time and failed_count <= CONTROLLER_MAX_ERRORS:
                 # create a cursor
@@ -378,16 +396,48 @@ class CredsSubmitter:
                             # running single threaded - wait for each task to complete
                             await creds_task
                         else:
+                            # If we start getting too many errors, drop down our concurrent request count.
+                            # This will introduce a delay in posting any new credentials, because we need
+                            # to wait for many of the active threads to complete.
+                            if current_max_creds_requests > 1 and progressive_error_factor > PROGRESSIVE_FAIL_THRESHOLD:
+                                current_max_creds_requests = int(0.5 + current_max_creds_requests * FAILURE_REDUCTION_FACTOR / 100)
+                                progressive_error_count = 0
+                                progressive_success_count = 0
+                                progressive_error_factor = 0
+                                success_seq = 0
+                                print(">>> Too many errors, reducing concurrent threads to:", current_max_creds_requests)
+                            elif progressive_error_factor == 0:
+                                # if we have a long run of successful posts then bump our throughput back up
+                                success_seq = success_seq + 1
+                                if success_seq > SUCCESS_INCREASE_FACTOR and current_max_creds_requests < MAX_CREDS_REQUESTS:
+                                    current_max_creds_requests = min(MAX_CREDS_REQUESTS, int(0.5 + 1.6 * current_max_creds_requests))
+                                    success_seq = 0
+                                    print(">>> Stable success, increasing concurrent threads to:", current_max_creds_requests)
+                            else:
+                                success_seq = 0
+
                             # multi-threaded, check if we are within MAX_CREDS_REQUESTS active requests
                             active_tasks = len([task for task in tasks if not task.done()])
-                            failed_count = 0
-                            while active_tasks >= MAX_CREDS_REQUESTS:
-                                #await asyncio.gather(*tasks)
+                            while active_tasks >= current_max_creds_requests:
+                                # done is cumulative, includes the full set of "done" tasks
                                 done, pending = await asyncio.wait(tasks, return_when=asyncio.FIRST_COMPLETED)
                                 active_tasks = len(pending)
+
+                                # reset counters since we are counting *all* done tasks
+                                prev_failed_count = failed_count
+                                failed_count = 0
+                                prev_success_count = success_count
+                                success_count = 0
+                                prev_progressive_error_factor = progressive_error_factor
                                 for finished in done:
                                     done_result = finished.result()
                                     failed_count = failed_count + done_result['failed']
+                                    success_count = success_count + done_result['success']
+                                progressive_error_count = failed_count - prev_failed_count
+                                progressive_success_count = success_count - prev_success_count
+                                progressive_error_factor = max(0, prev_progressive_error_factor + (
+                                    progressive_error_count * PROGRESSIVE_FAIL_FACTOR) - progressive_success_count)
+
                         credentials = []
                         cred_owner_id = ''
 
