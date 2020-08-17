@@ -177,11 +177,9 @@
       description_en: Reason for credential issue/update
       required: false
 
-- name: demo.business_number.registries.ca
+- name: business_number.registries.ca
   version: '1.0.42'
-  description: TODO
-  cardinality:
-    - business_number
+  description: Business Number credential
   attributes:
     registration_id:
       label_en: Registration ID

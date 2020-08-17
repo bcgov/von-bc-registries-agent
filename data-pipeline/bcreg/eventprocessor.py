@@ -48,7 +48,7 @@ dba_version = '1.0.42'
 
 # the next 4 cred types will only be generated in "demo" mode
 bn_credential = 'BNC'
-bn_schema = 'demo.business_number.registries.ca'
+bn_schema = 'business_number.registries.ca'
 bn_version = '1.0.42'
 
 vp_credential = 'VPC'
@@ -1386,17 +1386,17 @@ class EventProcessor:
                     reason_description = self.build_corp_reason_code(party['start_event'])
                     corp_creds.append(self.build_credential_dict(dba_credential, dba_schema, dba_version, dba_cred['registration_id'], dba_cred, reason_description, dba_cred['effective_date']))
 
-        if GENERATE_EXTRA_DEMO_CREDS:
-            # DEMO generate a BN credential if the corp has a BN
-            if "bn_9" in corp_info and corp_info["bn_9"] and 0 < len(corp_info["bn_9"]):
-                #print(">>> generate a bn credential for", corp_num, corp_info["bn_9"])
-                bn_cred = {}
-                bn_cred["registration_id"] = self.corp_num_with_prefix(corp_info['corp_typ_cd'], corp_info['corp_num'])
-                bn_cred["business_number"] = corp_info["bn_9"]
-                bn_cred["effective_date"] = corp_info["recognition_dts"]
-                bn_cred["expiry_date"] = ""
-                corp_creds.append(self.build_credential_dict(bn_credential, bn_schema, bn_version, bn_cred['registration_id'], bn_cred, '', bn_cred['effective_date']))
+        # generate a BN credential if the corp has a BN
+        if "bn_9" in corp_info and corp_info["bn_9"] and 0 < len(corp_info["bn_9"]):
+            #print(">>> generate a bn credential for", corp_num, corp_info["bn_9"])
+            bn_cred = {}
+            bn_cred["registration_id"] = self.corp_num_with_prefix(corp_info['corp_typ_cd'], corp_info['corp_num'])
+            bn_cred["business_number"] = corp_info["bn_9"]
+            bn_cred["effective_date"] = corp_info["recognition_dts"]
+            bn_cred["expiry_date"] = ""
+            corp_creds.append(self.build_credential_dict(bn_credential, bn_schema, bn_version, bn_cred['registration_id'], bn_cred, '', bn_cred['effective_date']))
 
+        if GENERATE_EXTRA_DEMO_CREDS:
             # DEMO generate Verified Individual credentials and relationships (2 way)
             vi_party_types = {"DIR":"Director", "OFF":"Officer", "FIO":"Firm Owner",}
             if 'parties' in corp_info and 0 < len(corp_info['parties']):

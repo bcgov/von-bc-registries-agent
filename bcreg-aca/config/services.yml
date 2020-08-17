@@ -308,7 +308,7 @@ issuers:
                 input: reason_description
                 from: claim
 
-      - schema: demo.business_number.registries.ca
+      - schema: business_number.registries.ca
         issuer_url: $APPLICATION_URL_ADDRESS
         description: TODO
         details:
