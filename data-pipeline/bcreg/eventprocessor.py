@@ -445,6 +445,7 @@ class EventProcessor:
             """
             CREATE TABLE IF NOT EXISTS CORP_CRED_REPROCESS_LOG (
                 RECORD_ID SERIAL PRIMARY KEY,
+                SYSTEM_TYPE_CD VARCHAR(255) NOT NULL, 
                 CORP_HISTORY_ID INT NOT NULL,
                 CORP_NUM VARCHAR(255) NOT NULL,
                 CREDENTIAL_TYPE_CD VARCHAR(255) NOT NULL,
@@ -1859,6 +1860,68 @@ class EventProcessor:
         Credentials are submitted to TOB via the agent using a separate process.
         """
         self.process_corp_event_queue_internal(True, True, use_cache)
+
+    def queue_reprocess_credential_type(self, system_type, credential_typ_cd):
+        """Queue up all existing orgs to process a credential of a specific type."""
+        sql1 = """SELECT RECORD_ID, 
+                         SYSTEM_TYPE_CD, 
+                         CORP_NUM, 
+                         PROCESS_SUCCESS,
+                         PROCESS_DATE
+                  FROM CORP_HISTORY_LOG
+                  WHERE PROCESS_SUCCESS = 'Y'
+                    AND SYSTEM_TYPE_CD = %s
+                  order by PROCESS_DATE desc;"""
+
+        sql2 = """INSERT INTO CORP_CRED_REPROCESS_LOG (SYSTEM_TYPE_CD, CORP_HISTORY_ID, CORP_NUM, CREDENTIAL_TYPE_CD, ENTRY_DATE)
+                  VALUES (%s, %s, %s, %s, %s)  RETURNING RECORD_ID;"""
+
+        sql2a = """SELECT RECORD_ID FROM CORP_CRED_REPROCESS_LOG 
+                   WHERE CORP_NUM = %s
+                     AND SYSTEM_TYPE_CD = %s
+                     AND CREDENTIAL_TYPE_CD = %s"""
+
+        # build the new table, just in case
+        self.create_reprocessing_tables()
+
+        cur = None
+        try:
+            corps = []
+            cur = self.conn.cursor()
+            cur.execute(sql1, (system_type,))
+            print("Checking for orgs requiring re-processing ...")
+            for row in cur:
+                corp = {}
+                corp['record_id'] = row[0]
+                corp['system_type'] = row[1]
+                corp['corp_num'] = row[2]
+                corp['process_success'] = row[3]
+                corp['process_date'] = row[4]
+                corps.append(corp)
+            cur.close()
+            cur = None
+
+            print("Queuing " + str(len(corps)) + " orgs for re-processing ...")
+            i = 0
+            cur = self.conn.cursor()
+            for corp in corps:
+                # check if we have already queued this company
+                cur.execute(sql2a, (corp['corp_num'], corp['system_type'], credential_typ_cd,))
+                row = cur.fetchone()
+                if row is None:
+                    cur.execute(sql2, (corp['system_type'], corp['record_id'], corp['corp_num'], credential_typ_cd, datetime.datetime.now(),))
+                    self.conn.commit()
+                    i = i + 1
+            cur = None
+            print("Done, queued " + str(i) + " orgs for re-processing.")
+        except (Exception, psycopg2.DatabaseError) as error:
+            LOGGER.error(error)
+            LOGGER.error(traceback.print_exc())
+            raise
+        finally:
+            if cur is not None:
+                cur.close()
+            cur = None
 
     # insert a transform into the transform table
     def insert_credential_transform(self, system_type, credential_typ_cd, mapping_transform, schema_name, schema_version):
