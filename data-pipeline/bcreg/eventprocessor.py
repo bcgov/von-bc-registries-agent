@@ -162,6 +162,25 @@ class EventProcessor:
         pass
  
     # create our base processing tables
+    def do_create_tables(self, commands):
+        cur = None
+        try:
+            cur = self.conn.cursor()
+            for command in commands:
+                cur.execute(command)
+            self.conn.commit()
+            cur.close()
+            cur = None
+        except (Exception, psycopg2.DatabaseError) as error:
+            LOGGER.error(error)
+            LOGGER.error(traceback.print_exc())
+            log_error("EventProcessor exception initializing DB: " + str(error))
+            raise
+        finally:
+            if cur is not None:
+                cur.close()
+
+    # create our base processing tables
     def create_tables(self):
         """ create tables in the PostgreSQL database"""
         commands = (
@@ -414,22 +433,59 @@ class EventProcessor:
             REINDEX TABLE CORP_AUDIT_LOG;
             """,
         )
-        cur = None
-        try:
-            cur = self.conn.cursor()
-            for command in commands:
-                cur.execute(command)
-            self.conn.commit()
-            cur.close()
-            cur = None
-        except (Exception, psycopg2.DatabaseError) as error:
-            LOGGER.error(error)
-            LOGGER.error(traceback.print_exc())
-            log_error("EventProcessor exception initializing DB: " + str(error))
-            raise
-        finally:
-            if cur is not None:
-                cur.close()
+        self.do_create_tables(commands)
+
+        # tables added subsequent to initial prod release
+        self.create_reprocessing_tables()
+
+
+    def create_reprocessing_tables(self):
+        """ create tables in the PostgreSQL database"""
+        commands = (
+            """
+            CREATE TABLE IF NOT EXISTS CORP_CRED_REPROCESS_LOG (
+                RECORD_ID SERIAL PRIMARY KEY,
+                CORP_HISTORY_ID INT NOT NULL,
+                CORP_NUM VARCHAR(255) NOT NULL,
+                CREDENTIAL_TYPE_CD VARCHAR(255) NOT NULL,
+                ENTRY_DATE TIMESTAMP NOT NULL,
+                PROCESS_DATE TIMESTAMP,
+                PROCESS_SUCCESS CHAR,
+                PROCESS_MSG VARCHAR(255)
+            )
+            """,
+            """
+            -- Hit for counts and queries
+            CREATE INDEX IF NOT EXISTS crpl_pd_null ON CORP_CRED_REPROCESS_LOG 
+            (PROCESS_DATE) WHERE PROCESS_DATE IS NULL;
+            """,
+            """
+            -- Hit for query
+            CREATE INDEX IF NOT EXISTS crpl_ri_pd_null_asc ON CORP_CRED_REPROCESS_LOG 
+            (RECORD_ID ASC, PROCESS_DATE) WHERE PROCESS_DATE IS NULL;   
+            """,
+            """
+            ALTER TABLE CORP_CRED_REPROCESS_LOG
+            SET (autovacuum_vacuum_scale_factor = 0.0);
+            """,
+            """ 
+            ALTER TABLE CORP_CRED_REPROCESS_LOG
+            SET (autovacuum_vacuum_threshold = 5000);
+            """,
+            """
+            ALTER TABLE CORP_CRED_REPROCESS_LOG  
+            SET (autovacuum_analyze_scale_factor = 0.0);
+            """,
+            """ 
+            ALTER TABLE CORP_CRED_REPROCESS_LOG  
+            SET (autovacuum_analyze_threshold = 5000);
+            """,
+            """ 
+            REINDEX TABLE CORP_CRED_REPROCESS_LOG;
+            """,
+        )
+        self.do_create_tables(commands)
+
 
     ###########################################################################
     # utility method to query event processing data

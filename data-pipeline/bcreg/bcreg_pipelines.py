@@ -19,6 +19,7 @@ def bc_reg_root_pipeline():
     init_pipeline.add(bc_reg_pipeline_initial_load())
     init_pipeline.add(bc_reg_pipeline_post_credentials())
     init_pipeline.add(bc_reg_populate_audit_table())
+    init_pipeline.add(bc_reg_pipeline_bn_credential_load())
 
     parent_pipeline.add(init_pipeline)
 
@@ -96,6 +97,22 @@ def bc_reg_pipeline_initial_load():
                           commands=[ExecutePython('./bcreg/find-unprocessed-corps_actve.py')]))
     sub_pipeline1_2.add(Task(id='load_bc_reg_data_a', description='Load BC Registries data',
                           commands=[ExecutePython('./bcreg/process-corps-generate-creds.py')]), ['register_un_processed_corps'])
+    pipeline1.add(sub_pipeline1_2)
+
+    return pipeline1
+
+def bc_reg_pipeline_bn_credential_load():
+    import bcreg
+
+    pipeline1 = Pipeline(
+        id='bc_reg_bn_loader',
+        description='A pipeline that creates BN credentials for all existing corporations.')
+
+    sub_pipeline1_2 = Pipeline(id='load_existing_corps_no_bn', description='Load BC Reg corps with no BN credential')
+    sub_pipeline1_2.add(Task(id='register_un_bned_corps', description='Register corps with no BN',
+                          commands=[ExecutePython('./bcreg/find-un-bned-corps.py')]))
+    sub_pipeline1_2.add(Task(id='load_corp_bn_data', description='Load BN credentials from company data',
+                          commands=[ExecutePython('./bcreg/process-corps-generate-bn-creds.py')]), ['register_un_bned_corps'])
     pipeline1.add(sub_pipeline1_2)
 
     return pipeline1
