@@ -1470,9 +1470,9 @@ class EventProcessor:
                     corp_creds.append(self.build_credential_dict(dba_credential, dba_schema, dba_version, dba_cred['registration_id'], dba_cred, reason_description, dba_cred['effective_date']))
 
         # generate a BN credential if the corp has a BN
-        #bn_cred = self.generate_bn_credential(system_typ_cd, corp_num, corp_info)
-        #if bn_cred:
-        #    corp_creds.append(bn_cred)
+        bn_cred = self.generate_bn_credential(system_typ_cd, corp_num, corp_info)
+        if bn_cred:
+            corp_creds.append(bn_cred)
 
         if GENERATE_EXTRA_DEMO_CREDS:
             # DEMO generate Verified Individual credentials and relationships (2 way)
