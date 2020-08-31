@@ -48,7 +48,7 @@ dba_version = '1.0.42'
 
 # the next 4 cred types will only be generated in "demo" mode
 bn_credential = 'BNC'
-bn_schema = 'demo.business_number.registries.ca'
+bn_schema = 'business_number.registries.ca'
 bn_version = '1.0.42'
 
 vp_credential = 'VPC'
@@ -161,6 +161,25 @@ class EventProcessor:
     def __exit__(self, exc_type, exc_value, traceback):
         pass
  
+    # create our base processing tables
+    def do_create_tables(self, commands):
+        cur = None
+        try:
+            cur = self.conn.cursor()
+            for command in commands:
+                cur.execute(command)
+            self.conn.commit()
+            cur.close()
+            cur = None
+        except (Exception, psycopg2.DatabaseError) as error:
+            LOGGER.error(error)
+            LOGGER.error(traceback.print_exc())
+            log_error("EventProcessor exception initializing DB: " + str(error))
+            raise
+        finally:
+            if cur is not None:
+                cur.close()
+
     # create our base processing tables
     def create_tables(self):
         """ create tables in the PostgreSQL database"""
@@ -414,22 +433,60 @@ class EventProcessor:
             REINDEX TABLE CORP_AUDIT_LOG;
             """,
         )
-        cur = None
-        try:
-            cur = self.conn.cursor()
-            for command in commands:
-                cur.execute(command)
-            self.conn.commit()
-            cur.close()
-            cur = None
-        except (Exception, psycopg2.DatabaseError) as error:
-            LOGGER.error(error)
-            LOGGER.error(traceback.print_exc())
-            log_error("EventProcessor exception initializing DB: " + str(error))
-            raise
-        finally:
-            if cur is not None:
-                cur.close()
+        self.do_create_tables(commands)
+
+        # tables added subsequent to initial prod release
+        self.create_reprocessing_tables()
+
+
+    def create_reprocessing_tables(self):
+        """ create tables in the PostgreSQL database"""
+        commands = (
+            """
+            CREATE TABLE IF NOT EXISTS CORP_CRED_REPROCESS_LOG (
+                RECORD_ID SERIAL PRIMARY KEY,
+                SYSTEM_TYPE_CD VARCHAR(255) NOT NULL, 
+                CORP_HISTORY_ID INT NOT NULL,
+                CORP_NUM VARCHAR(255) NOT NULL,
+                CREDENTIAL_TYPE_CD VARCHAR(255) NOT NULL,
+                ENTRY_DATE TIMESTAMP NOT NULL,
+                PROCESS_DATE TIMESTAMP,
+                PROCESS_SUCCESS CHAR,
+                PROCESS_MSG VARCHAR(255)
+            )
+            """,
+            """
+            -- Hit for counts and queries
+            CREATE INDEX IF NOT EXISTS crpl_pd_null ON CORP_CRED_REPROCESS_LOG 
+            (PROCESS_DATE) WHERE PROCESS_DATE IS NULL;
+            """,
+            """
+            -- Hit for query
+            CREATE INDEX IF NOT EXISTS crpl_ri_pd_null_asc ON CORP_CRED_REPROCESS_LOG 
+            (RECORD_ID ASC, PROCESS_DATE) WHERE PROCESS_DATE IS NULL;   
+            """,
+            """
+            ALTER TABLE CORP_CRED_REPROCESS_LOG
+            SET (autovacuum_vacuum_scale_factor = 0.0);
+            """,
+            """ 
+            ALTER TABLE CORP_CRED_REPROCESS_LOG
+            SET (autovacuum_vacuum_threshold = 5000);
+            """,
+            """
+            ALTER TABLE CORP_CRED_REPROCESS_LOG  
+            SET (autovacuum_analyze_scale_factor = 0.0);
+            """,
+            """ 
+            ALTER TABLE CORP_CRED_REPROCESS_LOG  
+            SET (autovacuum_analyze_threshold = 5000);
+            """,
+            """ 
+            REINDEX TABLE CORP_CRED_REPROCESS_LOG;
+            """,
+        )
+        self.do_create_tables(commands)
+
 
     ###########################################################################
     # utility method to query event processing data
@@ -1152,6 +1209,32 @@ class EventProcessor:
 
         return (vp_reg_id, vp_fn, vp_ln, vp_email, vp_phone)
 
+    def generate_bn_credential(self, system_typ_cd, corp_num, corp_info):
+        """Generate a BN credential."""
+        # generate a BN credential if the corp has a BN
+        if "bn_9" in corp_info and corp_info["bn_9"] and 0 < len(corp_info["bn_9"]):
+            #print(">>> generate a bn credential for", corp_num, corp_info["bn_9"])
+            bn_cred = {}
+            bn_cred["registration_id"] = self.corp_num_with_prefix(corp_info['corp_typ_cd'], corp_info['corp_num'])
+            bn_cred["business_number"] = corp_info["bn_9"]
+            bn_cred["effective_date"] = corp_info["recognition_dts"]
+            bn_cred["expiry_date"] = ""
+            return self.build_credential_dict(bn_credential, bn_schema, bn_version, bn_cred['registration_id'], bn_cred, '', bn_cred['effective_date'])
+
+        return None
+
+    def generate_credentials_of_type(self, system_typ_cd, credential_type_cd, corp_num, corp_info):
+        """Generate credentials only of the specified type."""
+        corp_creds = []
+        if credential_type_cd == bn_credential:
+            bn_cred = self.generate_bn_credential(system_typ_cd, corp_num, corp_info)
+            if bn_cred:
+                corp_creds.append(bn_cred)
+        else:
+            raise Exception("Error credential type not supported: " + credential_type_cd)
+
+        return corp_creds
+
     # generate credentials for the provided corp
     def generate_credentials(self, system_typ_cd, prev_event, last_event, corp_num, corp_info):
         """
@@ -1386,17 +1469,12 @@ class EventProcessor:
                     reason_description = self.build_corp_reason_code(party['start_event'])
                     corp_creds.append(self.build_credential_dict(dba_credential, dba_schema, dba_version, dba_cred['registration_id'], dba_cred, reason_description, dba_cred['effective_date']))
 
-        if GENERATE_EXTRA_DEMO_CREDS:
-            # DEMO generate a BN credential if the corp has a BN
-            if "bn_9" in corp_info and corp_info["bn_9"] and 0 < len(corp_info["bn_9"]):
-                #print(">>> generate a bn credential for", corp_num, corp_info["bn_9"])
-                bn_cred = {}
-                bn_cred["registration_id"] = self.corp_num_with_prefix(corp_info['corp_typ_cd'], corp_info['corp_num'])
-                bn_cred["business_number"] = corp_info["bn_9"]
-                bn_cred["effective_date"] = corp_info["recognition_dts"]
-                bn_cred["expiry_date"] = ""
-                corp_creds.append(self.build_credential_dict(bn_credential, bn_schema, bn_version, bn_cred['registration_id'], bn_cred, '', bn_cred['effective_date']))
+        # generate a BN credential if the corp has a BN
+        bn_cred = self.generate_bn_credential(system_typ_cd, corp_num, corp_info)
+        if bn_cred:
+            corp_creds.append(bn_cred)
 
+        if GENERATE_EXTRA_DEMO_CREDS:
             # DEMO generate Verified Individual credentials and relationships (2 way)
             vi_party_types = {"DIR":"Director", "OFF":"Officer", "FIO":"Firm Owner",}
             if 'parties' in corp_info and 0 < len(corp_info['parties']):
@@ -1803,6 +1881,153 @@ class EventProcessor:
         Credentials are submitted to TOB via the agent using a separate process.
         """
         self.process_corp_event_queue_internal(True, True, use_cache)
+
+    def generate_credential_type(self, system_type, credential_typ_cd):
+        """Generate credentials of the requested type for all queued orgs."""
+        sql1 = """SELECT repo.record_id, repo.system_type_cd, repo.corp_history_id, repo.credential_type_cd,
+                         repo.corp_num, hist.corp_state, hist.corp_json, hist.prev_event, hist.last_event
+                  FROM corp_cred_reprocess_log repo, corp_history_log hist
+                  WHERE repo.process_success is null
+                    AND hist.record_id = repo.corp_history_id
+                  LIMIT !BS!;"""
+
+        sql3a = """UPDATE corp_cred_reprocess_log
+                  SET PROCESS_DATE = %s, PROCESS_SUCCESS = %s, PROCESS_MSG = %s
+                  WHERE RECORD_ID = %s"""
+
+        print("Generating credentials for", system_type, credential_typ_cd, "...")
+        cur = None
+        try:
+            # we are loading data from BC Registries based on the corp event queue
+            # sql1 = find unprocessed events from our local table EVENT_BY_CORP_FILING
+            corps = []
+            cur = self.conn.cursor()
+            cur.execute(sql1.replace("!BS!", str(CORP_BATCH_SIZE)))
+            row = cur.fetchone()
+            while row is not None:
+                # include the date(s) for the start and end events
+                corp = {'RECORD_ID':row[0], 'SYSTEM_TYPE_CD':row[1], 'CORP_HISTORY_ID':row[2], 'CREDENTIAL_TYPE_CD':row[3],
+                                'CORP_NUM':row[4], 'CORP_STATE':row[5], 'CORP_JSON':row[6], 'PREV_EVENT':row[7], 'LAST_EVENT':row[8]}
+                corps.append(corp)
+                row = cur.fetchone()
+            cur.close()
+            cur = None
+
+            print("Processing " + str(len(corps)) + " orgs for credential " + system_type + " " + credential_typ_cd)
+            saved_creds = 0
+            for corp in corps:
+                corp_creds = []
+                process_success = True
+                try:
+                    # generate and store credentials
+                    corp_creds = self.generate_credentials_of_type(corp['SYSTEM_TYPE_CD'], corp['CREDENTIAL_TYPE_CD'], corp['CORP_NUM'], corp['CORP_JSON'])
+                    if len(corp_creds) > 0:
+                        cur = self.conn.cursor()
+                        saved_creds = saved_creds + self.store_credentials(cur, corp['SYSTEM_TYPE_CD'], corp['PREV_EVENT'], corp['LAST_EVENT'], 
+                                                corp['CORP_NUM'], corp['CORP_STATE'], corp['CORP_JSON'], corp_creds)
+                        cur.close()
+                        cur = None
+                except (Exception, psycopg2.DatabaseError) as error:
+                    print(error)
+                    LOGGER.error(error)
+                    LOGGER.error(traceback.print_exc())
+                    process_success = False
+                    process_msg = str(error)
+                    #raise
+                finally:
+                    if cur is not None:
+                        cur.close()
+
+                # store corporate info 
+                if process_success:
+                    flag = 'Y'
+                    res = None
+                else:
+                    flag = 'N'
+                    if 255 < len(process_msg):
+                        res = process_msg[:250] + '...'
+                    else:
+                        res = process_msg
+
+                # update process date
+                cur = self.conn.cursor()
+                cur.execute(sql3a, (datetime.datetime.now(), flag, res, corp['RECORD_ID'], ))
+                if flag == 'N':
+                    log_warning('Event processing error:' + res)
+                self.conn.commit()
+                cur.close()
+                cur = None
+
+        except (Exception, psycopg2.DatabaseError) as error:
+            LOGGER.error(error)
+            LOGGER.error(traceback.print_exc())
+            log_error("EventProcessor exception updating DB: " + str(error))
+            raise
+        finally:
+            if cur is not None:
+                cur.close()
+
+    def queue_reprocess_credential_type(self, system_type, credential_typ_cd):
+        """Queue up all existing orgs to process a credential of a specific type."""
+        sql1 = """SELECT RECORD_ID, 
+                         SYSTEM_TYPE_CD, 
+                         CORP_NUM, 
+                         PROCESS_SUCCESS,
+                         PROCESS_DATE
+                  FROM CORP_HISTORY_LOG
+                  WHERE PROCESS_SUCCESS = 'Y'
+                    AND SYSTEM_TYPE_CD = %s
+                  order by PROCESS_DATE desc;"""
+
+        sql2 = """INSERT INTO CORP_CRED_REPROCESS_LOG (SYSTEM_TYPE_CD, CORP_HISTORY_ID, CORP_NUM, CREDENTIAL_TYPE_CD, ENTRY_DATE)
+                  VALUES (%s, %s, %s, %s, %s)  RETURNING RECORD_ID;"""
+
+        sql2a = """SELECT RECORD_ID FROM CORP_CRED_REPROCESS_LOG 
+                   WHERE CORP_NUM = %s
+                     AND SYSTEM_TYPE_CD = %s
+                     AND CREDENTIAL_TYPE_CD = %s"""
+
+        # build the new table, just in case
+        self.create_reprocessing_tables()
+
+        cur = None
+        try:
+            corps = []
+            cur = self.conn.cursor()
+            cur.execute(sql1, (system_type,))
+            print("Checking for orgs requiring re-processing ...")
+            for row in cur:
+                corp = {}
+                corp['record_id'] = row[0]
+                corp['system_type'] = row[1]
+                corp['corp_num'] = row[2]
+                corp['process_success'] = row[3]
+                corp['process_date'] = row[4]
+                corps.append(corp)
+            cur.close()
+            cur = None
+
+            print("Queuing " + str(len(corps)) + " orgs for re-processing ...")
+            i = 0
+            cur = self.conn.cursor()
+            for corp in corps:
+                # check if we have already queued this company
+                cur.execute(sql2a, (corp['corp_num'], corp['system_type'], credential_typ_cd,))
+                row = cur.fetchone()
+                if row is None:
+                    cur.execute(sql2, (corp['system_type'], corp['record_id'], corp['corp_num'], credential_typ_cd, datetime.datetime.now(),))
+                    self.conn.commit()
+                    i = i + 1
+            cur = None
+            print("Done, queued " + str(i) + " orgs for re-processing.")
+        except (Exception, psycopg2.DatabaseError) as error:
+            LOGGER.error(error)
+            LOGGER.error(traceback.print_exc())
+            raise
+        finally:
+            if cur is not None:
+                cur.close()
+            cur = None
 
     # insert a transform into the transform table
     def insert_credential_transform(self, system_type, credential_typ_cd, mapping_transform, schema_name, schema_version):

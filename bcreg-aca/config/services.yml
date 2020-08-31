@@ -308,7 +308,7 @@ issuers:
                 input: reason_description
                 from: claim
 
-      - schema: demo.business_number.registries.ca
+      - schema: business_number.registries.ca
         issuer_url: $APPLICATION_URL_ADDRESS
         description: TODO
         details:
@@ -328,13 +328,14 @@ issuers:
           type:
             input: registration.registries.ca
             from: value
-        cardinality_fields:
-          - business_number
         mapping:
           - model: attribute
             fields:
               type:
                 input: business_number
+                from: value
+              format:
+                input: category
                 from: value
               value:
                 input: business_number
