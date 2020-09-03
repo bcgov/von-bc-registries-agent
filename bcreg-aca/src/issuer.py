@@ -707,7 +707,13 @@ def call_agent_with_retry(agent_url, post_method=True, payload=None, headers=Non
             total=retry_count,
             connect=retry_count,
             status=retry_count,
-            status_forcelist=[502,503,504],
+            status_forcelist=[
+                429,  # too many requests
+                500,  # Internal server error
+                502,  # Bad gateway
+                503,  # Service unavailable
+                504   # Gateway timeout
+            ],
             read=0,
             redirect=0,
             backoff_factor=retry_wait
