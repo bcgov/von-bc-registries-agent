@@ -112,7 +112,9 @@ def notify_error(message):
 
 
 @backoff.on_exception(backoff.expo,
-                      (aiohttp.ClientConnectionError,),
+                      (
+                        aiohttp.ClientError,
+                      ),
                       max_tries=5)
 async def submit_cred_batch(creds):
     try:
