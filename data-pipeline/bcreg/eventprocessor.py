@@ -1895,8 +1895,9 @@ class EventProcessor:
                   SET PROCESS_DATE = %s, PROCESS_SUCCESS = %s, PROCESS_MSG = %s
                   WHERE RECORD_ID = %s"""
 
-        print("Generating credentials for", system_type, credential_typ_cd, "...")
+        print(datetime.datetime.now(), "Generating credentials for", system_type, credential_typ_cd, "...")
         cur = None
+        i = 0
         try:
             # we are loading data from BC Registries based on the corp event queue
             # sql1 = find unprocessed events from our local table EVENT_BY_CORP_FILING
@@ -1913,7 +1914,7 @@ class EventProcessor:
             cur.close()
             cur = None
 
-            print("Processing " + str(len(corps)) + " orgs for credential " + system_type + " " + credential_typ_cd)
+            print(datetime.datetime.now(), "Processing " + str(len(corps)) + " orgs for credential " + system_type + " " + credential_typ_cd)
             saved_creds = 0
             for corp in corps:
                 corp_creds = []
@@ -1958,6 +1959,10 @@ class EventProcessor:
                 cur.close()
                 cur = None
 
+                i = i + 1
+                if 0 == (i % 10000):
+                    print(datetime.datetime.now(), i)
+
         except (Exception, psycopg2.DatabaseError) as error:
             LOGGER.error(error)
             LOGGER.error(traceback.print_exc())
@@ -1996,10 +2001,10 @@ class EventProcessor:
 
         cur = None
         try:
+            print(datetime.datetime.now(), "Checking for orgs requiring re-processing ...")
             corps = []
             cur = self.conn.cursor()
             cur.execute(sql1, (system_type,))
-            print("Checking for orgs requiring re-processing ...")
             for row in cur:
                 corp = {}
                 corp['record_id'] = row[0]
@@ -2011,10 +2016,10 @@ class EventProcessor:
             cur.close()
             cur = None
 
+            print(datetime.datetime.now(), "Checking for previously re-processed orgs ...")
             repro_corps = {}
             cur = self.conn.cursor()
             cur.execute(sql1a, (system_type, credential_typ_cd,))
-            print("Checking for previously re-processed orgs ...")
             for row in cur:
                 corp = {}
                 corp['record_id'] = row[0]
@@ -2024,7 +2029,7 @@ class EventProcessor:
             cur.close()
             cur = None
 
-            print("Queuing " + str(len(corps)) + " orgs for re-processing ...")
+            print(datetime.datetime.now(), "Queuing " + str(len(corps)) + " orgs for re-processing ...")
             i = 0
             cur = self.conn.cursor()
             for corp in corps:
@@ -2035,9 +2040,12 @@ class EventProcessor:
                 if not (corp['corp_num'] in repro_corps):
                     cur.execute(sql2, (corp['system_type'], corp['record_id'], corp['corp_num'], credential_typ_cd, datetime.datetime.now(),))
                     self.conn.commit()
+                    repro_corps[corp['corp_num']] = corp
                     i = i + 1
+                    if 0 == (i % 10000):
+                        print(datetime.datetime.now(), i)
             cur = None
-            print("Done, queued " + str(i) + " orgs for re-processing.")
+            print(datetime.datetime.now(), "Done, queued " + str(i) + " orgs for re-processing.")
         except (Exception, psycopg2.DatabaseError) as error:
             LOGGER.error(error)
             LOGGER.error(traceback.print_exc())
