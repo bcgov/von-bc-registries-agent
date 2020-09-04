@@ -1979,6 +1979,10 @@ class EventProcessor:
                     AND SYSTEM_TYPE_CD = %s
                   order by PROCESS_DATE desc;"""
 
+        sql1a = """SELECT RECORD_ID, SYSTEM_TYPE_CD, CORP_NUM FROM CORP_CRED_REPROCESS_LOG 
+                   WHERE SYSTEM_TYPE_CD = %s
+                     AND CREDENTIAL_TYPE_CD = %s"""
+
         sql2 = """INSERT INTO CORP_CRED_REPROCESS_LOG (SYSTEM_TYPE_CD, CORP_HISTORY_ID, CORP_NUM, CREDENTIAL_TYPE_CD, ENTRY_DATE)
                   VALUES (%s, %s, %s, %s, %s)  RETURNING RECORD_ID;"""
 
@@ -2007,14 +2011,28 @@ class EventProcessor:
             cur.close()
             cur = None
 
+            repro_corps = {}
+            cur = self.conn.cursor()
+            cur.execute(sql1a, (system_type, credential_typ_cd,))
+            print("Checking for previously re-processed orgs ...")
+            for row in cur:
+                corp = {}
+                corp['record_id'] = row[0]
+                corp['system_type'] = row[1]
+                corp['corp_num'] = row[2]
+                repro_corps[row[2]] = corp
+            cur.close()
+            cur = None
+
             print("Queuing " + str(len(corps)) + " orgs for re-processing ...")
             i = 0
             cur = self.conn.cursor()
             for corp in corps:
                 # check if we have already queued this company
-                cur.execute(sql2a, (corp['corp_num'], corp['system_type'], credential_typ_cd,))
-                row = cur.fetchone()
-                if row is None:
+                #cur.execute(sql2a, (corp['corp_num'], corp['system_type'], credential_typ_cd,))
+                #row = cur.fetchone()
+                #if row is None:
+                if not (corp['corp_num'] in repro_corps):
                     cur.execute(sql2, (corp['system_type'], corp['record_id'], corp['corp_num'], credential_typ_cd, datetime.datetime.now(),))
                     self.conn.commit()
                     i = i + 1
