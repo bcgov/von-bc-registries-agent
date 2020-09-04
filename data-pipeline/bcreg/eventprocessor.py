@@ -1888,8 +1888,8 @@ class EventProcessor:
                          repo.corp_num, hist.corp_state, hist.corp_json, hist.prev_event, hist.last_event
                   FROM corp_cred_reprocess_log repo, corp_history_log hist
                   WHERE repo.process_success is null
-                    AND hist.record_id = repo.corp_history_id
-                  LIMIT !BS!;"""
+                    AND hist.record_id = repo.corp_history_id;"""
+        #          LIMIT !BS!;"""
 
         sql3a = """UPDATE corp_cred_reprocess_log
                   SET PROCESS_DATE = %s, PROCESS_SUCCESS = %s, PROCESS_MSG = %s
@@ -1903,7 +1903,7 @@ class EventProcessor:
             # sql1 = find unprocessed events from our local table EVENT_BY_CORP_FILING
             corps = []
             cur = self.conn.cursor()
-            cur.execute(sql1.replace("!BS!", str(CORP_BATCH_SIZE)))
+            #cur.execute(sql1.replace("!BS!", str(CORP_BATCH_SIZE)))
             row = cur.fetchone()
             while row is not None:
                 # include the date(s) for the start and end events
