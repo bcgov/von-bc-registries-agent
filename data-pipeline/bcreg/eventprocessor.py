@@ -1904,6 +1904,7 @@ class EventProcessor:
             corps = []
             cur = self.conn.cursor()
             #cur.execute(sql1.replace("!BS!", str(CORP_BATCH_SIZE)))
+            cur.execute(sql1)
             row = cur.fetchone()
             while row is not None:
                 # include the date(s) for the start and end events
