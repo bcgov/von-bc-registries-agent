@@ -1888,8 +1888,8 @@ class EventProcessor:
                          repo.corp_num, hist.corp_state, hist.corp_json, hist.prev_event, hist.last_event
                   FROM corp_cred_reprocess_log repo, corp_history_log hist
                   WHERE repo.process_success is null
-                    AND hist.record_id = repo.corp_history_id;"""
-        #          LIMIT !BS!;"""
+                    AND hist.record_id = repo.corp_history_id
+                  LIMIT !BS!;"""
 
         sql3a = """UPDATE corp_cred_reprocess_log
                   SET PROCESS_DATE = %s, PROCESS_SUCCESS = %s, PROCESS_MSG = %s
@@ -1898,80 +1898,83 @@ class EventProcessor:
         print(datetime.datetime.now(), "Generating credentials for", system_type, credential_typ_cd, "...")
         cur = None
         i = 0
-        try:
-            # we are loading data from BC Registries based on the corp event queue
-            # sql1 = find unprocessed events from our local table EVENT_BY_CORP_FILING
-            corps = []
-            cur = self.conn.cursor()
-            #cur.execute(sql1.replace("!BS!", str(CORP_BATCH_SIZE)))
-            cur.execute(sql1)
-            row = cur.fetchone()
-            while row is not None:
-                # include the date(s) for the start and end events
-                corp = {'RECORD_ID':row[0], 'SYSTEM_TYPE_CD':row[1], 'CORP_HISTORY_ID':row[2], 'CREDENTIAL_TYPE_CD':row[3],
-                                'CORP_NUM':row[4], 'CORP_STATE':row[5], 'CORP_JSON':row[6], 'PREV_EVENT':row[7], 'LAST_EVENT':row[8]}
-                corps.append(corp)
-                row = cur.fetchone()
-            cur.close()
-            cur = None
-
-            print(datetime.datetime.now(), "Processing " + str(len(corps)) + " orgs for credential " + system_type + " " + credential_typ_cd)
-            saved_creds = 0
-            for corp in corps:
-                corp_creds = []
-                process_success = True
-                try:
-                    # generate and store credentials
-                    corp_creds = self.generate_credentials_of_type(corp['SYSTEM_TYPE_CD'], corp['CREDENTIAL_TYPE_CD'], corp['CORP_NUM'], corp['CORP_JSON'])
-                    if len(corp_creds) > 0:
-                        cur = self.conn.cursor()
-                        saved_creds = saved_creds + self.store_credentials(cur, corp['SYSTEM_TYPE_CD'], corp['PREV_EVENT'], corp['LAST_EVENT'], 
-                                                corp['CORP_NUM'], corp['CORP_STATE'], corp['CORP_JSON'], corp_creds)
-                        cur.close()
-                        cur = None
-                except (Exception, psycopg2.DatabaseError) as error:
-                    print(error)
-                    LOGGER.error(error)
-                    LOGGER.error(traceback.print_exc())
-                    process_success = False
-                    process_msg = str(error)
-                    #raise
-                finally:
-                    if cur is not None:
-                        cur.close()
-
-                # store corporate info 
-                if process_success:
-                    flag = 'Y'
-                    res = None
-                else:
-                    flag = 'N'
-                    if 255 < len(process_msg):
-                        res = process_msg[:250] + '...'
-                    else:
-                        res = process_msg
-
-                # update process date
+        while True:
+            try:
+                # we are loading data from BC Registries based on the corp event queue
+                # sql1 = find unprocessed events from our local table EVENT_BY_CORP_FILING
+                corps = []
                 cur = self.conn.cursor()
-                cur.execute(sql3a, (datetime.datetime.now(), flag, res, corp['RECORD_ID'], ))
-                if flag == 'N':
-                    log_warning('Event processing error:' + res)
-                self.conn.commit()
+                cur.execute(sql1.replace("!BS!", str(CORP_BATCH_SIZE)))
+                row = cur.fetchone()
+                while row is not None:
+                    # include the date(s) for the start and end events
+                    corp = {'RECORD_ID':row[0], 'SYSTEM_TYPE_CD':row[1], 'CORP_HISTORY_ID':row[2], 'CREDENTIAL_TYPE_CD':row[3],
+                                    'CORP_NUM':row[4], 'CORP_STATE':row[5], 'CORP_JSON':row[6], 'PREV_EVENT':row[7], 'LAST_EVENT':row[8]}
+                    corps.append(corp)
+                    row = cur.fetchone()
                 cur.close()
                 cur = None
 
-                i = i + 1
-                if 0 == (i % 10000):
-                    print(datetime.datetime.now(), i)
+                if len(corps) == 0:
+                    return
 
-        except (Exception, psycopg2.DatabaseError) as error:
-            LOGGER.error(error)
-            LOGGER.error(traceback.print_exc())
-            log_error("EventProcessor exception updating DB: " + str(error))
-            raise
-        finally:
-            if cur is not None:
-                cur.close()
+                print(datetime.datetime.now(), "Processing " + str(len(corps)) + " orgs for credential " + system_type + " " + credential_typ_cd)
+                saved_creds = 0
+                for corp in corps:
+                    corp_creds = []
+                    process_success = True
+                    try:
+                        # generate and store credentials
+                        corp_creds = self.generate_credentials_of_type(corp['SYSTEM_TYPE_CD'], corp['CREDENTIAL_TYPE_CD'], corp['CORP_NUM'], corp['CORP_JSON'])
+                        if len(corp_creds) > 0:
+                            cur = self.conn.cursor()
+                            saved_creds = saved_creds + self.store_credentials(cur, corp['SYSTEM_TYPE_CD'], corp['PREV_EVENT'], corp['LAST_EVENT'], 
+                                                    corp['CORP_NUM'], corp['CORP_STATE'], corp['CORP_JSON'], corp_creds)
+                            cur.close()
+                            cur = None
+                    except (Exception, psycopg2.DatabaseError) as error:
+                        print(error)
+                        LOGGER.error(error)
+                        LOGGER.error(traceback.print_exc())
+                        process_success = False
+                        process_msg = str(error)
+                        #raise
+                    finally:
+                        if cur is not None:
+                            cur.close()
+
+                    # store corporate info 
+                    if process_success:
+                        flag = 'Y'
+                        res = None
+                    else:
+                        flag = 'N'
+                        if 255 < len(process_msg):
+                            res = process_msg[:250] + '...'
+                        else:
+                            res = process_msg
+
+                    # update process date
+                    cur = self.conn.cursor()
+                    cur.execute(sql3a, (datetime.datetime.now(), flag, res, corp['RECORD_ID'], ))
+                    if flag == 'N':
+                        log_warning('Event processing error:' + res)
+                    self.conn.commit()
+                    cur.close()
+                    cur = None
+
+                    i = i + 1
+                    if 0 == (i % 10000):
+                        print(datetime.datetime.now(), i)
+
+            except (Exception, psycopg2.DatabaseError) as error:
+                LOGGER.error(error)
+                LOGGER.error(traceback.print_exc())
+                log_error("EventProcessor exception updating DB: " + str(error))
+                raise
+            finally:
+                if cur is not None:
+                    cur.close()
 
     def queue_reprocess_credential_type(self, system_type, credential_typ_cd):
         """Queue up all existing orgs to process a credential of a specific type."""
