@@ -2,7 +2,7 @@ version: "3"
 services:
   caddy:
     build:
-      context: ../bcreg-x
+      context: ../bcreg-aca
       dockerfile: Dockerfile.caddy
     environment:
       TOB_API_URL: ${TOB_API_URL}
