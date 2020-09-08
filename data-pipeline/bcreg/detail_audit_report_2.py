@@ -83,8 +83,7 @@ with open('event_future_corps.csv', mode='r') as corp_file:
         if row_count == 0:
             print(f'Column names are {", ".join(row)}')
             row_count += 1
-        else:
-            future_corps[row["corp_num"]] = row["corp_num"]
+        future_corps[row["corp_num"]] = row["corp_num"]
 
 # check if all the BC Reg corps are in orgbook (with the same corp type)
 bc_reg_corps = {}
@@ -99,18 +98,17 @@ with open('bc_reg_corps.csv', mode='r') as corp_file:
         if row_count == 0:
             print(f'Column names are {", ".join(row)}')
             row_count += 1
-        else:
-            bc_reg_corps[row["corp_num"]] = row["corp_type"]
-            if bare_corp_num(row["corp_num"]) in future_corps:
-                #print("Future corp ignore:", row["corp_num"])
-                pass
-            elif not row["corp_num"] in corp_types:
-                #print("Topic not found for:", row)
-                print("./manage -e prod queueOrganization " + bare_corp_num(row["corp_num"]))
-            elif (not corp_types[row["corp_num"]]) or (corp_types[row["corp_num"]] != row["corp_type"]):
-                #print("Corp Type mis-match for:", row, corp_types[row["corp_num"]])
-                print("./manage -p bc -e prod deleteTopic " + row["corp_num"])
-                print("./manage -e prod requeueOrganization " + bare_corp_num(row["corp_num"]))
+        bc_reg_corps[row["corp_num"]] = row["corp_type"]
+        if bare_corp_num(row["corp_num"]) in future_corps:
+            #print("Future corp ignore:", row["corp_num"])
+            pass
+        elif not row["corp_num"] in corp_types:
+            #print("Topic not found for:", row)
+            print("./manage -e prod queueOrganization " + bare_corp_num(row["corp_num"]))
+        elif (not corp_types[row["corp_num"]]) or (corp_types[row["corp_num"]] != row["corp_type"]):
+            #print("Corp Type mis-match for:", row, corp_types[row["corp_num"]])
+            print("./manage -p bc -e prod deleteTopic " + row["corp_num"])
+            print("./manage -e prod requeueOrganization " + bare_corp_num(row["corp_num"]))
 
 # now check if there are corps in orgbook that are *not* in BC Reg database
 for orgbook_corp in corp_types:
@@ -130,12 +128,11 @@ with open('event_audit_corps.csv', mode='r') as audit_file:
         if row_count == 0:
             print(f'Column names are {", ".join(row)}')
             row_count += 1
-        else:
-            audit_corps[corp_num_with_prefix(row['corp_type'], row['corp_num'])] = row['corp_type']
-            if not (corp_num_with_prefix(row['corp_type'], row['corp_num']) in bc_reg_corps):
-                print("Event Processor corp not in BC Reg:", row['corp_num'], row['corp_type'])
+        audit_corps[corp_num_with_prefix(row['corp_type'], row['corp_num'])] = row['corp_type']
+        if not (corp_num_with_prefix(row['corp_type'], row['corp_num']) in bc_reg_corps):
+            print("Event Processor corp not in BC Reg:", row['corp_num'], row['corp_type'])
 
 # check who is in bc reg and not in event processor
 for bcreg_corp in bc_reg_corps:
-    if bcreg_corp not in audit_corps:
+    if bcreg_corp not in audit_corps and bare_corp_num(bcreg_corp) not in future_corps:
         print("BC Reg corp not in Event Processor :", bcreg_corp)
