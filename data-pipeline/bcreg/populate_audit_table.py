@@ -253,13 +253,24 @@ with EventProcessor() as event_processor:
     evp_corp_history_count = event_processor.get_sql_record_count(sql1)
     evp_credential_count = event_processor.get_sql_record_count(sql2)
 
-if evp_corp_history_count != bc_reg_count:
-    print("Error missing corps in Event Processor", bc_reg_count, evp_corp_history_count)
-    if ERROR_THRESHOLD_COUNT < abs(evp_corp_history_count - bc_reg_count):
-        log_error("Error missing corps in Event Processor: BCReg={} EvP={}".format(bc_reg_count, evp_corp_history_count))
-    else:
-        log_warning("Warning missing corps in Event Processor: BCReg={} EvP={}".format(bc_reg_count, evp_corp_history_count))
+    # get future-dated corps that haven't yet been processed
+    sql3 = """
+    select count(*) from event_by_corp_filing
+    where process_success is null and corp_num not in
+    (select corp_num from CORP_AUDIT_LOG);
+    """
+    evp_future_corp_process_count = event_processor.get_sql_record_count(sql3)
+    evp_bc_reg_match_count = evp_corp_history_count + evp_future_corp_process_count
 
+# check count of BC Reg corps vs event processor corps
+if evp_bc_reg_match_count != bc_reg_count:
+    print("Error missing corps in Event Processor", bc_reg_count, evp_bc_reg_match_count)
+    if ERROR_THRESHOLD_COUNT < abs(evp_bc_reg_match_count - bc_reg_count):
+        log_error("Error missing corps in Event Processor: BCReg={} EvP={}".format(bc_reg_count, evp_bc_reg_match_count))
+    else:
+        log_warning("Warning missing corps in Event Processor: BCReg={} EvP={}".format(bc_reg_count, evp_bc_reg_match_count))
+
+# check counts of event processor input and output
 if evp_credential_count != evp_corp_history_count:
     print("Error missing credentials in Event Processor", evp_corp_history_count, evp_credential_count)
     if ERROR_THRESHOLD_COUNT < abs(evp_credential_count - evp_corp_history_count):
