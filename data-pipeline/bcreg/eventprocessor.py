@@ -1946,7 +1946,10 @@ class EventProcessor:
                     # store corporate info 
                     if process_success:
                         flag = 'Y'
-                        res = None
+                        if 0 < len(corp_creds):
+                            res = "Credential generatred"
+                        else:
+                            res = "No credential generated"
                     else:
                         flag = 'N'
                         if 255 < len(process_msg):
