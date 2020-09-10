@@ -1,6 +1,6 @@
 export PROJECT_NAMESPACE="devex-von-bc-registries-agent"
 export GIT_URI="https://github.com/bcgov/von-bc-registries-agent.git"
-export GIT_REF="master"
+export GIT_REF="von-x"
 
 # The templates that should not have their GIT referances(uri and ref) over-ridden
 # Templates NOT in this list will have they GIT referances over-ridden
