@@ -1,6 +1,0 @@
-__pycache__
-.env*
-.vscode
-
-# Ignore test data
-testdata/

@@ -100,6 +100,8 @@ class BCRegistries:
         try:
             params = config(section='bc_registries')
             self.conn = psycopg2.connect(**params)
+            self.conn.set_session(readonly=True)
+            self.conn.set_isolation_level(psycopg2.extensions.ISOLATION_LEVEL_READ_COMMITTED)
 
             # Register the adapter
             sqlite3.register_adapter(decimal.Decimal, adapt_decimal)
@@ -1549,7 +1551,8 @@ class BCRegistries:
                          phone, reason_typ_cd
                       FROM """ + self.get_table_prefix() + """corp_party
                       WHERE (corp_num = """ + self.get_db_sql_param() + """ OR bus_company_num = """ + self.get_db_sql_param() + """)
-                        AND party_typ_cd = 'FBO'"""
+                        """
+                        #AND party_typ_cd = 'FBO'"""
 
         cur = None
         try:

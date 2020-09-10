@@ -44,6 +44,14 @@ usage() {
 
   start - Same as up
 
+  scale/upscale - Same as start/up however starts multiple instances of the aca-py container.
+
+        Note that to run "scale" you need to update the docker-compose.yml file to REMOVE exposed ports
+        from the bcreg-agent container.
+
+        You also need to FIRST run `./manage start` to initialize the agent and wallet, then run
+        `./manage stop` and then `./manage scale`.
+
   logs - Display the logs from the docker compose run (ctrl-c to exit).
 
   stop - Stops the services.  This is a non-destructive process.  The volumes and containers
@@ -87,17 +95,54 @@ configureEnvironment () {
 
   export COMPOSE_PROJECT_NAME=${COMPOSE_PROJECT_NAME:-"vonx"}
   export LEDGER_URL=${LEDGER_URL-http://$DOCKERHOST:9000}
-  export APPLICATION_URL=${APPLICATION_URL-http://localhost:${WEB_HTTP_PORT:-5000}}
-  export ENDPOINT_URL=http://${ENDPOINT_HOST-$DOCKERHOST:${WEB_HTTP_PORT:-5001}}
+  export GENESIS_URL=${GENESIS_URL:-${LEDGER_URL}/genesis}
+  #export AGENT_ADMIN_API_KEY=${AGENT_ADMIN_API_KEY:-R2D2HfPM5Zwd69IjclQiuFmcMV6}
+
+  # bcreg-controller
+  export CONTROLLER_PORT=5000
+  export EXPOSED_CONTROLLER_PORT=5002
+  export TOB_AGENT_ADMIN_INTERFACE_PORT=8024
+  export TOB_AGENT_ADMIN_URL=${TOB_AGENT_ADMIN_URL:-http://vcr-agent:${TOB_AGENT_ADMIN_INTERFACE_PORT}}
+  export TOB_ADMIN_API_KEY=${TOB_ADMIN_API_KEY:-R2D2HfPM5Zwd69IjclQiuFmcMV6}
+  export CONTROLLER_URL=http://bcreg-controller:${CONTROLLER_PORT}
+  export EXTRA_DEMO_CREDS=${EXTRA_DEMO_CREDS}
+
+  export RECORD_TIMINGS=${RECORD_TIMINGS:-false}
+  export TRACE_EVENTS=${TRACE_EVENTS:-false}
+  export TRACE_TARGET=${TRACE_TARGET:-log}
+  # set this one manually to trace a percentage of issued credential exchanges
+  export TRACE_MSG_PCT=${TRACE_MSG_PCT}
+
+  # bcreg-agent
+  export AGENT_HTTP_INTERFACE_PORT=8031
+  export AGENT_WS_INTERFACE_PORT=8033
+  export AGENT_ADMIN_INTERFACE_PORT=8034
+  export AGENT_WALLET_NAME=${AGENT_WALLET_NAME:-icat_agent_wallet}
+  export WALLET_SEED=bc_registries_dev_00000000000000
+  export AGENT_NAME="bcreg.agent"
+  export AGENT_ENDPOINT=${AGENT_ENDPOINT:-http://bcreg-agent:$AGENT_HTTP_INTERFACE_PORT}
+  #export AGENT_ADMIN_API_KEY=${AGENT_ADMIN_API_KEY}
+  export AGENT_ADMIN_MODE="admin-insecure-mode"
+  if [ ! -z "${AGENT_ADMIN_API_KEY}" ]; then
+    AGENT_ADMIN_MODE="admin-api-key ${AGENT_ADMIN_API_KEY}"
+  fi
+  export AGENT_TIMING_MODE=""
+  if [ "${RECORD_TIMINGS}" = "true" ]; then
+    AGENT_TIMING_MODE="--timing"
+  fi
+  export AGENT_TRACE_MODE=""
+  if [ "${TRACE_EVENTS}" = "true" ]; then
+    AGENT_TRACE_MODE="--trace"
+  fi
 
   # wallet-db
+  export WALLET_TYPE="postgres_storage"
+  export WALLET_ENCRYPTION_KEY="key"
+  export POSTGRESQL_WALLET_HOST="bcreg-wallet-db"
+  export POSTGRESQL_WALLET_PORT="5432"
   export POSTGRESQL_DATABASE="THE_ORG_BOOK"
   export POSTGRESQL_USER="DB_USER"
   export POSTGRESQL_PASSWORD="DB_PASSWORD"
-  export WALLET_TYPE="postgres_storage"
-  export WALLET_ENCRYPTION_KEY="key"
-  export POSTGRESQL_WALLET_HOST="bc-wallet-db"
-  export POSTGRESQL_WALLET_PORT="5432"
   export POSTGRESQL_ADMIN_USER="postgres"
   export POSTGRESQL_ADMIN_PASSWORD="mysecretpassword"
 }
@@ -162,7 +207,17 @@ case "$COMMAND" in
   start|up)
     _startupParams=$(getStartupParams $@)
     configureEnvironment $@
-    docker-compose up -d ${_startupParams} 
+    docker-compose up -d ${_startupParams}
+    docker-compose logs -f
+    ;;
+  scale|upscale)
+    _startupParams=$(getStartupParams $@)
+    configureEnvironment $@
+    echo "NOTE make sure you have previously run $@ start to initialize the agent and wallet!!!"
+    echo "NOTE make sure you have removed the port mapping in docker-compose.yml for bcreg-agent!!!"
+    echo "Press any key to continue or <CRTL-C> to abort"
+    read anykey
+    docker-compose up --scale bcreg-agent=5 -d ${_startupParams}
     docker-compose logs -f
     ;;
   logs)
@@ -171,7 +226,7 @@ case "$COMMAND" in
     ;;
   stop)
     configureEnvironment $@
-    docker-compose stop 
+    docker-compose stop
     ;;
   startdb)
     configureEnvironment $@

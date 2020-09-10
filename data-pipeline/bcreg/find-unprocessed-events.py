@@ -81,7 +81,7 @@ try:
 
             LOGGER.info("Update our queue")
             event_processor.update_corp_audit_event_queue(system_type, audit_corps)
-            
+
 except Exception as e:
     LOGGER.error("Exception: " + str(e))
     log_error("find-unpocessed-events processing exception: " + str(e))
