@@ -335,7 +335,7 @@ issuers:
                 input: business_number
                 from: value
               format:
-                input: category
+                input: attribute
                 from: value
               value:
                 input: business_number
