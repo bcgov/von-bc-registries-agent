@@ -1216,7 +1216,7 @@ class EventProcessor:
             #print(">>> generate a bn credential for", corp_num, corp_info["bn_9"])
             bn_cred = {}
             bn_cred["registration_id"] = self.corp_num_with_prefix(corp_info['corp_typ_cd'], corp_info['corp_num'])
-            bn_cred["business_number"] = corp_info["bn_9"]
+            bn_cred["business_number"] = corp_info["bn_9"].strip()
             bn_cred["effective_date"] = corp_info["recognition_dts"]
             bn_cred["expiry_date"] = ""
             return self.build_credential_dict(bn_credential, bn_schema, bn_version, bn_cred['registration_id'], bn_cred, '', bn_cred['effective_date'])
@@ -1991,23 +1991,41 @@ class EventProcessor:
                     AND SYSTEM_TYPE_CD = %s
                   order by PROCESS_DATE desc;"""
 
-        sql1a = """SELECT RECORD_ID, SYSTEM_TYPE_CD, CORP_NUM FROM CORP_CRED_REPROCESS_LOG 
+        sql1a = """SELECT RECORD_ID, SYSTEM_TYPE_CD, CORP_NUM, CORP_HISTORY_ID FROM CORP_CRED_REPROCESS_LOG 
+                   WHERE SYSTEM_TYPE_CD = %s
+                     AND CREDENTIAL_TYPE_CD = %s"""
+
+        sql1b = """SELECT RECORD_ID, SYSTEM_TYPE_CD, CORP_NUM, CREDENTIAL_TYPE_CD FROM CREDENTIAL_LOG
                    WHERE SYSTEM_TYPE_CD = %s
                      AND CREDENTIAL_TYPE_CD = %s"""
 
         sql2 = """INSERT INTO CORP_CRED_REPROCESS_LOG (SYSTEM_TYPE_CD, CORP_HISTORY_ID, CORP_NUM, CREDENTIAL_TYPE_CD, ENTRY_DATE)
                   VALUES (%s, %s, %s, %s, %s)  RETURNING RECORD_ID;"""
 
-        sql2a = """SELECT RECORD_ID FROM CORP_CRED_REPROCESS_LOG 
-                   WHERE CORP_NUM = %s
-                     AND SYSTEM_TYPE_CD = %s
-                     AND CREDENTIAL_TYPE_CD = %s"""
+        #sql2a = """SELECT RECORD_ID FROM CORP_CRED_REPROCESS_LOG 
+        #           WHERE CORP_NUM = %s
+        #             AND SYSTEM_TYPE_CD = %s
+        #             AND CREDENTIAL_TYPE_CD = %s"""
 
         # build the new table, just in case
         self.create_reprocessing_tables()
 
         cur = None
         try:
+            print(datetime.datetime.now(), "Checking for existing credentials ...")
+            existing_corps = {}
+            cur = self.conn.cursor()
+            cur.execute(sql1b, (system_type, credential_typ_cd,))
+            for row in cur:
+                corp = {}
+                corp['record_id'] = row[0]
+                corp['system_type'] = row[1]
+                corp['corp_num'] = row[2]
+                corp['credential_type_cd'] = row[3]
+                existing_corps[corp['corp_num']] = corp
+            cur.close()
+            cur = None
+
             print(datetime.datetime.now(), "Checking for orgs requiring re-processing ...")
             corps = []
             cur = self.conn.cursor()
@@ -2019,7 +2037,8 @@ class EventProcessor:
                 corp['corp_num'] = row[2]
                 corp['process_success'] = row[3]
                 corp['process_date'] = row[4]
-                corps.append(corp)
+                if corp['corp_num'] not in existing_corps:
+                    corps.append(corp)
             cur.close()
             cur = None
 
@@ -2032,7 +2051,8 @@ class EventProcessor:
                 corp['record_id'] = row[0]
                 corp['system_type'] = row[1]
                 corp['corp_num'] = row[2]
-                repro_corps[row[2]] = corp
+                corp['corp_history_id'] = row[3]
+                repro_corps[corp['corp_history_id']] = corp
             cur.close()
             cur = None
 
@@ -2044,7 +2064,7 @@ class EventProcessor:
                 #cur.execute(sql2a, (corp['corp_num'], corp['system_type'], credential_typ_cd,))
                 #row = cur.fetchone()
                 #if row is None:
-                if not (corp['corp_num'] in repro_corps):
+                if not (corp['record_id'] in repro_corps):
                     cur.execute(sql2, (corp['system_type'], corp['record_id'], corp['corp_num'], credential_typ_cd, datetime.datetime.now(),))
                     self.conn.commit()
                     repro_corps[corp['corp_num']] = corp
