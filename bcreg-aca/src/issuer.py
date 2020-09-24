@@ -890,7 +890,6 @@ def handle_send_credential(cred_input):
         for attribute in credential["attributes"]:
             credential_attributes.append({
                 "name": attribute,
-                "mime-type": "text/plain",
                 "value": credential["attributes"][attribute]
                 })
         cred_offer = {
