@@ -1,4 +1,13 @@
 #!/usr/bin/python
+
+#
+#  This script dumps out "staged" credentials to external files, in directory "bcreg-x/testdata/creds"
+#
+#  These credentials can be posted to the BC Reg issuer using something like:
+#
+#  curl -H 'Content-Type: application/json' http://localhost:5002/issue-credential -d @- < ../../bcreg-x/testdata/creds/<filename>.json
+#
+
 import os
 import psycopg2
 import datetime
@@ -68,7 +77,7 @@ def dump_corp_history_queue(path):
 
 def dump_corp_credential_queue(path):
     sql = """SELECT RECORD_ID, SYSTEM_TYPE_CD, PREV_EVENT, LAST_EVENT, CORP_NUM, CREDENTIAL_TYPE_CD, 
-                SCHEMA_NAME, SCHEMA_VERSION, CREDENTIAL_JSON, ENTRY_DATE
+                SCHEMA_NAME, SCHEMA_VERSION, CREDENTIAL_JSON, CREDENTIAL_REASON, ENTRY_DATE
               FROM CREDENTIAL_LOG"""
 
     """ Connect to the PostgreSQL database server """
@@ -90,7 +99,8 @@ def dump_corp_credential_queue(path):
         while row is not None:
             # print(row)
             creds.append({'RECORD_ID':row[0], 'SYSTEM_TYPE_CD':row[1], 'PREV_EVENT_ID':row[2], 'LAST_EVENT_ID':row[3], 'CORP_NUM':row[4], 
-                        'CREDENTIAL_TYPE_CD':row[5], 'SCHEMA_NAME':row[6], 'SCHEMA_VERSION':row[7], 'CREDENTIAL_JSON':row[8], 'ENTRY_DATE':row[9]})
+                        'CREDENTIAL_TYPE_CD':row[5], 'SCHEMA_NAME':row[6], 'SCHEMA_VERSION':row[7],
+                        'CREDENTIAL_JSON':row[8], 'CREDENTIAL_REASON':row[9], 'ENTRY_DATE':row[10]})
             row = cur.fetchone()
 
         cur.close()
@@ -98,7 +108,13 @@ def dump_corp_credential_queue(path):
 
         for i,cred in enumerate(creds): 
             filename = cred['CORP_NUM'] + '.' + str(cred['RECORD_ID']) + '.' + cred['SCHEMA_NAME'] + '.' + cred['SCHEMA_VERSION'] + '.json'
-            dumpfile(path, filename, cred['CREDENTIAL_JSON'])
+            cred_json = [{
+                "schema": cred["SCHEMA_NAME"],
+                "version": cred["SCHEMA_VERSION"],
+                "attributes": cred['CREDENTIAL_JSON']
+            }]
+            cred_json[0]["attributes"]["reason_description"] = cred["CREDENTIAL_REASON"]
+            dumpfile(path, filename, cred_json)
 
     except (Exception, psycopg2.DatabaseError) as error:
         print(error)
