@@ -1096,7 +1096,13 @@ class EventProcessor:
         if org_name is not None:
             if 'start_event' in org_name and 'event_typ_cd' in org_name['start_event']:
                 if org_name['start_event']['event_typ_cd'] == 'FILE':
-                    if 'filing' in org_name['start_event'] and org_name['start_event']['filing']['filing_typ_cd'] == 'NOALB' or org_name['start_event']['filing']['filing_typ_cd'] == 'NOALC' or  org_name['start_event']['filing']['filing_typ_cd'] == 'NOALU':
+                    if ('filing' in org_name['start_event'] 
+                        and org_name['start_event']['filing']['filing_typ_cd'] == 'NOALB' 
+                        or org_name['start_event']['filing']['filing_typ_cd'] == 'NOALC' 
+                        or org_name['start_event']['filing']['filing_typ_cd'] == 'NOALD' 
+                        or org_name['start_event']['filing']['filing_typ_cd'] == 'NOALE' 
+                        or org_name['start_event']['filing']['filing_typ_cd'] == 'NOALR'
+                        or org_name['start_event']['filing']['filing_typ_cd'] == 'NOALU'):
                         return True
         return False
 
