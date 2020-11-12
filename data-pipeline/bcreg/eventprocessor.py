@@ -1277,7 +1277,6 @@ class EventProcessor:
 
             # loop based on start/end events
             for i in range(len(effective_events)):
-                #LOGGER.info('effective_event', effective_events[i])
 
                 loop_start_event = effective_events[i]
                 #print(use_prev_event['event_date'], loop_start_event['event_timestmp'], use_last_event['event_date'])
@@ -1287,12 +1286,10 @@ class EventProcessor:
                 #   - unless it is the most recent event, in which case include it anyways
                 if i < (len(effective_events)-1) and is_data_conversion_event(loop_start_event) and loop_start_event['event_timestmp'] == loop_start_event['effective_date']:
                     # skip data conversion event
-                    #LOGGER.info(" >>> Skip credential for data conversion event", i, len(effective_events)-1, loop_start_event)
                     pass
                 elif use_prev_event['event_date'] <= loop_start_event['event_timestmp']: # and loop_start_event['event_timestmp'] <= use_last_event['event_date']:
                     # event is in the "overlap" range
                     # generate corp credential
-                    #print(" >>> Process event")
                     corp_cred = {}
                     corp_cred['registration_id'] = self.corp_num_with_prefix(corp_info['corp_typ_cd'], corp_info['corp_num'])
                     corp_cred['registration_date'] = self.filter_min_date(corp_info['recognition_dts'])
@@ -1311,13 +1308,6 @@ class EventProcessor:
                     else:
                         corp_cred['entity_name'] = ''
                         corp_cred['entity_name_effective'] = ''
-
-                    # check for NOALU/NOALB/NOALC filing type on the org_name end event
-                    if self.is_notice_of_alteration_event(org_name):
-                        # erase the corp_type in previously created/expired credentials
-                        #LOGGER.info("Cleaning corp type history for 'notice of alteration'", corp_num)
-                        for cred in corp_creds:
-                            cred['credential']['entity_type'] = ''
 
                     # org_name_assumed active at effective date
                     org_name_assumed = self.corp_rec_at_effective_date(corp_info['org_name_assumed'], loop_start_event)
@@ -1371,6 +1361,15 @@ class EventProcessor:
                         corp_cred['effective_date'] = loop_start_event['effective_date']
                     if corp_cred['effective_date'] is None or corp_cred['effective_date'] == '':
                         corp_cred['effective_date'] = corp_cred['registration_date']
+
+                    # check for NOALU/NOALB/NOALC filing type on the org_name end event
+                    if self.is_notice_of_alteration_event(org_name):
+                        # erase the corp_type in previously created/expired credentials
+                        #print("Cleaning corp type history for 'notice of alteration'", corp_num)
+                        for cred in corp_creds:
+                            if cred['credential']['effective_date'] < corp_cred['effective_date']:
+                                cred['credential']['entity_type'] = ''
+
                     corp_cred['expiry_date'] = ''
                     corp_cred['registration_renewal_effective'] = ''
                     corp_cred['entity_name_trans'] = ''
@@ -1383,7 +1382,6 @@ class EventProcessor:
                     #self.check_required_field(corp_num, corp_cred, 'entity_status')
 
                     corp_cred = self.build_credential_dict(corp_credential, corp_schema, corp_version, corp_num, corp_cred, reason_description, corp_cred['effective_date'])
-                    #LOGGER.info("corp_cred", corp_cred)
 
                     # these will be sorted by date, but we need to make sure we are not submitting duplicates
                     # checking against the previously generated credential is sufficient
@@ -1395,7 +1393,6 @@ class EventProcessor:
                         pass
                 else:
                     # skipping event because out of range of start/end period
-                    #LOGGER.info(" >>> Skip event not in range")
                     #LOGGER.info(use_prev_event['event_date'], loop_start_event['event_timestmp'], use_last_event['event_date'])
                     pass
 
