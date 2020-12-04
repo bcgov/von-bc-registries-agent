@@ -340,6 +340,14 @@ issuers:
               value:
                 input: business_number
                 from: claim
+          - model: name
+            fields:
+              type:
+                input: business_number
+                from: value
+              text:
+                input: business_number
+                from: claim
 
       - schema: demo.verified_person.registries.ca
         issuer_url: $APPLICATION_URL_ADDRESS
