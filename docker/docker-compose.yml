@@ -121,7 +121,7 @@ services:
         --wallet-name '${AGENT_WALLET_NAME}' \
         --wallet-key '${WALLET_ENCRYPTION_KEY}' \
         --wallet-storage-type '${WALLET_TYPE}' \
-        --wallet-storage-config '{\"url\":\"${POSTGRESQL_WALLET_HOST}:${POSTGRESQL_WALLET_PORT}\",\"max_connections\":5,\"wallet_scheme\":\"MultiWalletSingleTable\"}' \
+        --wallet-storage-config '{\"url\":\"${POSTGRESQL_WALLET_HOST}:${POSTGRESQL_WALLET_PORT}\",\"max_connections\":5}' \
         --wallet-storage-creds '{\"account\":\"${POSTGRESQL_USER}\",\"password\":\"${POSTGRESQL_PASSWORD}\",\"admin_account\":\"postgres\",\"admin_password\":\"${POSTGRESQL_ADMIN_PASSWORD}\"}' \
         --seed '${WALLET_SEED}' \
         --admin '0.0.0.0' ${AGENT_ADMIN_INTERFACE_PORT} \
