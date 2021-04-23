@@ -994,7 +994,8 @@ class EventProcessor:
                 #if corp_rec['start_event_id'] == loop_start_id:
                 #    # if the start event id matches then we have a match
                 #    return corp_rec
-                if self.compare_dates(corp_rec['effective_start_date'], "<=", loop_start_date, str(corp_rec)):
+                if (self.compare_dates(corp_rec['effective_start_date'], "<=", loop_start_date, str(corp_rec)) and
+                    (self.compare_dates(corp_rec['effective_end_date'], ">", loop_start_date, str(corp_rec)))):
                     # if the record date is earlier than the event effective date, it is potential match
                     if 'end_event_id' not in corp_rec or corp_rec['end_event_id'] is None:
                         # if we hit the active record, use it (ignore anything dated after the start date of the currently active record)
@@ -1225,7 +1226,8 @@ class EventProcessor:
             bn_cred["business_number"] = corp_info["bn_9"].strip()
             bn_cred["effective_date"] = corp_info["recognition_dts"]
             bn_cred["expiry_date"] = ""
-            return self.build_credential_dict(bn_credential, bn_schema, bn_version, bn_cred['registration_id'], bn_cred, '', bn_cred['effective_date'])
+            bn_cred_dict = self.build_credential_dict(bn_credential, bn_schema, bn_version, bn_cred['registration_id'], bn_cred, '', bn_cred['effective_date'])
+            return bn_cred_dict
 
         return None
 
@@ -1277,14 +1279,16 @@ class EventProcessor:
 
             # loop based on start/end events
             for i in range(len(effective_events)):
-
                 loop_start_event = effective_events[i]
+
                 #print(use_prev_event['event_date'], loop_start_event['event_timestmp'], use_last_event['event_date'])
                 # for the registration credential, we need to check if this event is in the "overlap range"
                 # note the special case logic for data conversion events:
                 #   - if it is a data conversion event and we don't have any other dates we can apply, skip it
                 #   - unless it is the most recent event, in which case include it anyways
-                if i < (len(effective_events)-1) and is_data_conversion_event(loop_start_event) and loop_start_event['event_timestmp'] == loop_start_event['effective_date']:
+                if (i < (len(effective_events)-1) and
+                    is_data_conversion_event(loop_start_event) and
+                    loop_start_event['event_timestmp'] == loop_start_event['effective_date']):
                     # skip data conversion event
                     pass
                 elif use_prev_event['event_date'] <= loop_start_event['event_timestmp']: # and loop_start_event['event_timestmp'] <= use_last_event['event_date']:
@@ -1301,7 +1305,10 @@ class EventProcessor:
                     if org_name is not None:
                         #LOGGER.info('org_name', org_name)
                         corp_cred['entity_name'] = org_name['corp_nme']
-                        if is_data_conversion_event(org_name['start_event']) and org_name['effective_start_date'] == org_name['start_event']['event_timestmp']:
+                        if (is_data_conversion_event(org_name['start_event']) and 
+                            org_name['effective_start_date'] == org_name['start_event']['event_timestmp'] and
+                            i < (len(effective_events)-1)
+                            ):
                             corp_cred['entity_name_effective'] = ''
                         else:
                             corp_cred['entity_name_effective'] = self.filter_min_date(org_name['effective_start_date'])
@@ -1354,13 +1361,16 @@ class EventProcessor:
                         jurisdiction_effective_date = None
 
                     # make sure we set an effective date for the credential!
-                    corp_cred['effective_date'] = self.credential_effective_date(corp_cred)
-                    if corp_cred['effective_date'] is None or (jurisdiction_effective_date is not None and self.compare_dates(jurisdiction_effective_date, ">", corp_cred['effective_date'], "jurisdiction_effective")):
-                        corp_cred['effective_date'] = jurisdiction_effective_date
-                    if corp_cred['effective_date'] is None or corp_cred['effective_date'] == '':
-                        corp_cred['effective_date'] = loop_start_event['effective_date']
+                    #corp_cred['effective_date'] = self.credential_effective_date(corp_cred)
+                    corp_cred['effective_date'] = loop_start_event['effective_date']
+                    #if corp_cred['effective_date'] is None or corp_cred['effective_date'] == '':
+                    #    corp_cred['effective_date'] = loop_start_event['effective_date']
                     if corp_cred['effective_date'] is None or corp_cred['effective_date'] == '':
                         corp_cred['effective_date'] = corp_cred['registration_date']
+                    #if corp_cred['effective_date'] is None or (jurisdiction_effective_date is not None and self.compare_dates(jurisdiction_effective_date, ">", corp_cred['effective_date'], "jurisdiction_effective")):
+                    if corp_cred['effective_date'] is None or corp_cred['effective_date'] == '':
+                        if jurisdiction_effective_date is not None:
+                            corp_cred['effective_date'] = jurisdiction_effective_date
 
                     # check for NOALU/NOALB/NOALC filing type on the org_name end event
                     if self.is_notice_of_alteration_event(org_name):
@@ -1415,7 +1425,7 @@ class EventProcessor:
                         corp_creds.append(self.build_credential_dict(addr_credential, addr_schema, addr_version, 
                                                                     corp_num + ',' + office['office_typ_cd'], 
                                                                     addr_cred, reason_description, addr_cred['effective_date']))
-        
+
         corp_type = corp_info['corp_typ_cd']
 
         # generate relationship credential(s) 
