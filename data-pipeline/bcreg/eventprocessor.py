@@ -2143,7 +2143,12 @@ class EventProcessor:
         sql_corp_ct_outstanding = 'where process_date is null'
 
         if table == 'credential_log':
+            cutoff_time = datetime.datetime.utcnow().replace(tzinfo=pytz.utc)
+            cutoff_time_str = cutoff_time.strftime("%Y-%m-%dT%H:%M:%S")
             sql_corp_ct_processed = sql_corp_ct_processed + " and process_success != 'A'"
+            sql_corp_ct_processed = sql_corp_ct_processed + """ and (CREDENTIAL_JSON->>'expiry_date' = ''
+                or CREDENTIAL_JSON->>'expiry_date' is null
+                or CREDENTIAL_JSON->>'expiry_date' <= '""" + cutoff_time_str + """')"""
 
         sql = sql_ct_select + ' ' + table + ' ' + (sql_corp_ct_outstanding if unprocessed else sql_corp_ct_processed)
 
