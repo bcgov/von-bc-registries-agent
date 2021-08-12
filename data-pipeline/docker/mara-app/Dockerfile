@@ -71,6 +71,7 @@ WORKDIR $APP_ROOT
 RUN make install-packages
 
 # pin previous version of sqlalchemy_utils work avoid bug in 0.36.8
+RUN pip install sqlalchemy==1.3.23
 RUN pip install sqlalchemy_utils==0.36.7
 
 # Set ownership and permissions

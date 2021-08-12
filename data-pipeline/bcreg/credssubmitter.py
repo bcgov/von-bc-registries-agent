@@ -20,6 +20,7 @@ import psycopg2
 import asyncio
 import multiprocessing.pool as mpool
 import datetime
+import pytz
 import json
 import os
 import sys
@@ -313,6 +314,7 @@ class CredsSubmitter:
                       FROM CREDENTIAL_LOG 
                       WHERE PROCESS_DATE is null
                       AND RECORD_ID > %s
+                      AND (CREDENTIAL_JSON->>'expiry_date' = '' or CREDENTIAL_JSON->>'expiry_date' is null or CREDENTIAL_JSON->>'expiry_date' <= %s)
                       ORDER BY RECORD_ID
                       LIMIT """ + str(CREDS_BATCH_SIZE) + """
                   )
@@ -321,7 +323,9 @@ class CredsSubmitter:
         sql1a = """SELECT count(*) cnt
                    FROM CREDENTIAL_LOG 
                    WHERE PROCESS_DATE is null
-                   AND RECORD_ID > %s"""
+                   AND RECORD_ID > %s
+                   AND (CREDENTIAL_JSON->>'expiry_date' = '' or CREDENTIAL_JSON->>'expiry_date' is null or CREDENTIAL_JSON->>'expiry_date' <= %s)
+                   """
 
         """ Connect to the PostgreSQL database server """
         #conn = None
@@ -329,6 +333,8 @@ class CredsSubmitter:
         # Track the current set of tasks.
         # When gathering tasks at the end we don't want to include these in the list.
         external_tasks = asyncio.Task.all_tasks()
+        cutoff_time = datetime.datetime.utcnow().replace(tzinfo=pytz.utc)
+        cutoff_time_str = cutoff_time.strftime("%Y-%m-%dT%H:%M:%S")
         try:
             params = config(section='event_processor')
             pool = mpool.ThreadPool(MAX_CREDS_REQUESTS)
@@ -343,7 +349,7 @@ class CredsSubmitter:
             # create a cursor
             cred_count = 0
             cur = self.conn.cursor()
-            cur.execute(sql1a, (max_rec_id,))
+            cur.execute(sql1a, (max_rec_id, cutoff_time_str,))
             row = cur.fetchone()
             if row is not None:
                 cred_count = row[0]
@@ -368,7 +374,7 @@ class CredsSubmitter:
             while 0 < cred_count_remaining and processing_time < max_processing_time and failed_count <= CONTROLLER_MAX_ERRORS:
                 # create a cursor
                 cur = self.conn.cursor()
-                cur.execute(sql1, (max_rec_id,))
+                cur.execute(sql1, (max_rec_id, cutoff_time_str,))
                 row = cur.fetchone()
                 credentials = []
                 cred_owner_id = ''
@@ -470,7 +476,7 @@ class CredsSubmitter:
                     raise Excecption("Error Issuer Controller is not available")
 
                 cur = self.conn.cursor()
-                cur.execute(sql1a, (max_rec_id,))
+                cur.execute(sql1a, (max_rec_id, cutoff_time_str,))
                 row = cur.fetchone()
                 if row is not None:
                     cred_count_remaining = row[0]
