@@ -735,6 +735,26 @@ class BCRegistries:
             if cur is not None:
                 cur.close()
 
+    # get the last event date on or before now
+    def get_max_date_before_now(self):
+        cur = None
+        try:
+            # create a cursor
+            cur = self.conn.cursor()
+            cur.execute("""SELECT max(event_timestmp) FROM """ + BC_REGISTRIES_TABLE_PREFIX + """event where event_timestmp <= NOW()""")
+            row = cur.fetchone()
+            cur.close()
+            cur = None
+            return row[0]
+        except (Exception, psycopg2.DatabaseError) as error:
+            LOGGER.error(error)
+            LOGGER.error(traceback.print_exc())
+            log_error("BCRegistries exception reading DB: " + str(error))
+            raise
+        finally:
+            if cur is not None:
+                cur.close()
+
     # get max event number from bc registries event log
     def get_event_id_date(self, event_id):
         cur = None
@@ -835,7 +855,7 @@ class BCRegistries:
         return corps
 
     # return unprocessed corporations, based on an event range
-    def get_unprocessed_corps(self, last_event_id, last_event_dt, max_event_id, max_event_dt):
+    def get_unprocessed_corps(self, last_event_id, last_event_dt):
         sqls = []
 
         # select *all* corps - we will filter in the next stage
@@ -848,7 +868,7 @@ class BCRegistries:
         for sql in sqls:
             cur = None
             try:
-                LOGGER.info("Executing: " + sql + " with" + str(last_event_dt))
+                LOGGER.info("Executing: " + sql + " with " + str(last_event_dt))
                 cur = self.conn.cursor()
                 cur.execute(sql, (last_event_dt,))
                 row = cur.fetchone()
