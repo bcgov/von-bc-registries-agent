@@ -17,6 +17,7 @@ from bcreg.rocketchat_hooks import log_error, log_warning, log_info
 system_type = 'BC_REG'
 
 BC_REGISTRIES_TABLE_PREFIX = 'bc_registries.'
+BC_REGISTRIES_TIMEZONE = 'PST8PDT'
 INMEM_CACHE_TABLE_PREFIX   = ''
 MAX_WHERE_IN = 1000
 
@@ -741,6 +742,7 @@ class BCRegistries:
         try:
             # create a cursor
             cur = self.conn.cursor()
+            cur.execute("""SET TIME ZONE """ + BC_REGISTRIES_TIMEZONE)
             cur.execute("""SELECT max(event_timestmp) FROM """ + BC_REGISTRIES_TABLE_PREFIX + """event where event_timestmp <= NOW()""")
             row = cur.fetchone()
             cur.close()
