@@ -17,6 +17,7 @@ from bcreg.rocketchat_hooks import log_error, log_warning, log_info
 system_type = 'BC_REG'
 
 BC_REGISTRIES_TABLE_PREFIX = 'bc_registries.'
+BC_REGISTRIES_TIMEZONE = 'PST8PDT'
 INMEM_CACHE_TABLE_PREFIX   = ''
 MAX_WHERE_IN = 1000
 
@@ -737,15 +738,12 @@ class BCRegistries:
 
     # get the last event date on or before now
     def get_max_date_before_now(self):
-        cur = None
         try:
-            # create a cursor
-            cur = self.conn.cursor()
-            cur.execute("""SELECT max(event_timestmp) FROM """ + BC_REGISTRIES_TABLE_PREFIX + """event where event_timestmp <= NOW()""")
-            row = cur.fetchone()
-            cur.close()
-            cur = None
-            return row[0]
+            with self.conn.cursor() as cur:
+                cur.execute("""SET TIME ZONE """ + BC_REGISTRIES_TIMEZONE)
+                cur.execute("""SELECT max(event_timestmp) FROM """ + BC_REGISTRIES_TABLE_PREFIX + """event where event_timestmp <= NOW()""")
+                row = cur.fetchone()
+                return row[0]
         except (Exception, psycopg2.DatabaseError) as error:
             LOGGER.error(error)
             LOGGER.error(traceback.print_exc())
