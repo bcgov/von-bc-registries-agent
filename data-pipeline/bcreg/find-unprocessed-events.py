@@ -31,7 +31,7 @@ try:
             LOGGER.info("Get last max event before now")
             max_event_date_before_now = bc_registries.get_max_date_before_now()
             max_event_id_before_now = bc_registries.get_max_event(max_event_date_before_now)
-            LOGGER.info("Last max event brefore now is " + str(max_event_id_before_now) + " " + str(max_event_date_before_now))
+            LOGGER.info("Last max event before now is " + str(max_event_id_before_now) + " " + str(max_event_date_before_now))
 
             # get unprocessed corps (there are about 2700)
             LOGGER.info("Get unprocessed corps")

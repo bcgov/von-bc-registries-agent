@@ -741,7 +741,7 @@ class BCRegistries:
         try:
             with self.conn.cursor() as cur:
                 cur.execute("""SET TIME ZONE """ + BC_REGISTRIES_TIMEZONE)
-                cur.execute("""SELECT max(event_timestmp) FROM """ + BC_REGISTRIES_TABLE_PREFIX + """event where event_timestmp <= NOW()""")
+                cur.execute("""SELECT max(event_timestmp) FROM """ + BC_REGISTRIES_TABLE_PREFIX + """event where event_timestmp <= NOW()::timestamp without time zone""")
                 row = cur.fetchone()
                 return row[0]
         except (Exception, psycopg2.DatabaseError) as error:
