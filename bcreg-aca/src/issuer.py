@@ -304,6 +304,9 @@ class StartupProcessingThread(threading.Thread):
                             "CRED_DEF_" + schema_name + "_" + schema_info["version"]
                         ],
                     }
+                    labels = config.extract_translated(schema_info, "label", schema_name, "en")
+                    if labels:
+                        ctype_config["labels"] = labels
                     ctype_config.update(credential_type)
                     ctype = config.assemble_credential_type_spec(ctype_config, schema_info.get("attributes"))
                     if ctype is not None:
