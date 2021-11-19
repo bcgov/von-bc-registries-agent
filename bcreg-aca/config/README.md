@@ -31,9 +31,16 @@ The following is a simple `schemas.yml` file with a single credential having a s
 ``` YAML
 - name: my-permit.my-organization.ca
   version: '1.0.2'
+  label_en: My Permit
   attributes:
-    - corp_num
-    - legal_name
+    corp_num:
+      label_en: ksjadhkajshd
+      description_en: asjkdhkajshd
+      required: True
+    legal_name:
+      label_en: ksjadhkajshd
+      description_en: asjkdhkajshd
+      required: False
 ```
 Pretty simple!  The following are notes about the example file above and `schemas.yml` files in general.
 
@@ -65,6 +72,8 @@ The following describes the purpose of each element:
 - `TEMPLATE_PATH` is the location of the web form HTML templates referenced in the `routes.yml` file.
 
 ## File: [routes.yml](routes.yml)
+
+*** Note the `routes.yml` file is not currently used ***
 
 The `routes.yml` file configures the web server routes for the API and the web forms template invoked by a user requesting a credential interactively, such as with GreenLight. The agent web forms are unlikely to be used in a production VON issuer/verifier agent instance, but the form is super useful for testing. The configuration drives a dynamic form (based on the claim names and attributes) so that a user can request a credential by filling out and submitting the web form.
 
@@ -186,6 +195,13 @@ issuers:
     - description: Permit
       schema: my-permit.my-organization.ca
       issuer_url: http://localhost:5001/my-organization/my-permit
+
+      details:
+        url_en: $APPLICATION_URL_INCORP
+        highlighted_attributes:
+          - reason_description
+        credential_title: corp_num
+
       depends_on:
         - greenlight_registration
         - pst_number

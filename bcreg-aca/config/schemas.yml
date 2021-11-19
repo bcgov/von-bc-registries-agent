@@ -1,6 +1,6 @@
 - name: registration.registries.ca
   version: '1.0.42'
-  description: TODO
+  label_en: Registration
   attributes:
     registration_id:
       label_en: Registration ID
@@ -71,7 +71,7 @@
       description_en: Date Credential is effective
       required: true
     reason_description:
-      label_en: Credential Issue Reason
+      label_en: Reason
       description_en: Reason for credential issue/update
       required: false
     expiry_date:
@@ -81,7 +81,7 @@
 
 - name: address.registries.ca
   version: '1.0.42'
-  description: TODO
+  label_en: Address
   attributes:
     registration_id:
       label_en: Registration ID
@@ -134,7 +134,7 @@
 
 - name: relationship.registries.ca
   version: '1.0.42'
-  description: TODO
+  label_en: Relationship
   attributes:
     registration_id:
       label_en: Registration ID
@@ -173,13 +173,13 @@
       description_en: Date Credential expires
       required: false
     reason_description:
-      label_en: Credential Issue Reason
+      label_en: Reason
       description_en: Reason for credential issue/update
       required: false
 
 - name: business_number.registries.ca
   version: '1.0.42'
-  description: Business Number credential
+  label_en: Business number
   attributes:
     registration_id:
       label_en: Registration ID
@@ -204,7 +204,7 @@
 
 - name: demo.verified_person.registries.ca
   version: '1.0.42'
-  description: TODO
+  description_en: TODO
   attributes:
     registration_id:
       label_en: Registration ID
@@ -249,7 +249,7 @@
 
 - name: demo.person_relationship.registries.ca
   version: '1.0.42'
-  description: TODO
+  description_en: TODO
   attributes:
     registration_id:
       label_en: Registration ID
@@ -294,7 +294,7 @@
 
 - name: demo.org_relationship.registries.ca
   version: '1.0.42'
-  description: TODO
+  description_en: TODO
   attributes:
     registration_id:
       label_en: Registration ID

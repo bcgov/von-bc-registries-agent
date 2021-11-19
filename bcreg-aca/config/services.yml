@@ -18,10 +18,10 @@ issuers:
     credential_types:
       - schema: registration.registries.ca
         issuer_url: $APPLICATION_URL_INCORP
-        description: TODO
         details:
-          label_en: Registration
           url_en: $APPLICATION_URL_INCORP
+          highlighted_attributes:
+            - reason_description
         credential:
           effective_date:
             input: effective_date
@@ -161,10 +161,10 @@ issuers:
 
       - schema: relationship.registries.ca
         issuer_url: $APPLICATION_URL_DBA
-        description: TODO
         details:
-          label_en: Relationship
           url_en: $APPLICATION_URL_DBA
+          highlighted_attributes:
+            - reason_description
         credential:
           effective_date:
             input: effective_date
@@ -252,9 +252,7 @@ issuers:
 
       - schema: address.registries.ca
         issuer_url: $APPLICATION_URL_ADDRESS
-        description: TODO
         details:
-          label_en: Corporate Address
           url_en: $APPLICATION_URL_ADDRESS
         credential:
           effective_date:
@@ -310,10 +308,9 @@ issuers:
 
       - schema: business_number.registries.ca
         issuer_url: $APPLICATION_URL_ADDRESS
-        description: TODO
         details:
-          label_en: Corporate Business Number
           url_en: $APPLICATION_URL_ADDRESS
+          credential_title: business_number
         credential:
           effective_date:
             input: effective_date
