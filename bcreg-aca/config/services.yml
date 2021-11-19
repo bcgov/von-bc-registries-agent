@@ -22,7 +22,6 @@ issuers:
           url_en: $APPLICATION_URL_INCORP
           highlighted_attributes:
             - reason_description
-          credential_title: Registration
         credential:
           effective_date:
             input: effective_date
@@ -166,7 +165,6 @@ issuers:
           url_en: $APPLICATION_URL_DBA
           highlighted_attributes:
             - reason_description
-          credential_title: Business Relationship
         credential:
           effective_date:
             input: effective_date
@@ -256,7 +254,6 @@ issuers:
         issuer_url: $APPLICATION_URL_ADDRESS
         details:
           url_en: $APPLICATION_URL_ADDRESS
-          credential_title: Address
         credential:
           effective_date:
             input: effective_date
@@ -313,9 +310,7 @@ issuers:
         issuer_url: $APPLICATION_URL_ADDRESS
         details:
           url_en: $APPLICATION_URL_ADDRESS
-          highlighted_attributes:
-            - business_number
-          credential_title: Business Number
+          credential_title: business_number
         credential:
           effective_date:
             input: effective_date

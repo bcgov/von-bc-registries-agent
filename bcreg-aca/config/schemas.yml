@@ -1,7 +1,6 @@
 - name: registration.registries.ca
   version: '1.0.42'
-  label_en: Registration Description
-  label_fr: Le Registration Description
+  label_en: Registration
   attributes:
     registration_id:
       label_en: Registration ID
@@ -82,8 +81,7 @@
 
 - name: address.registries.ca
   version: '1.0.42'
-  label_en: TODO
-  label_fr: Le TODO
+  label_en: Address
   attributes:
     registration_id:
       label_en: Registration ID
@@ -137,7 +135,6 @@
 - name: relationship.registries.ca
   version: '1.0.42'
   label_en: Relationship
-  label_fr: Le Relationship
   attributes:
     registration_id:
       label_en: Registration ID
@@ -182,8 +179,7 @@
 
 - name: business_number.registries.ca
   version: '1.0.42'
-  label_en: Business Number
-  label_fr: Le Business Number
+  label_en: Business number
   attributes:
     registration_id:
       label_en: Registration ID
