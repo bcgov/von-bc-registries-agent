@@ -200,7 +200,7 @@ issuers:
         url_en: $APPLICATION_URL_INCORP
         highlighted_attributes:
           - reason_description
-        credential_title: Registration
+        credential_title: corp_num
 
       depends_on:
         - greenlight_registration
