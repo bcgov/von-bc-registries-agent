@@ -3,6 +3,9 @@ class Script {
    * @params {object} request
    */
   process_incoming_request({ request }) {
+    var find = '\n';
+    var regex = new RegExp(find, 'g');
+
     let data = request.content;
     let attachmentColor = `#36A64F`;
     let statusMsg = `Status`;
@@ -40,7 +43,7 @@ class Script {
         text: statusMsg,
         attachments: [
           {
-            text: `${data.message}`,
+            text: `${data.message.replace(regex, '  \n')}`,
             color: attachmentColor
           }
         ]
