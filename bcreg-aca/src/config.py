@@ -334,9 +334,6 @@ def assemble_credential_type_spec(config: dict, schema_attrs: dict) -> dict:
         if has_label:
             cred_topic["labels"] = extract_translated(config_topic, "label", None, deflang)
         ctype["topic"].append(cred_topic)
-    # ctype["labels"] = {}
-    # for k in labels:
-    #     ctype["labels"][k] = labels[k]
     ctype["endpoints"] = {}
     for k in urls:
         ctype["endpoints"][k] = urls[k]
