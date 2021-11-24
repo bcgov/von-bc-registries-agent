@@ -34,12 +34,12 @@ The following is a simple `schemas.yml` file with a single credential having a s
   label_en: My Permit
   attributes:
     corp_num:
-      label_en: ksjadhkajshd
-      description_en: asjkdhkajshd
+      label_en: Corp Num
+      description_en: Corporation number
       required: True
     legal_name:
-      label_en: ksjadhkajshd
-      description_en: asjkdhkajshd
+      label_en: Corp Name
+      description_en: Corporation legal name
       required: False
 ```
 Pretty simple!  The following are notes about the example file above and `schemas.yml` files in general.
