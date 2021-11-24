@@ -18,7 +18,7 @@ def bc_reg_root_pipeline():
     init_pipeline.add(db_init_pipeline())
     init_pipeline.add(bc_reg_pipeline_initial_load())
     init_pipeline.add(bc_reg_pipeline_post_credentials())
-    init_pipeline.add(bc_reg_populate_audit_table())
+    # init_pipeline.add(bc_reg_populate_audit_table())
     init_pipeline.add(bc_reg_pipeline_bn_credential_load())
 
     parent_pipeline.add(init_pipeline)
@@ -57,10 +57,10 @@ def bc_reg_pipeline():
                           commands=[ExecutePython('./bcreg/submit-creds.py')]))
     pipeline1.add(sub_pipeline1_3, ['load_and_process_bc_reg_data'])
 
-    sub_pipeline1_4 = Pipeline(id='populate_evp_audit_table', description='Populate Event Processor Audit Table')
-    sub_pipeline1_4.add(Task(id='populate_audit_table', description='Populate Audit Table',
-                          commands=[ExecutePython('./bcreg/populate_audit_table.py')]))
-    pipeline1.add(sub_pipeline1_4, ['submit_bc_reg_credentials'])
+    # sub_pipeline1_4 = Pipeline(id='populate_evp_audit_table', description='Populate Event Processor Audit Table')
+    # sub_pipeline1_4.add(Task(id='populate_audit_table', description='Populate Audit Table',
+    #                       commands=[ExecutePython('./bcreg/populate_audit_table.py')]))
+    # pipeline1.add(sub_pipeline1_4, ['submit_bc_reg_credentials'])
 
     return pipeline1
 
@@ -136,17 +136,14 @@ def bc_reg_pipeline_post_credentials():
 
     return pipeline1
 
-def bc_reg_populate_audit_table():
-    import bcreg
-
-    pipeline = Pipeline(
-        id='bc_reg_populate_audit_table',
-        description='Populate Audit Table.')
-
-    pipeline.add(Task(id='populate_audit_table', description='Populate audit table.',
-                        commands=[ExecutePython('./bcreg/populate_audit_table.py')]))
-
-    return pipeline
+# def bc_reg_populate_audit_table():
+#     import bcreg
+#     pipeline = Pipeline(
+#         id='bc_reg_populate_audit_table',
+#         description='Populate Audit Table.')
+#     pipeline.add(Task(id='populate_audit_table', description='Populate audit table.',
+#                         commands=[ExecutePython('./bcreg/populate_audit_table.py')]))
+#     return pipeline
 
 def bc_reg_pipeline_status():
     import bcreg
