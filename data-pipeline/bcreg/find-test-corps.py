@@ -393,23 +393,24 @@ specific_corps_2 = [
                     '0837735',
                     '1016676',
                     '1052899',
+                    'A0010928',
 ]
 
 
 with BCRegistries() as bc_registries:
     # get 5 corps for each type in scope (in addition to the above list)
     for corp_type in CORP_TYPES_IN_SCOPE:
-        print(corp_type)
-        sql = """
-                select corp_num
-                from bc_registries.corporation
-                where corp_typ_cd = '""" + corp_type + """'
-                order by corp_num desc
-               """
-        corps = bc_registries.get_bcreg_sql("corps_by_type", sql, cache=False)
-        n_corps = min(len(corps), 5)
-        for i in range(n_corps):
-            specific_corps.append(corps[i]['corp_num'])
+       print(corp_type)
+       sql = """
+               select corp_num
+               from bc_registries.corporation
+               where corp_typ_cd = '""" + corp_type + """'
+               order by corp_num desc
+              """
+       corps = bc_registries.get_bcreg_sql("corps_by_type", sql, cache=False)
+       n_corps = min(len(corps), 5)
+       for i in range(n_corps):
+           specific_corps.append(corps[i]['corp_num'])
 
     with EventProcessor() as event_processor:
         print("Get last processed event")
@@ -424,8 +425,8 @@ with BCRegistries() as bc_registries:
         # get specific test corps (there are about 6)
         print("Get specific corps")
         corps = bc_registries.get_specific_corps(specific_corps)
-        #corps_2 = bc_registries.get_specific_corps(specific_corps_2)
-        #corps.extend(corps_2)
+        corps_2 = bc_registries.get_specific_corps(specific_corps_2)
+        corps.extend(corps_2)
 
         print("Find unprocessed events for each corp")
         last_event_dt = bc_registries.get_event_effective_date(prev_event_id)
