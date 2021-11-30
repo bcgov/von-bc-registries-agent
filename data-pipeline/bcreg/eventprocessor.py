@@ -1216,15 +1216,16 @@ class EventProcessor:
 
         return (vp_reg_id, vp_fn, vp_ln, vp_email, vp_phone)
 
-    def generate_bn_credential(self, system_typ_cd, corp_num, corp_info):
+    def generate_bn_credential(self, system_typ_cd, corp_num, corp_info, effective_event=None):
         """Generate a BN credential."""
         # generate a BN credential if the corp has a BN
         if "bn_9" in corp_info and corp_info["bn_9"] and 0 < len(corp_info["bn_9"]):
-            #print(">>> generate a bn credential for", corp_num, corp_info["bn_9"])
+            # print(">>> generate a bn credential for", corp_num, corp_info)
+            effective_date = corp_info["recognition_dts"] if corp_info["recognition_dts"] else effective_event['effective_date'] if effective_event else None
             bn_cred = {}
             bn_cred["registration_id"] = self.corp_num_with_prefix(corp_info['corp_typ_cd'], corp_info['corp_num'])
             bn_cred["business_number"] = corp_info["bn_9"].strip()
-            bn_cred["effective_date"] = corp_info["recognition_dts"]
+            bn_cred["effective_date"] = effective_date
             bn_cred["expiry_date"] = ""
             bn_cred_dict = self.build_credential_dict(bn_credential, bn_schema, bn_version, bn_cred['registration_id'], bn_cred, '', bn_cred['effective_date'])
             return bn_cred_dict
@@ -1483,7 +1484,8 @@ class EventProcessor:
                     corp_creds.append(self.build_credential_dict(dba_credential, dba_schema, dba_version, dba_cred['registration_id'], dba_cred, reason_description, dba_cred['effective_date']))
 
         # generate a BN credential if the corp has a BN
-        bn_cred = self.generate_bn_credential(system_typ_cd, corp_num, corp_info)
+        effective_event = effective_events[0] if 0 < len(effective_events) else None
+        bn_cred = self.generate_bn_credential(system_typ_cd, corp_num, corp_info, effective_event=effective_event)
         if bn_cred:
             corp_creds.append(bn_cred)
 
