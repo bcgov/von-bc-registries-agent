@@ -1,4 +1,4 @@
-FROM ubuntu:16.04
+FROM ubuntu:18.04
 
 # mara-base section
 ARG python_version=3.8
@@ -11,7 +11,6 @@ RUN apt-get update -y \
                 coreutils \
                 graphviz \
                 software-properties-common \
-                python-software-properties \
                 postgresql-client
 RUN add-apt-repository ppa:deadsnakes/ppa
 RUN apt-get update -y \
