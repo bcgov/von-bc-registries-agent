@@ -11,7 +11,8 @@ RUN apt-get update -y \
                 coreutils \
                 graphviz \
                 software-properties-common \
-                postgresql-client
+                postgresql-client \
+                rsync
 RUN add-apt-repository ppa:deadsnakes/ppa
 RUN apt-get update -y \
     && apt-get install -y \
