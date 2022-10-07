@@ -7,8 +7,8 @@ import os
 import logging
 
 from bcreg.config import config
-from bcreg.bcregistries import BCRegistries, system_type
-from bcreg.eventprocessor import EventProcessor, CORP_TYPES_IN_SCOPE
+from bcreg.bcreg_lear import BCReg_Lear, lear_system_type
+from bcreg.eventprocessor import EventProcessor, LEAR_CORP_TYPES_IN_SCOPE
 from bcreg.rocketchat_hooks import log_error, log_warning, log_info
 
 LOG_LEVEL = os.environ.get('LOG_LEVEL', 'WARNING').upper()
@@ -21,14 +21,14 @@ try:
         corp_types = os.environ.get('CORP_TYPES_SCOPE', '')
 
         if not corp_types or 0 == len(corp_types):
-            event_processor.process_corp_event_queue_and_generate_creds(system_type, use_cache=True)
+            event_processor.process_corp_event_queue_and_generate_creds(lear_system_type, use_cache=True)
         else:
             corp_types = corp_types.split(",")
             corp_types_scope = {}
             for corp_type in corp_types:
                 if corp_type in CORP_TYPES_IN_SCOPE:
                     corp_types_scope[corp_type] = CORP_TYPES_IN_SCOPE[corp_type]
-            event_processor.process_corp_event_queue_and_generate_creds(system_type, use_cache=True, corp_types=corp_types_scope)                    
+            event_processor.process_corp_event_queue_and_generate_creds(lear_system_type, use_cache=True, corp_types=corp_types_scope)                    
 except Exception as e:
     print("Exception", e)
     log_error("process_corps_generate_creds processing exception: " + str(e))

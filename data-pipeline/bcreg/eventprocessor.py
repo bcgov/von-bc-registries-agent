@@ -13,7 +13,8 @@ import os
 import csv
 
 from bcreg.config import config
-from bcreg.bcregistries import BCRegistries, CustomJsonEncoder, event_dict, is_data_conversion_event
+from bcreg.bcregistries import BCRegistries, CustomJsonEncoder, event_dict, is_data_conversion_event, system_type
+from bcreg.bcreg_lear import BCReg_Lear, lear_system_type
 from bcreg.rocketchat_hooks import log_error, log_warning, log_info
 
 
@@ -115,6 +116,12 @@ CORP_TYPES_IN_SCOPE = {
     "XP":  "XPRO LIM PARTNR",
     "XS":  "XPRO SOCIETY",
 }
+
+LEAR_CORP_TYPES_IN_SCOPE = {
+    "GP":  "PARTNERSHIP",
+    "SP":  "SOLE PROP",
+}
+
 
 class DateTimeEncoder(json.JSONEncoder):
     def default(self, o):
@@ -522,14 +529,14 @@ class EventProcessor:
 
 
     # record the last event processed
-    def insert_last_event(self, system_type, event_id, event_date):
+    def insert_last_event(self, system_type_cd, event_id, event_date):
         """ insert a new event into the event table """
         sql = """INSERT INTO LAST_EVENT (SYSTEM_TYPE_CD, EVENT_ID, EVENT_DATE, ENTRY_DATE)
                  VALUES (%s, %s, %s, %s) RETURNING RECORD_ID;"""
         cur = None
         try:
             cur = self.conn.cursor()
-            cur.execute(sql, (system_type, event_id, event_date, datetime.datetime.now(),))
+            cur.execute(sql, (system_type_cd, event_id, event_date, datetime.datetime.now(),))
             _record_id = cur.fetchone()[0]
             self.conn.commit()
             cur.close()
@@ -544,11 +551,11 @@ class EventProcessor:
                 cur.close()
 
     # get the id of the last event processed (at a specific date)
-    def get_last_processed_event(self, event_date, system_type):
+    def get_last_processed_event(self, event_date, system_type_cd):
         cur = None
         try:
             cur = self.conn.cursor()
-            cur.execute("""SELECT max(event_id) FROM LAST_EVENT where EVENT_DATE = %s and SYSTEM_TYPE_CD = %s""", (event_date, system_type,))
+            cur.execute("""SELECT max(event_id) FROM LAST_EVENT where EVENT_DATE = %s and SYSTEM_TYPE_CD = %s""", (event_date, system_type_cd,))
             row = cur.fetchone()
             cur.close()
             cur = None
@@ -566,11 +573,11 @@ class EventProcessor:
                 cur.close()
 
     # get the last event processed timestamp
-    def get_last_processed_event_date(self, system_type):
+    def get_last_processed_event_date(self, system_type_cd):
         cur = None
         try:
             cur = self.conn.cursor()
-            cur.execute("""SELECT max(event_date) FROM LAST_EVENT where SYSTEM_TYPE_CD = %s""", (system_type,))
+            cur.execute("""SELECT max(event_date) FROM LAST_EVENT where SYSTEM_TYPE_CD = %s""", (system_type_cd,))
             row = cur.fetchone()
             cur.close()
             cur = None
@@ -630,14 +637,14 @@ class EventProcessor:
         return corps
 
     # update a group of corps into the "unprocessed corp" queue
-    def update_corp_audit_event_queue(self, system_type, corps):
+    def update_corp_audit_event_queue(self, system_type_cd, corps):
         sql = """INSERT INTO EVENT_BY_CORP_FILING (SYSTEM_TYPE_CD, PREV_EVENT_ID, PREV_EVENT_DATE, LAST_EVENT_ID, LAST_EVENT_DATE, CORP_NUM, ENTRY_DATE)
                  VALUES(%s, %s, %s, %s, %s, %s, %s) RETURNING RECORD_ID;"""
         cur = None
         try:
             for i,corp in enumerate(corps): 
                 cur = self.conn.cursor()
-                cur.execute(sql, (system_type, corp['prev_event_id'], corp['prev_event_date'], corp['last_event_id'], corp['last_event_date'], corp['corp_num'], datetime.datetime.now(),))
+                cur.execute(sql, (system_type_cd, corp['prev_event_id'], corp['prev_event_date'], corp['last_event_id'], corp['last_event_date'], corp['corp_num'], datetime.datetime.now(),))
                 _record_id = cur.fetchone()[0]
                 cur.close()
                 cur = None
@@ -653,14 +660,14 @@ class EventProcessor:
                 cur.close()
 
     # insert a record into the "unprocessed corporations" table
-    def insert_corporation(self, system_type, prev_event_id, prev_event_dt, last_event_id, last_event_dt, corp_num):
+    def insert_corporation(self, system_type_cd, prev_event_id, prev_event_dt, last_event_id, last_event_dt, corp_num):
         """ insert a new corps into the corps table """
         sql = """INSERT INTO EVENT_BY_CORP_FILING (SYSTEM_TYPE_CD, PREV_EVENT_ID, PREV_EVENT_DATE, LAST_EVENT_ID, LAST_EVENT_DATE, CORP_NUM, ENTRY_DATE)
                  VALUES(%s, %s, %s, %s, %s, %s, %s) RETURNING RECORD_ID;"""
         cur = None
         try:
             cur = self.conn.cursor()
-            cur.execute(sql, (system_type, prev_event_id, prev_event_dt, last_event_id, last_event_dt, 
+            cur.execute(sql, (system_type_cd, prev_event_id, prev_event_dt, last_event_id, last_event_dt, 
                                 corp_num, datetime.datetime.now(),))
             _record_id = cur.fetchone()[0]
             self.conn.commit()
@@ -697,7 +704,7 @@ class EventProcessor:
                 cur.close()
 
     # update a group of corps into the "unprocessed corp" queue
-    def update_corp_event_queue(self, system_type, corps, max_event_id, max_event_date):
+    def update_corp_event_queue(self, system_type_cd, corps, max_event_id, max_event_date):
         sql = """INSERT INTO EVENT_BY_CORP_FILING (SYSTEM_TYPE_CD, PREV_EVENT_ID, PREV_EVENT_DATE, LAST_EVENT_ID, LAST_EVENT_DATE, CORP_NUM, ENTRY_DATE)
                  VALUES(%s, %s, %s, %s, %s, %s, %s) RETURNING RECORD_ID;"""
         sql2 = """INSERT INTO LAST_EVENT (SYSTEM_TYPE_CD, EVENT_ID, EVENT_DATE, ENTRY_DATE)
@@ -706,12 +713,12 @@ class EventProcessor:
         try:
             for i,corp in enumerate(corps): 
                 cur = self.conn.cursor()
-                cur.execute(sql, (system_type, corp['PREV_EVENT']['event_id'], corp['PREV_EVENT']['event_date'], corp['LAST_EVENT']['event_id'], corp['LAST_EVENT']['event_date'], corp['CORP_NUM'], datetime.datetime.now(),))
+                cur.execute(sql, (system_type_cd, corp['PREV_EVENT']['event_id'], corp['PREV_EVENT']['event_date'], corp['LAST_EVENT']['event_id'], corp['LAST_EVENT']['event_date'], corp['CORP_NUM'], datetime.datetime.now(),))
                 _record_id = cur.fetchone()[0]
                 cur.close()
                 cur = None
             cur = self.conn.cursor()
-            cur.execute(sql2, (system_type, max_event_id, max_event_date, datetime.datetime.now(),))
+            cur.execute(sql2, (system_type_cd, max_event_id, max_event_date, datetime.datetime.now(),))
             self.conn.commit()
             cur = None
         except (Exception, psycopg2.DatabaseError) as error:
@@ -724,14 +731,14 @@ class EventProcessor:
                 cur.close()
 
     # insert data for one corp into the history table
-    def insert_corp_history(self, system_type, prev_event_json, last_event_json, corp_num, corp_state, corp_json):
+    def insert_corp_history(self, system_type_cd, prev_event_json, last_event_json, corp_num, corp_state, corp_json):
         """ insert a new corps into the corps table """
         sql = """INSERT INTO CORP_HISTORY_LOG (SYSTEM_TYPE_CD, PREV_EVENT, LAST_EVENT, CORP_NUM, CORP_STATE, CORP_JSON, ENTRY_DATE)
                  VALUES(%s, %s, %s, %s, %s, %s, %s) RETURNING RECORD_ID;"""
         cur = None
         try:
             cur = self.conn.cursor()
-            cur.execute(sql, (system_type, prev_event_json, last_event_json, corp_num, corp_state, corp_json, datetime.datetime.now(),))
+            cur.execute(sql, (system_type_cd, prev_event_json, last_event_json, corp_num, corp_state, corp_json, datetime.datetime.now(),))
             _record_id = cur.fetchone()[0]
             self.conn.commit()
             cur.close()
@@ -908,11 +915,11 @@ class EventProcessor:
         return addr_cred
 
     # store credentials for the provided corp
-    def store_credentials(self, cur, system_typ_cd, prev_event, last_event, corp_num, corp_state, corp_info, corp_creds):
+    def store_credentials(self, cur, system_type_cd, prev_event, last_event, corp_num, corp_state, corp_info, corp_creds):
         cred_count = 0
         for corp_cred in corp_creds:
             if corp_cred['credential']['effective_date'] is not None and corp_cred['credential']['effective_date'] != '':
-                cred_count = cred_count + self.insert_json_credential(cur, system_typ_cd, prev_event, last_event, corp_num, corp_state, 
+                cred_count = cred_count + self.insert_json_credential(cur, system_type_cd, prev_event, last_event, corp_num, corp_state, 
                                                                 corp_cred['cred_type'], corp_cred['id'], corp_cred['schema'], corp_cred['version'], 
                                                                 corp_cred['credential'], corp_cred['credential_reason'])
             else:
@@ -1216,7 +1223,7 @@ class EventProcessor:
 
         return (vp_reg_id, vp_fn, vp_ln, vp_email, vp_phone)
 
-    def generate_bn_credential(self, system_typ_cd, corp_num, corp_info, effective_event=None):
+    def generate_bn_credential(self, system_type_cd, corp_num, corp_info, effective_event=None):
         """Generate a BN credential."""
         # generate a BN credential if the corp has a BN
         if "bn_9" in corp_info and corp_info["bn_9"] and 0 < len(corp_info["bn_9"]):
@@ -1232,11 +1239,11 @@ class EventProcessor:
 
         return None
 
-    def generate_credentials_of_type(self, system_typ_cd, credential_type_cd, corp_num, corp_info):
+    def generate_credentials_of_type(self, system_type_cd, credential_type_cd, corp_num, corp_info):
         """Generate credentials only of the specified type."""
         corp_creds = []
         if credential_type_cd == bn_credential:
-            bn_cred = self.generate_bn_credential(system_typ_cd, corp_num, corp_info)
+            bn_cred = self.generate_bn_credential(system_type_cd, corp_num, corp_info)
             if bn_cred:
                 corp_creds.append(bn_cred)
         else:
@@ -1245,7 +1252,7 @@ class EventProcessor:
         return corp_creds
 
     # generate credentials for the provided corp
-    def generate_credentials(self, system_typ_cd, prev_event, last_event, corp_num, corp_info):
+    def generate_credentials_colin(self, system_type_cd, prev_event, last_event, corp_num, corp_info):
         """
         Generate credentials for the given corporation based on the supplied event range.
         prev_event and last_event represent the start and end event range we are processing.
@@ -1485,7 +1492,7 @@ class EventProcessor:
 
         # generate a BN credential if the corp has a BN
         effective_event = effective_events[0] if 0 < len(effective_events) else None
-        bn_cred = self.generate_bn_credential(system_typ_cd, corp_num, corp_info, effective_event=effective_event)
+        bn_cred = self.generate_bn_credential(system_type_cd, corp_num, corp_info, effective_event=effective_event)
         if bn_cred:
             corp_creds.append(bn_cred)
 
@@ -1543,8 +1550,41 @@ class EventProcessor:
 
         return corp_creds
 
+    # generate credentials for the provided corp
+    def generate_credentials_lear(self, system_type_cd, prev_event, last_event, corp_num, corp_info):
+        """
+        Generate credentials for the given corporation based on the supplied event range.
+        prev_event and last_event represent the start and end event range we are processing.
+        (for the initial load, prev_event is the genesis date of Jan 1, 0000)
+        The event "date" is based on some complicated logic and can come from the event or the related filing.
+        """
+        raise Exception(f"Method not yet implemented for system type: {system_type_cd}")
+
+    # generate credentials for the provided corp
+    def generate_credentials(self, system_type_cd, prev_event, last_event, corp_num, corp_info):
+        """
+        Generate credentials for the given corporation based on the supplied event range.
+        prev_event and last_event represent the start and end event range we are processing.
+        (for the initial load, prev_event is the genesis date of Jan 1, 0000)
+        The event "date" is based on some complicated logic and can come from the event or the related filing.
+        """
+        if system_type_cd == system_type:
+            return self.generate_credentials_colin(system_type_cd, prev_event, last_event, corp_num, corp_info)
+        elif system_type_cd == lear_system_type:
+            return self.generate_credentials_lear(system_type_cd, prev_event, last_event, corp_num, corp_info)
+        else:
+            raise Exception(f"Unknown system type: {system_type_cd}")
+
+    def bc_reg_processor(self, system_type_cd, use_cache=False):
+        if system_type_cd == system_type:
+            return BCRegistries(use_cache)
+        elif system_type_cd == lear_system_type:
+            return BCReg_Lear(use_cache)
+        else:
+            raise Exception(f"Unknown system type: {system_type_cd}")
+
     # process corps that have been queued - update data from bc_registries
-    def process_corp_event_queue_internal(self, load_regs=True, generate_creds=False, use_cache=False, corp_types=CORP_TYPES_IN_SCOPE):
+    def process_corp_event_queue_internal(self, system_type_cd, load_regs=True, generate_creds=False, use_cache=False, corp_types=CORP_TYPES_IN_SCOPE):
         """
         The main process for loading BC Reg data and producing credentials.
         This process takes unprocessed events from the EVENT_BY_CORP_FILING table, and for each corp_num:
@@ -1563,7 +1603,8 @@ class EventProcessor:
                          CORP_NUM, 
                          ENTRY_DATE
                   FROM EVENT_BY_CORP_FILING
-                  WHERE RECORD_ID IN
+                  WHERE SYSTEM_TYPE_CD = %s
+                  AND RECORD_ID IN
                   (
                     SELECT RECORD_ID
                     FROM EVENT_BY_CORP_FILING 
@@ -1580,8 +1621,8 @@ class EventProcessor:
                           CORP_NUM, 
                           CORP_JSON, 
                           ENTRY_DATE
-                   FROM CORP_HISTORY_LOG
-                   WHERE RECORD_ID IN
+                  WHERE SYSTEM_TYPE_CD = %s
+                  AND RECORD_ID IN
                    (
                      SELECT RECORD_ID
                      FROM CORP_HISTORY_LOG 
@@ -1623,7 +1664,8 @@ class EventProcessor:
                     # we are loading data from BC Registries based on the corp event queue
                     # sql1 = find unprocessed events from our local table EVENT_BY_CORP_FILING
                     cur = self.conn.cursor()
-                    cur.execute(sql1.replace("!BS!", str(max_batch_size)))
+                    sql1e = sql1.replace("!BS!", str(max_batch_size))
+                    cur.execute(sql1e, (system_type_cd,))
                     row = cur.fetchone()
                     while row is not None:
                         # include the date(s) for the start and end events
@@ -1646,7 +1688,8 @@ class EventProcessor:
                     # not loading from BC Reg, just processing data already loaded in corp_history
                     # sql1a = load staged corp data from local table CORP_HISTORY_LOG
                     cur = self.conn.cursor()
-                    cur.execute(sql1a.replace("!BS!", str(max_batch_size)))
+                    sql1ae = sql1a.replace("!BS!", str(max_batch_size))
+                    cur.execute(sql1ae, (system_type_cd,))
                     row = cur.fetchone()
                     while row is not None:
                         # includes the date(s) for the start and end events
@@ -1674,7 +1717,8 @@ class EventProcessor:
                 saved_creds = 0
                 force_continue = False
                 # now generate credentials from the corporate data
-                with BCRegistries(use_cache) as bc_registries:
+                # with BCRegistries(use_cache) as bc_registries:
+                with self.bc_reg_processor(system_type_cd, use_cache=use_cache) as bc_registries:
                     if use_cache:
                         try:
                             # cache BC Reg data into local in-memory sqlite database (for performance)
@@ -1710,9 +1754,10 @@ class EventProcessor:
                                 corp_info = bc_registries.get_bc_reg_corp_info(corp['CORP_NUM'])
 
                                 if corp_info['corp_typ_cd'] in corp_types:
-                                    # get event summary
-                                    effective_recs = self.corp_unique_record_list(corp['CORP_NUM'], corp_info)
-                                    corp_info['reg_summary'] = effective_recs
+                                    if system_type_cd == system_type:
+                                        # get event summary
+                                        effective_recs = self.corp_unique_record_list(corp['CORP_NUM'], corp_info)
+                                        corp_info['reg_summary'] = effective_recs
 
                                     corp_info_json = bc_registries.to_json(corp_info)
                                     corp_in_scope = True
@@ -1873,21 +1918,21 @@ class EventProcessor:
 
 
     # process corps that have been queued - update data from bc_registries
-    def process_corp_event_queue(self, use_cache=False):
+    def process_corp_event_queue(self, system_type_cd, use_cache=False):
         """
         Reads data from BC Reg and loads into local database (CORP_HISTORY_LOG).
         """
-        self.process_corp_event_queue_internal(True, False, use_cache)
+        self.process_corp_event_queue_internal(system_type_cd, load_regs=True, generate_creds=False, use_cache=use_cache)
 
     # generate creds based on pre-processed data (no connect to bc reg)
-    def process_corp_generate_creds(self):
+    def process_corp_generate_creds(self, system_type_cd):
         """
         Reads staged data (CORP_HISTORY_LOG) and produces credentials (CREDENTIAL_LOG).
         """
-        self.process_corp_event_queue_internal(False, True)
+        self.process_corp_event_queue_internal(system_type_cd, load_regs=False, generate_creds=True)
 
     # process corps that have been queued - update data from bc_registries - and generate credentials
-    def process_corp_event_queue_and_generate_creds(self, use_cache=False, corp_types=CORP_TYPES_IN_SCOPE):
+    def process_corp_event_queue_and_generate_creds(self, system_type_cd, use_cache=False, corp_types=CORP_TYPES_IN_SCOPE):
         """
         The main process for loading BC Reg data and producing credentials.
         This process takes unprocessed events from the EVENT_BY_CORP_FILING table, and for each corp_num:
@@ -1895,9 +1940,9 @@ class EventProcessor:
            - produces credentials (stores in CREDENTIAL_LOG)
         Credentials are submitted to TOB via the agent using a separate process.
         """
-        self.process_corp_event_queue_internal(True, True, use_cache)
+        self.process_corp_event_queue_internal(system_type_cd, load_regs=True, generate_creds=True, use_cache=use_cache)
 
-    def generate_credential_type(self, system_type, credential_typ_cd):
+    def generate_credential_type(self, system_type_cd, credential_typ_cd):
         """Generate credentials of the requested type for all queued orgs."""
         sql1 = """SELECT repo.record_id, repo.system_type_cd, repo.corp_history_id, repo.credential_type_cd,
                          repo.corp_num, hist.corp_state, hist.corp_json, hist.prev_event, hist.last_event
@@ -1910,7 +1955,7 @@ class EventProcessor:
                   SET PROCESS_DATE = %s, PROCESS_SUCCESS = %s, PROCESS_MSG = %s
                   WHERE RECORD_ID = %s"""
 
-        print(datetime.datetime.now(), "Generating credentials for", system_type, credential_typ_cd, "...")
+        print(datetime.datetime.now(), "Generating credentials for", system_type_cd, credential_typ_cd, "...")
         cur = None
         i = 0
         while True:
@@ -1933,7 +1978,7 @@ class EventProcessor:
                 if len(corps) == 0:
                     return
 
-                print(datetime.datetime.now(), "Processing " + str(len(corps)) + " orgs for credential " + system_type + " " + credential_typ_cd)
+                print(datetime.datetime.now(), "Processing " + str(len(corps)) + " orgs for credential " + system_type_cd + " " + credential_typ_cd)
                 saved_creds = 0
                 for corp in corps:
                     corp_creds = []
@@ -1962,7 +2007,7 @@ class EventProcessor:
                     if process_success:
                         flag = 'Y'
                         if 0 < len(corp_creds):
-                            res = "Credential generatred"
+                            res = "Credential generated"
                         else:
                             res = "No credential generated"
                     else:
@@ -1994,7 +2039,7 @@ class EventProcessor:
                 if cur is not None:
                     cur.close()
 
-    def queue_reprocess_credential_type(self, system_type, credential_typ_cd):
+    def queue_reprocess_credential_type(self, system_type_cd, credential_typ_cd):
         """Queue up all existing orgs to process a credential of a specific type."""
         sql1 = """SELECT RECORD_ID, 
                          SYSTEM_TYPE_CD, 
@@ -2030,7 +2075,7 @@ class EventProcessor:
             print(datetime.datetime.now(), "Checking for existing credentials ...")
             existing_corps = {}
             cur = self.conn.cursor()
-            cur.execute(sql1b, (system_type, credential_typ_cd,))
+            cur.execute(sql1b, (system_type_cd, credential_typ_cd,))
             for row in cur:
                 corp = {}
                 corp['record_id'] = row[0]
@@ -2044,7 +2089,7 @@ class EventProcessor:
             print(datetime.datetime.now(), "Checking for orgs requiring re-processing ...")
             corps = []
             cur = self.conn.cursor()
-            cur.execute(sql1, (system_type,))
+            cur.execute(sql1, (system_type_cd,))
             for row in cur:
                 corp = {}
                 corp['record_id'] = row[0]
@@ -2060,7 +2105,7 @@ class EventProcessor:
             print(datetime.datetime.now(), "Checking for previously re-processed orgs ...")
             repro_corps = {}
             cur = self.conn.cursor()
-            cur.execute(sql1a, (system_type, credential_typ_cd,))
+            cur.execute(sql1a, (system_type_cd, credential_typ_cd,))
             for row in cur:
                 corp = {}
                 corp['record_id'] = row[0]
@@ -2098,14 +2143,14 @@ class EventProcessor:
             cur = None
 
     # insert a transform into the transform table
-    def insert_credential_transform(self, system_type, credential_typ_cd, mapping_transform, schema_name, schema_version):
+    def insert_credential_transform(self, system_type_cd, credential_typ_cd, mapping_transform, schema_name, schema_version):
         """ insert a new event into the event table """
         sql = """INSERT INTO CREDENTIAL_TRANSFORM (SYSTEM_TYPE_CD, CREDENTIAL_TYPE_CD, MAPPING_TRANSFORM, SCHEMA_NAME, SCHEMA_VERSION)
                  VALUES(%s, %s, %s, %s, %s) RETURNING RECORD_ID;"""
         cur = None
         try:
             cur = self.conn.cursor()
-            cur.execute(sql, (system_type, credential_typ_cd, mapping_transform, schema_name, schema_version,))
+            cur.execute(sql, (system_type_cd, credential_typ_cd, mapping_transform, schema_name, schema_version,))
             _record_id = cur.fetchone()[0]
             self.conn.commit()
             cur.close()
