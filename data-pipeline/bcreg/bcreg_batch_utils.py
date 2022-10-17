@@ -7,6 +7,9 @@ from bcreg.config import config
 from bcreg.rocketchat_hooks import log_error, log_warning, log_info
 
 
+MAX_CORPS = 10000
+CRAZY_MAX_CORPS = 100000
+
 LOGGER = logging.getLogger(__name__)
 
 

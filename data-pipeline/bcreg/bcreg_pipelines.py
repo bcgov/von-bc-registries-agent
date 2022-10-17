@@ -9,6 +9,7 @@ def bc_reg_root_pipeline():
         description = 'Holder for the different versions of the BC Registries pipeline.')
 
     parent_pipeline.add(bc_reg_pipeline())
+    parent_pipeline.add(bc_reg_pipeline_lear())
     parent_pipeline.add(bc_reg_pipeline_status())
 
     init_pipeline = Pipeline(
@@ -19,6 +20,7 @@ def bc_reg_root_pipeline():
     init_pipeline.add(bc_reg_pipeline_initial_load())
     init_pipeline.add(bc_reg_pipeline_initial_load_lear())
     init_pipeline.add(bc_reg_pipeline_post_credentials())
+    init_pipeline.add(bc_reg_pipeline_post_credentials_lear())
     # init_pipeline.add(bc_reg_populate_audit_table())
     init_pipeline.add(bc_reg_pipeline_bn_credential_load())
 
@@ -57,6 +59,29 @@ def bc_reg_pipeline():
     sub_pipeline1_3.add(Task(id='submit_credentials', description='Submit credentials',
                           commands=[ExecutePython('./bcreg/submit-creds.py')]))
     pipeline1.add(sub_pipeline1_3, ['load_and_process_bc_reg_data'])
+
+    return pipeline1
+
+def bc_reg_pipeline_lear():
+    import bcreg
+
+    pipeline1 = Pipeline(
+        id='bc_reg_event_processor_lear',
+        description='A pipeline that processes BC Registries (LEAR) events and generates credentials.')
+
+    sub_pipeline1_2 = Pipeline(id='load_and_process_bc_reg_data_lear', description='Load BC Reg data and generate credentials')
+    sub_pipeline1_2.add(Task(id='register_un_processed_events_lear', description='Register un-processed events',
+                          commands=[ExecutePython('./bcreg/find-unprocessed-events-lear.py')]))
+    sub_pipeline1_2.add(Task(id='load_bc_reg_data_lear', description='Load BC Registries data',
+                          commands=[ExecutePython('./bcreg/process-corps-generate-creds_lear.py')]), ['register_un_processed_events_lear'])
+    sub_pipeline1_2.add(Task(id='create_bc_reg_credentials_lear', description='Create credentials',
+                          commands=[ExecutePython('./bcreg/generate-creds_lear.py')]), ['load_bc_reg_data_lear'])
+    pipeline1.add(sub_pipeline1_2)
+
+    sub_pipeline1_3 = Pipeline(id='submit_bc_reg_credentials_lear', description='Submit BC Reg credentials to P-X')
+    sub_pipeline1_3.add(Task(id='submit_credentials_lear', description='Submit credentials',
+                          commands=[ExecutePython('./bcreg/submit-creds_lear.py')]))
+    pipeline1.add(sub_pipeline1_3, ['load_and_process_bc_reg_data_lear'])
 
     return pipeline1
 
@@ -139,6 +164,20 @@ def bc_reg_pipeline_post_credentials():
     sub_pipeline1_3 = Pipeline(id='submit_bc_reg_credentials_a', description='Submit BC Reg credentials to P-X')
     sub_pipeline1_3.add(Task(id='submit_credentials_a', description='Submit credentials',
                           commands=[ExecutePython('./bcreg/submit-creds.py')]))
+    pipeline1.add(sub_pipeline1_3)
+
+    return pipeline1
+
+def bc_reg_pipeline_post_credentials_lear():
+    import bcreg
+
+    pipeline1 = Pipeline(
+        id='bc_reg_credential_poster_lear',
+        description='A pipeline that posts generated credentials to TOB.')
+
+    sub_pipeline1_3 = Pipeline(id='submit_bc_reg_credentials_a_lear', description='Submit BC Reg credentials to P-X')
+    sub_pipeline1_3.add(Task(id='submit_credentials_a_lear', description='Submit credentials',
+                          commands=[ExecutePython('./bcreg/submit-creds_lear.py')]))
     pipeline1.add(sub_pipeline1_3)
 
     return pipeline1

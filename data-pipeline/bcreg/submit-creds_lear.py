@@ -21,7 +21,7 @@ import io
 import os
 import logging
 
-from bcreg.bcregistries import system_type
+from bcreg.bcreg_lear import lear_system_type
 from bcreg.credssubmitter import CredsSubmitter
 from bcreg.rocketchat_hooks import log_error, log_warning, log_info
 
@@ -32,7 +32,7 @@ logging.basicConfig(level=LOG_LEVEL)
 try:
     loop = asyncio.get_event_loop()
     with CredsSubmitter() as creds_submitter:
-        loop.run_until_complete(creds_submitter.process_credential_queue(False, system_type))
+        loop.run_until_complete(creds_submitter.process_credential_queue(False, lear_system_type))
 except Exception as e:
     print("Exception", e)
     log_error("submit_creds processing exception: " + str(e))

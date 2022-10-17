@@ -31,7 +31,10 @@ import logging
 import backoff
 
 from bcreg.config import config
+from bcreg.bcregistries import system_type
+from bcreg.bcreg_lear import lear_system_type
 from bcreg.rocketchat_hooks import log_error, log_warning, log_info
+
 
 CONTROLLER_URL = os.environ.get('CONTROLLER_URL', 'http://localhost:5002')
 NOTIFY_OF_CREDENTIAL_POSTING_ERRORS = os.environ.get('NOTIFY_OF_CREDENTIAL_POSTING_ERRORS', 'false')
@@ -293,7 +296,7 @@ class CredsSubmitter:
     def __exit__(self, exc_type, exc_value, traceback):
         pass
  
-    async def process_credential_queue(self, single_thread=False):
+    async def process_credential_queue(self, single_thread=False, system_type_cd=system_type):
         sql1 = """SELECT RECORD_ID, 
                       SYSTEM_TYPE_CD, 
                       PREV_EVENT, 
@@ -308,7 +311,8 @@ class CredsSubmitter:
                       SCHEMA_VERSION, 
                       ENTRY_DATE
                   FROM CREDENTIAL_LOG 
-                  WHERE RECORD_ID IN
+                  WHERE SYSTEM_TYPE_CD = %s
+                  AND RECORD_ID IN
                   (
                       SELECT RECORD_ID
                       FROM CREDENTIAL_LOG 
@@ -322,7 +326,8 @@ class CredsSubmitter:
 
         sql1a = """SELECT count(*) cnt
                    FROM CREDENTIAL_LOG 
-                   WHERE PROCESS_DATE is null
+                   WHERE SYSTEM_TYPE_CD = %s
+                   AND PROCESS_DATE is null
                    AND RECORD_ID > %s
                    AND (CREDENTIAL_JSON->>'expiry_date' = '' or CREDENTIAL_JSON->>'expiry_date' is null or CREDENTIAL_JSON->>'expiry_date' <= %s)
                    """
@@ -349,7 +354,7 @@ class CredsSubmitter:
             # create a cursor
             cred_count = 0
             cur = self.conn.cursor()
-            cur.execute(sql1a, (max_rec_id, cutoff_time_str,))
+            cur.execute(sql1a, (system_type_cd, max_rec_id, cutoff_time_str,))
             row = cur.fetchone()
             if row is not None:
                 cred_count = row[0]
@@ -374,7 +379,7 @@ class CredsSubmitter:
             while 0 < cred_count_remaining and processing_time < max_processing_time and failed_count <= CONTROLLER_MAX_ERRORS:
                 # create a cursor
                 cur = self.conn.cursor()
-                cur.execute(sql1, (max_rec_id, cutoff_time_str,))
+                cur.execute(sql1, (system_type_cd, max_rec_id, cutoff_time_str,))
                 row = cur.fetchone()
                 credentials = []
                 cred_owner_id = ''
@@ -476,7 +481,7 @@ class CredsSubmitter:
                     raise Excecption("Error Issuer Controller is not available")
 
                 cur = self.conn.cursor()
-                cur.execute(sql1a, (max_rec_id, cutoff_time_str,))
+                cur.execute(sql1a, (system_type_cd, max_rec_id, cutoff_time_str,))
                 row = cur.fetchone()
                 if row is not None:
                     cred_count_remaining = row[0]

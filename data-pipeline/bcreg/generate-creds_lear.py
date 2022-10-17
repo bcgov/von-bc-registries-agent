@@ -6,7 +6,7 @@ import logging
 
 from bcreg.config import config
 from bcreg.eventprocessor import EventProcessor
-from bcreg.bcregistries import BCRegistries, system_type
+from bcreg.bcreg_lear import BCReg_Lear, lear_system_type
 from bcreg.eventprocessor import EventProcessor
 from bcreg.rocketchat_hooks import log_error, log_warning, log_info
 
@@ -16,7 +16,7 @@ logging.basicConfig(level=LOG_LEVEL)
 
 try:
     with EventProcessor() as event_processor:
-    	event_processor.process_corp_generate_creds(system_type)
+    	event_processor.process_corp_generate_creds(lear_system_type)
 except Exception as e:
     print("Exception", e)
     log_error("generate_creds processing exception: " + str(e))

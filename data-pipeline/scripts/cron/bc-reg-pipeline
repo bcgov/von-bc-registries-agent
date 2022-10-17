@@ -1,1 +1,2 @@
 */30 * * * * default cd /data-pipeline/scripts && ./run-step.sh bcreg/bc_reg_pipeline.py
+15,45 * * * * default cd /data-pipeline/scripts && ./run-step.sh bcreg/bc_reg_pipeline_lear.py

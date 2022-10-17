@@ -537,7 +537,7 @@ class BCRegistries(BCReg_Core):
     # return None if not found
     def get_event(self, corp_num, event_id, corp_type_cd=None, force_query_remote=False):
         sql = """SELECT event_id, corp_num, event.event_typ_cd, event_timestmp, trigger_dts, event_class, short_desc, full_desc
-                    FROM """ + self.get_table_prefix(force_query_remote) + """event, """ + self.get_table_prefix(force_query_remote) + """event_type
+                    FROM """ + self.get_table_prefix(force_query_remote) + """event event, """ + self.get_table_prefix(force_query_remote) + """event_type event_type
                     WHERE event_id = """ + self.get_db_sql_param(force_query_remote) + """ and event.event_typ_cd = event_type.event_typ_cd"""
                     # WHERE corp_num = """ + self.get_db_sql_param(force_query_remote) + """ and event_id = """ + self.get_db_sql_param(force_query_remote)
         ret_event = None
@@ -619,7 +619,7 @@ class BCRegistries(BCReg_Core):
         if event_type != 'FILE':
             return {}
         sql_filing = """SELECT event_id, filing.filing_typ_cd, effective_dt, new_corp_num, filing_typ_class, short_desc, full_desc 
-                        from """ + self.get_table_prefix(force_query_remote) + """filing, """ + self.get_table_prefix(force_query_remote) + """filing_type 
+                        from """ + self.get_table_prefix(force_query_remote) + """filing filing, """ + self.get_table_prefix(force_query_remote) + """filing_type filing_type 
                         WHERE event_id = """ + self.get_db_sql_param(force_query_remote) + """ and filing.filing_typ_cd = filing_type.filing_typ_cd """
         cursor = None
         try:

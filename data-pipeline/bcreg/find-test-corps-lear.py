@@ -12,21 +12,26 @@ LOG_LEVEL = os.environ.get('LOG_LEVEL', 'WARNING').upper()
 logging.basicConfig(level=LOG_LEVEL)
 
 
-specific_corps = []
+specific_corps = [
+    'CP0000672',
+]
+num_corps_per_type = 20
 
 
 with BCReg_Lear() as bc_registries:
     # get 5 corps for each type in scope (in addition to the above list)
-    for corp_type in LEAR_CORP_TYPES_IN_SCOPE:
+    corp_types_to_load = ['BEN', 'BC',]
+    corp_types_to_load.extend(LEAR_CORP_TYPES_IN_SCOPE)
+    for corp_type in corp_types_to_load:
         print(corp_type)
         sql = """
                select identifier as corp_num
                from businesses
                where legal_type = '""" + corp_type + """'
-               order by identifier desc
+               order by last_modified desc
               """
         corps = bc_registries.get_bcreg_sql("corps_by_type", sql, cache=False)
-        n_corps = min(len(corps), 5)
+        n_corps = min(len(corps), num_corps_per_type)
         for i in range(n_corps):
            specific_corps.append(corps[i]['corp_num'])
 

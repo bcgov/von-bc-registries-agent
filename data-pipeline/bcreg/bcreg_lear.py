@@ -26,6 +26,43 @@ timezone = pytz.timezone("PST8PDT")
 
 LOGGER = logging.getLogger(__name__)
 
+STATE_CODES = {
+    "ACTIVE": "ACT",
+    "HISTORICAL": "HIS",
+}
+
+FILING_TYPE_CODES = {
+    "filing_type": "filing_type",
+    "alteration": "alteration",
+    "amalgamation": "amalgamation",
+    "amalgamationApplication": "amalgamationApplication",
+    "amendedAGM": "amendedAGM",
+    "amendedAnnualReport": "amendedAnnualReport",
+    "amendedChangeOfDirectors": "amendedChangeOfDirectors",
+    "annualReport": "annualReport",
+    "changeOfAddress": "changeOfAddress",
+    "changeOfDirectors": "changeOfDirectors",
+    "changeOfName": "changeOfName",
+    "changeOfRegistration": "changeOfRegistration",
+    "conversion": "conversion",
+    "correction": "correction",
+    "courtOrder": "courtOrder",
+    "dissolution": "dissolution",
+    "dissolved": "dissolved",
+    "F.18": "F.18",
+    "incorporationApplication": "incorporationApplication",
+    "Involuntary Dissolution": "Involuntary Dissolution",
+    "lear_epoch": "lear_epoch",
+    "putBackOn": "putBackOn",
+    "registrarsNotation": "registrarsNotation",
+    "registrarsOrder": "registrarsOrder",
+    "registration": "registration",
+    "restorationApplication": "restorationApplication",
+    "specialResolution": "specialResolution",
+    "transition": "transition",
+    "voluntaryDissolution": "voluntaryDissolution",
+    "voluntaryLiquidation": "voluntaryLiquidation",
+}
 
 def event_dict(event_id, event_date):
     event = {'event_id': event_id, 'event_date': event_date}
@@ -82,11 +119,14 @@ class BCReg_Lear(BCReg_Core):
                     'businesses_version']
     # load by business_id (id on businesses_version table)
     other_tables = ['filings',
+                    'aliases',
                     'aliases_version',
+                    'party_roles',
                     'party_roles_version']
     # custom load
-    other_other_tables = ['transaction',
-                          'parties_version']
+    other_other_tables = ['parties',
+                          'parties_version',]
+    other_other_other_tables = ['transaction',]
 
     # load all bc registries data for the specified corps into our in-mem cache
     def cache_bcreg_corps(self, specific_corps, generate_individual_sql=False):
@@ -107,6 +147,7 @@ class BCReg_Lear(BCReg_Core):
             LOGGER.info('Caching data for corporations ...')
             for corp_nums_list in specific_corps_lists:
                 bus_ids_list = []
+                txn_ids_list = []
                 corp_nums_list = self.id_where_in(corp_nums_list, True)
                 corp_num_where = 'identifier in (' + corp_nums_list + ')'
                 for corp_table in self.corp_tables:
@@ -114,6 +155,10 @@ class BCReg_Lear(BCReg_Core):
                     if corp_table == 'businesses':
                         for _row in _rows:
                             bus_ids_list.append(_row['id'])
+                    elif corp_table == 'businesses_version':
+                        for _row in _rows:
+                            if _row['transaction_id'] is not None:
+                                txn_ids_list.append(_row['transaction_id'])
 
                 party_ids_list = []
                 bus_id_where = 'business_id in (' + self.id_where_in(bus_ids_list, True) + ')'
@@ -121,11 +166,20 @@ class BCReg_Lear(BCReg_Core):
                     _rows = self.get_bcreg_table(other_table, bus_id_where, '', True, generate_individual_sql)
                     if other_table == 'party_roles':
                         for _row in _rows:
-                            party_ids_list.append(_row['party_id'])
+                            if _row['party_id'] is not None:
+                                party_ids_list.append(_row['party_id'])
+                    elif other_table == 'filings':
+                        for _row in _rows:
+                            if _row['transaction_id'] is not None:
+                                txn_ids_list.append(_row['transaction_id'])
 
                 party_id_where = 'id in (' + self.id_where_in(party_ids_list, True) + ')'
                 for other_table in self.other_other_tables:
                     _rows = self.get_bcreg_table(other_table, party_id_where, '', True, generate_individual_sql)
+
+                txn_id_where = 'id in (' + self.id_where_in(txn_ids_list, True) + ')'
+                for other_table in self.other_other_other_tables:
+                    _rows = self.get_bcreg_table(other_table, txn_id_where, '', True, generate_individual_sql)
 
     # load all bc registries data for the specified corps into our in-mem cache
     def cache_bcreg_code_tables(self, generate_individual_sql=False):
@@ -238,7 +292,7 @@ class BCReg_Lear(BCReg_Core):
 
     # return unprocessed corporations, based on active or historical
     # use for initial data load
-    def get_unprocessed_corps_data_load(self, last_event_dt, max_event_dt):
+    def get_unprocessed_corps_data_load(self, last_event_id, last_event_dt, max_event_id, max_event_dt):
         sqls = []
         
         # select *all* corps - we will filter in the next stage
@@ -256,8 +310,8 @@ class BCReg_Lear(BCReg_Core):
                     # LOGGER.info(row)
                     corps.append({
                         'CORP_NUM':row[0],
-                        'PREV_EVENT': last_event_dt,
-                        'LAST_EVENT': max_event_dt,
+                        'PREV_EVENT': event_dict(last_event_id, last_event_dt),
+                        'LAST_EVENT': event_dict(max_event_id, max_event_dt),
                     })
                     row = cur.fetchone()
                 cur.close()
@@ -274,40 +328,47 @@ class BCReg_Lear(BCReg_Core):
         return corps
 
     # return unprocessed corporations, based on an event range
-    def get_unprocessed_corps(self, last_event_dt):
-        sqls = []
-
-        # select *all* corps - we will filter in the next stage
-        sqls.append("""SELECT identifier from """ + self.DB_TABLE_PREFIX + """businesses
-                        where last_modified >= %s""")
+    def get_unprocessed_corps(self, last_event_id, last_event_dt):
+        sqlt = """SELECT id, issued_at from transaction
+                  WHERE issued_at >= %s"""
+        sqlb = """SELECT identifier from businesses_version
+                  WHERE transaction_id = %s"""
 
         corps = []
         event_ids = []
         corp_set = {}
-        for sql in sqls:
+        cur = None
+        try:
+            LOGGER.info("Executing: " + sqlt + " with " + str(last_event_dt))
+            cur = self.conn.cursor()
+            cur.execute(sqlt, (last_event_dt,))
+            row = cur.fetchone()
+            while row is not None:
+                event_ids.append(row[0])
+                row = cur.fetchone()
+            cur.close()
             cur = None
-            try:
-                LOGGER.info("Executing: " + sql + " with " + str(last_event_dt))
+            for event_id in event_ids:
+                LOGGER.info("Executing: " + sqlb + " with " + str(event_id))
                 cur = self.conn.cursor()
-                cur.execute(sql, (last_event_dt,))
+                cur.execute(sqlb, (event_id,))
                 row = cur.fetchone()
                 while row is not None:
                     if not row[0] in corp_set:
                         corp_set[row[0]] = row[0]
                         corps.append({'CORP_NUM':row[0],})
-                    event_ids.append(row[1])
                     row = cur.fetchone()
                 cur.close()
                 cur = None
-                LOGGER.info("Loaded corps: " + str(len(corps)))
-            except (Exception, psycopg2.DatabaseError) as error:
-                LOGGER.error(error)
-                LOGGER.error(traceback.print_exc())
-                log_error("BCRegistries exception reading DB: " + str(error))
-                raise
-            finally:
-                if cur is not None:
-                    cur.close()
+            LOGGER.info("Loaded corps: " + str(len(corps)))
+        except (Exception, psycopg2.DatabaseError) as error:
+            LOGGER.error(error)
+            LOGGER.error(traceback.print_exc())
+            log_error("BCRegistries exception reading DB: " + str(error))
+            raise
+        finally:
+            if cur is not None:
+                cur.close()
 
         # since the event may affect more than one corp, check corp_state to see if there are any other corps to bring into scope
         """
@@ -428,21 +489,20 @@ class BCReg_Lear(BCReg_Core):
                 ret_date = event['event_timestmp']
 
         if ret_date is None:
-            LOGGER.error('Error ret_date is None' + str(event))
+            LOGGER.error('Error ret_date is None: ' + str(event))
         """
-        print(">>> get effective date for event:", event)
+        ret_date = event['issued_at']
         if 'filing' in event:
-            if 'completion_date' in event['filing']:
+            if 'completion_date' in event['filing'] and event['filing']['completion_date']:
                 ret_date = event['filing']['completion_date']
-            elif 'effective_date' in event['filing']:
+            elif 'effective_date' in event['filing'] and event['filing']['effective_date']:
                 ret_date = event['filing']['effective_date']
-            else:
-                ret_date = event['issued_at']
-        else:
-            ret_date = event['issued_at']
+        elif 'transaction' in event:
+            if 'issued_at' in event['transaction']:
+                ret_date = event['transaction']['issued_at']
 
         if ret_date is None:
-            LOGGER.error('Error ret_date is None' + str(event))
+            LOGGER.error('Error ret_date is None: ' + str(event))
 
         return ret_date
 
@@ -452,7 +512,6 @@ class BCReg_Lear(BCReg_Core):
         if event_id == 0:
             return datetime.datetime(datetime.MINYEAR, 1, 1) # MIN_START_DATE
         event = self.get_event('0', event_id)
-        print(">>> Returns event:", event)
         event_date = self.get_event_filing_effective_date(event)
         return event_date
 
@@ -548,19 +607,17 @@ class BCReg_Lear(BCReg_Core):
             cur.execute(sql2)
             row = cur.fetchone()
             while row is not None:
-                if not row[0] in corp_set:
-                    corp_set[row[0]] = row[0]
-                    filing = {
-                        "id": row[0],
-                        "filing_type": row[1],
-                        "filing_date": row[2],
-                        "filing_json": row[3],
-                        "transaction_id": row[4],
-                        "business_id": row[5],
-                        "status": row[6],
-                        "completion_date": row[7],
-                        "effective_date": row[8],
-                    }
+                filing = {
+                    "id": row[0],
+                    "filing_type": FILING_TYPE_CODES[row[1]] if row[1] in FILING_TYPE_CODES else row[1],
+                    "filing_date": row[2],
+                    "filing_json": row[3],
+                    "transaction_id": row[4],
+                    "business_id": row[5],
+                    "status": row[6],
+                    "completion_date": row[7],
+                    "effective_date": row[8],
+                }
                 filings.append(filing)
                 row = cur.fetchone()
 
@@ -579,7 +636,7 @@ class BCReg_Lear(BCReg_Core):
         bus_ver_columns = ''
         if versions:
             bus_table = 'businesses_version'
-            bus_ver_columns = ', state_filing_id as state_filing_id'
+            bus_ver_columns = ', state_filing_id as state_filing_id, transaction_id as transaction_id'
         sql_corp = """SELECT identifier as corp_num,
                              legal_type as corp_typ_cd,
                              founding_date as recognition_dts,
@@ -610,7 +667,7 @@ class BCReg_Lear(BCReg_Core):
             row = cur.fetchone()
             while row is not None:
                 corp = {}
-                corp['current_date'] = datetime.datetime.now()
+                corp['current_date'] = timezone.localize(datetime.datetime.now())
                 corp['corp_num'] = row[0]
                 if deep_copy:
                     # TODO
@@ -633,8 +690,8 @@ class BCReg_Lear(BCReg_Core):
                 corp['can_jur_typ_cd'] = row[11]
                 corp['xpro_typ_cd'] = row[12]
                 corp['othr_juris_desc'] = row[13]
-                corp['state_typ_cd'] = row[14]
-                corp['op_state_typ_cd'] = row[15]
+                corp['state_typ_cd'] = STATE_CODES[row[14]] if row[14] in STATE_CODES else row[14]
+                corp['op_state_typ_cd'] = STATE_CODES[row[15]] if row[15] in STATE_CODES else row[15]
                 corp['corp_class'] = row[16]
                 if versions:
                     state_filing_id = row[17]
@@ -644,6 +701,12 @@ class BCReg_Lear(BCReg_Core):
                         corp['filing'] = filings[0] if 0 < len(filings) else {}
                     else:
                         corp['filing'] = {}
+                    transaction_id = row[18]
+                    if transaction_id and 0 < transaction_id:
+                        transaction = self.get_event(corp['corp_num'], transaction_id)
+                        corp['transaction'] = transaction
+                    else:
+                        corp['transaction'] = {}
 
                 if versions:
                     corps.append(corp)
@@ -723,6 +786,8 @@ class BCReg_Lear(BCReg_Core):
                 corp['corp_num'] = ''
                 corp['corp_typ_cd'] = ''
                 corp['recognition_dts'] = ''
+                corp['filing'] = {}
+                corp['transaction'] = {}
 
             if versions:
                 return corps
@@ -813,9 +878,10 @@ class BCReg_Lear(BCReg_Core):
 
             return corp
         except (Exception, psycopg2.DatabaseError) as error:
-            LOGGER.error(error)
-            LOGGER.error(traceback.print_exc())
-            log_error("BCRegistries exception reading corp party info from DB: " + str(error))
+            # TODO right now we are not reading party info
+            #LOGGER.error(error)
+            #LOGGER.error(traceback.print_exc())
+            #log_error("BCRegistries exception reading corp party info from DB: " + str(error))
             raise 
         finally:
             if cur is not None:

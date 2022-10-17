@@ -10,7 +10,7 @@ import logging
 
 from mara_app.monkey_patch import patch
 from bcreg.bcreg_pipelines import bc_reg_root_pipeline
-from bcreg.bcregistries import BCRegistries, system_type
+from bcreg.bcreg_lear import BCReg_Lear, lear_system_type
 from bcreg.eventprocessor import EventProcessor
 from bcreg.rocketchat_hooks import log_error, log_warning, log_info
 
@@ -38,7 +38,7 @@ try:
     mara_db.config.databases \
         = lambda: {'mara': mara_db.dbs.PostgreSQLDB(user=mara_user, password=mara_password, host=mara_host, database=mara_database, port=mara_port)}
 
-    (child_pipeline, success) = data_integration.pipelines.find_node(['bc_reg_event_processor']) 
+    (child_pipeline, success) = data_integration.pipelines.find_node(['bc_reg_event_processor_lear']) 
     if success:
         run_pipeline(child_pipeline)
         log_info("Ran bc_reg_event_processor - complete.")

@@ -15,7 +15,7 @@ from bcreg.config import config
 from bcreg.rocketchat_hooks import log_error, log_warning, log_info
 
 
-INMEM_CACHE_TABLE_PREFIX   = ''
+INMEM_CACHE_TABLE_PREFIX   = 'x'
 MAX_WHERE_IN = 1000
 
 LOGGER = logging.getLogger(__name__)
@@ -169,7 +169,7 @@ class BCReg_Core:
 
     # return a sql to create an in-mem sqlite table
     def create_table_sql(self, table, table_desc):
-        table_sql = 'create table if not exists ' + table + ' ('
+        table_sql = 'create table if not exists ' + INMEM_CACHE_TABLE_PREFIX + table + ' ('
         i = 0
         for col in table_desc:
             col_name = col[0]
@@ -190,10 +190,12 @@ class BCReg_Core:
             return 'text'
         if pg_type == 1700:  # NUMBER(38)
             return 'numeric'
-        if pg_type == 23:    # NUMBER(7)
+        if pg_type == 23 or pg_type == 21 or pg_type == 20:    # INT*
             return 'integer'
-        if pg_type == 1114:  # DATE or DATETIME
+        if pg_type == 1114 or pg_type == 1184:  # DATE or DATETIME (or TZ)
             return 'timestamp'
+        if pg_type == 114 or pg_type == 3802:  # json or jsonb
+            return 'text'
         # default for now
         return 'text'
 
@@ -201,6 +203,11 @@ class BCReg_Core:
         if "'" in s_val:
             s_val = s_val.replace("'", "''")
         return str(s_val)
+
+    def get_sql_insert_value(self, col_value, pg_type):
+        if pg_type == 114 or pg_type == 3802:  # json or jsonb
+            return json.dumps(col_value)
+        return col_value
 
     def get_sql_col_value(self, col_value, pg_type):
         if col_value is None:
@@ -211,12 +218,14 @@ class BCReg_Core:
             return "'" + self.stringify(col_value) + "'"  
         if pg_type == 1700:  # NUMBER(38)
             return str(col_value)
-        if pg_type == 23:    # NUMBER(7)
+        if pg_type == 23 or pg_type == 21 or pg_type == 20:    # INT*
             return str(col_value)
-        if pg_type == 1114:  # DATE or DATETIME
+        if pg_type == 1114 or pg_type == 1184:  # DATE or DATETIME (or TZ)
             return "'" + str(col_value) + "'"  
+        if pg_type == 114 or pg_type == 3802:  # json or jsonb
+            return "'" + json.dumps(col_value) + "'"
         # default for now
-        return str(col_value)
+        return "'" + str(col_value) + "'"
 
     # cache data from bc registries database into a local in-mem sqlite table
     # create the table if nencessary, based on the bc registries dictionary
@@ -347,16 +356,16 @@ class BCReg_Core:
             insert_values = ''
             i = 0
             for key in col_keys:
-                insert_row_vals.append(row[key])
+                insert_row_vals.append(self.get_sql_insert_value(row[key], desc[i][1]))
                 if generate_individual_sql:
                     insert_values = insert_values + self.get_sql_col_value(gen_row[key], desc[i][1])
-                    i = i + 1
-                    if i < len(col_keys):
-                        insert_values = insert_values + ', '
+                i = i + 1
+                if generate_individual_sql and i < len(col_keys):
+                    insert_values = insert_values + ', '
             inserts.append(insert_row_vals)
             if generate_individual_sql:
-                insert_sqls.append('insert into ' + table + ' (' + insert_keys + ') values (' + insert_values + ')')
-        insert_sql = 'insert into ' + table + ' (' + insert_keys + ') values (' + insert_placeholders + ')'
+                insert_sqls.append('insert into ' + INMEM_CACHE_TABLE_PREFIX + table + ' (' + insert_keys + ') values (' + insert_values + ')')
+        insert_sql = 'insert into ' + INMEM_CACHE_TABLE_PREFIX + table + ' (' + insert_keys + ') values (' + insert_placeholders + ')'
 
         if generate_individual_sql:
             self.generated_sqls.append(create_sql)
@@ -376,6 +385,7 @@ class BCReg_Core:
             except (Exception) as error:
                 LOGGER.error(error)
                 LOGGER.error(traceback.print_exc())
+                log_error("BCRegistries exception loading table: " + table)
                 log_error("BCRegistries exception reading DB: " + str(error))
                 raise 
             finally:
@@ -457,7 +467,7 @@ class BCReg_Core:
         id_list = ''
         i = 0
         for the_id in ids:
-            id_list = id_list + delimiter + the_id + delimiter
+            id_list = id_list + delimiter + str(the_id) + delimiter
             i = i + 1
             if i < len(ids):
                 id_list = id_list  + ', '
