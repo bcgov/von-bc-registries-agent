@@ -316,7 +316,8 @@ class CredsSubmitter:
                   (
                       SELECT RECORD_ID
                       FROM CREDENTIAL_LOG 
-                      WHERE PROCESS_DATE is null
+                      WHERE SYSTEM_TYPE_CD = %s
+                      AND PROCESS_DATE is null
                       AND RECORD_ID > %s
                       AND (CREDENTIAL_JSON->>'expiry_date' = '' or CREDENTIAL_JSON->>'expiry_date' is null or CREDENTIAL_JSON->>'expiry_date' <= %s)
                       ORDER BY RECORD_ID
@@ -379,7 +380,7 @@ class CredsSubmitter:
             while 0 < cred_count_remaining and processing_time < max_processing_time and failed_count <= CONTROLLER_MAX_ERRORS:
                 # create a cursor
                 cur = self.conn.cursor()
-                cur.execute(sql1, (system_type_cd, max_rec_id, cutoff_time_str,))
+                cur.execute(sql1, (system_type_cd, system_type_cd, max_rec_id, cutoff_time_str,))
                 row = cur.fetchone()
                 credentials = []
                 cred_owner_id = ''
