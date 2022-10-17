@@ -10,12 +10,8 @@ import logging
 
 from mara_app.monkey_patch import patch
 from bcreg.bcreg_pipelines import bc_reg_root_pipeline
-from bcreg.bcregistries import BCRegistries, system_type
 from bcreg.eventprocessor import EventProcessor
 from bcreg.rocketchat_hooks import log_error, log_warning, log_info
-
-MAX_CORPS = 10000
-CRAZY_MAX_CORPS = 100000
 
 LOG_LEVEL = os.environ.get('LOG_LEVEL', 'WARNING').upper()
 logging.basicConfig(level=LOG_LEVEL)
@@ -34,25 +30,24 @@ mara_user = os.environ.get('MARA_DB_USER', 'mara_db')
 mara_password = os.environ.get('MARA_DB_PASSWORD')
 
 try:
-    log_info("Starting bc_reg_event_processor ...")
     mara_db.config.databases \
         = lambda: {'mara': mara_db.dbs.PostgreSQLDB(user=mara_user, password=mara_password, host=mara_host, database=mara_database, port=mara_port)}
 
-    (child_pipeline, success) = data_integration.pipelines.find_node(['bc_reg_event_processor']) 
+    (initial_load_pipeline, success) = data_integration.pipelines.find_node(['initialization_and_load_tasks','bc_reg_corp_loader_lear']) 
     if success:
-        run_pipeline(child_pipeline)
-        log_info("Ran bc_reg_event_processor - complete.")
-
-        with EventProcessor() as eventprocessor:
-            corps_ct = eventprocessor.get_outstanding_corps_record_count()
-            if CRAZY_MAX_CORPS < corps_ct:
-                log_error("bc-reg-pipeline More than cRaZy MaX corps outstanding: " + str(corps_ct))
-            elif MAX_CORPS < corps_ct:
-                log_warning("bc-reg-pipeline More than max corps outstanding: " + str(corps_ct))
+        corps_ct = 1
+        prev_corps_ct = 0
+        while 0 < corps_ct and corps_ct != prev_corps_ct:
+            # run at least once to get an initial data load
+            run_pipeline(initial_load_pipeline)
+            with EventProcessor() as eventprocessor:
+                prev_corps_ct = corps_ct
+                corps_ct = eventprocessor.get_outstanding_corps_record_count()
+            log_info("Ran bc_reg_corp_loader_lear for " + str(corps_ct) + " corps")
     else:
         print("Pipeline not found")
-        log_error("Pipeline not found for:" + "bc_reg_event_processor")
+        log_error("Pipeline not found for:" + "bc_reg_corp_loader_lear")
 except Exception as e:
     print("Exception", e)
-    log_error("bc_reg_event_processor processing exception: " + str(e))
+    log_error("bc_reg_corp_loader_lear processing exception: " + str(e))
     raise
