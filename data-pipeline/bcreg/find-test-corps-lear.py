@@ -14,6 +14,10 @@ logging.basicConfig(level=LOG_LEVEL)
 
 specific_corps = [
     'CP0000672',
+    'FM0020270',
+    'FM0222860',
+    'FM0268275',
+    'FM0272479',
 ]
 num_corps_per_type = 20
 

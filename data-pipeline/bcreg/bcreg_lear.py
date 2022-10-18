@@ -631,6 +631,18 @@ class BCReg_Lear(BCReg_Core):
             if cur is not None:
                 cur.close()
 
+    def  get_corp_version_effective_date(self, corp):
+        effective_date = None
+        if 'transaction' in corp and 'effective_date' in corp['transaction']:
+            effective_date =  corp['transaction']['effective_date']
+        elif 'filing' in corp and 'effective_date' in corp['filing']:
+            effective_date =  corp['filing']['effective_date']
+        else:
+            effective_date = corp['last_event_dt']
+        if effective_date.tzinfo is None or effective_date.tzinfo.utcoffset(effective_date) is None:
+            effective_date = effective_date.replace(tzinfo=pytz.utc)
+        return effective_date
+
     def get_basic_corp_info(self, corp_num, deep_copy=True, versions=False):
         bus_table = 'businesses'
         bus_ver_columns = ''
@@ -687,11 +699,13 @@ class BCReg_Lear(BCReg_Core):
                 corp['last_event_dt'] = row[8]
                 corp['corp_nme'] = row[9]
                 corp['corp_nme_as'] = row[10]
+                corp['corp_nme_effective_date'] = None
                 corp['can_jur_typ_cd'] = row[11]
                 corp['xpro_typ_cd'] = row[12]
                 corp['othr_juris_desc'] = row[13]
                 corp['state_typ_cd'] = STATE_CODES[row[14]] if row[14] in STATE_CODES else row[14]
                 corp['op_state_typ_cd'] = STATE_CODES[row[15]] if row[15] in STATE_CODES else row[15]
+                corp['state_typ_effective_date'] = None
                 corp['corp_class'] = row[16]
                 if versions:
                     state_filing_id = row[17]
@@ -707,6 +721,7 @@ class BCReg_Lear(BCReg_Core):
                         corp['transaction'] = transaction
                     else:
                         corp['transaction'] = {}
+                    corp['effective_date'] = self.get_corp_version_effective_date(corp)
 
                 if versions:
                     corps.append(corp)
@@ -788,8 +803,28 @@ class BCReg_Lear(BCReg_Core):
                 corp['recognition_dts'] = ''
                 corp['filing'] = {}
                 corp['transaction'] = {}
+                corp['effective_date'] = None
 
             if versions:
+                # fill in effective dates for versions (name, status)
+                corps = sorted(corps, key=lambda k: k['effective_date'])
+                corp_nme = None
+                corp_nme_effective_date = None
+                state_typ_cd = None
+                state_typ_effective_date = None
+                for corp_v in corps:
+                    if (not corp_nme) or corp_v['corp_nme'] != corp_nme:
+                        corp_v['corp_nme_effective_date'] = corp_v['effective_date']
+                        corp_nme = corp_v['corp_nme']
+                        corp_nme_effective_date = corp_v['corp_nme_effective_date']
+                    else:
+                        corp_v['corp_nme_effective_date'] = corp_nme_effective_date
+                    if (not state_typ_cd) or corp_v['state_typ_cd'] != state_typ_cd:
+                        corp_v['state_typ_effective_date'] = corp_v['effective_date']
+                        state_typ_cd = corp_v['state_typ_cd']
+                        state_typ_effective_date = corp_v['state_typ_effective_date']
+                    else:
+                        corp_v['state_typ_effective_date'] = state_typ_effective_date
                 return corps
             else:
                 return corp
