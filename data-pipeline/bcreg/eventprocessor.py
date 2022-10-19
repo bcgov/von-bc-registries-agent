@@ -13,8 +13,8 @@ import os
 import csv
 
 from bcreg.config import config
-from bcreg.bcregistries import BCRegistries, CustomJsonEncoder, event_dict, is_data_conversion_event, system_type
-from bcreg.bcreg_lear import BCReg_Lear, lear_system_type
+from bcreg.bcregistries import BCRegistries, CustomJsonEncoder, event_dict, is_data_conversion_event, system_type, CORP_TYPES_IN_SCOPE
+from bcreg.bcreg_lear import BCReg_Lear, lear_system_type, LEAR_CORP_TYPES_IN_SCOPE
 from bcreg.rocketchat_hooks import log_error, log_warning, log_info
 
 
@@ -79,48 +79,6 @@ MIN_VALID_DATE_TZ = timezone.localize(MIN_VALID_DATE)
 MAX_END_DATE_TZ   = timezone.localize(MAX_END_DATE)
 
 LOGGER = logging.getLogger(__name__)
-
-
-CORP_TYPES_IN_SCOPE = {
-    "A":   "EXTRA PRO",
-    "B":   "EXTRA PRO",
-    "BC":  "BC COMPANY",
-    "BEN": "BENEFIT COMPANY",
-    "C":   "CONTINUE IN",
-    "CC":  "BC CCC",
-    "CP":  "COOP",
-    "CS":  "CONT IN SOCIETY",
-    "CUL": "ULC CONTINUE IN",
-    "EPR": "EXTRA PRO REG",
-    "FOR": "FOREIGN",
-    "GP":  "PARTNERSHIP",
-    #"FI":  "FINANCIAL", 
-    "LIC": "LICENSED",
-    "LL":  "LL PARTNERSHIP",
-    "LLC": "LIMITED CO",
-    "LP":  "LIM PARTNERSHIP",
-    "MF":  "MISC FIRM",
-    "PA":  "PRIVATE ACT",
-    #"PAR": "PARISHES",
-    "QA":  "CO 1860",
-    "QB":  "CO 1862",
-    "QC":  "CO 1878",
-    "QD":  "CO 1890",
-    "QE":  "CO 1897",
-    "REG": "REGISTRATION",
-    "S":   "SOCIETY",
-    "SP":  "SOLE PROP",
-    "ULC": "BC ULC COMPANY",
-    "XCP": "XPRO COOP",
-    "XL":  "XPRO LL PARTNR",
-    "XP":  "XPRO LIM PARTNR",
-    "XS":  "XPRO SOCIETY",
-}
-
-LEAR_CORP_TYPES_IN_SCOPE = {
-    "GP":  "PARTNERSHIP",
-    "SP":  "SOLE PROP",
-}
 
 
 class DateTimeEncoder(json.JSONEncoder):

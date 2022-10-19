@@ -5,8 +5,8 @@ import os
 import logging
 
 from bcreg.config import config
-from bcreg.eventprocessor import EventProcessor, CORP_TYPES_IN_SCOPE
-from bcreg.bcregistries import BCRegistries, system_type
+from bcreg.eventprocessor import EventProcessor
+from bcreg.bcregistries import BCRegistries, system_type, CORP_TYPES_IN_SCOPE
 
 LOG_LEVEL = os.environ.get('LOG_LEVEL', 'WARNING').upper()
 logging.basicConfig(level=LOG_LEVEL)

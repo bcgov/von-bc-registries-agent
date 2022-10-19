@@ -5,8 +5,8 @@ import os
 import logging
 
 from bcreg.config import config
-from bcreg.eventprocessor import EventProcessor, LEAR_CORP_TYPES_IN_SCOPE
-from bcreg.bcreg_lear import BCReg_Lear, lear_system_type
+from bcreg.eventprocessor import EventProcessor
+from bcreg.bcreg_lear import BCReg_Lear, lear_system_type, LEAR_CORP_TYPES_IN_SCOPE
 
 LOG_LEVEL = os.environ.get('LOG_LEVEL', 'WARNING').upper()
 logging.basicConfig(level=LOG_LEVEL)
@@ -14,6 +14,9 @@ logging.basicConfig(level=LOG_LEVEL)
 
 specific_corps = [
     'CP0000672',
+    'CP0001309',
+    'CP0001311',
+    'CP0001316',
     'FM0020270',
     'FM0222860',
     'FM0268275',
@@ -46,7 +49,7 @@ with BCReg_Lear() as bc_registries:
         print("Get last max event")
         max_event_date = bc_registries.get_max_event_date()
         max_event_id = bc_registries.get_max_event(max_event_date)
-        print(">>> max event:", max_event_id, max_event_date)
+        print(">>> max event --> ", max_event_id, max_event_date)
         
         # get specific test corps (there are about 6)
         print("Get specific corps")

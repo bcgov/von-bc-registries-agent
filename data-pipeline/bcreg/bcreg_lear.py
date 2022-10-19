@@ -26,6 +26,11 @@ timezone = pytz.timezone("PST8PDT")
 
 LOGGER = logging.getLogger(__name__)
 
+LEAR_CORP_TYPES_IN_SCOPE = {
+    "GP":  "PARTNERSHIP",
+    "SP":  "SOLE PROP",
+}
+
 STATE_CODES = {
     "ACTIVE": "ACT",
     "HISTORICAL": "HIS",
@@ -248,8 +253,7 @@ class BCReg_Lear(BCReg_Core):
     def get_max_date_before_now(self):
         try:
             with self.conn.cursor() as cur:
-                cur.execute("""SET TIME ZONE """ + BC_REGISTRIES_TIMEZONE)
-                cur.execute("""SELECT max(issued_at) FROM """ + self.DB_TABLE_PREFIX + """transaction where issued_at <= NOW()::timestamp without time zone""")
+                cur.execute("""SELECT max(issued_at) FROM """ + self.DB_TABLE_PREFIX + """transaction""")
                 row = cur.fetchone()
                 return row[0]
         except (Exception, psycopg2.DatabaseError) as error:
@@ -512,8 +516,7 @@ class BCReg_Lear(BCReg_Core):
         if event_id == 0:
             return datetime.datetime(datetime.MINYEAR, 1, 1) # MIN_START_DATE
         event = self.get_event('0', event_id)
-        event_date = self.get_event_filing_effective_date(event)
-        return event_date
+        return event['issued_at']
 
     # find a specific event, 
     # return None if not found
@@ -665,7 +668,8 @@ class BCReg_Lear(BCReg_Core):
                              '' as othr_juris_desc,
                              state as state_typ_cd,
                              state as op_state_typ_cd,
-                             '' as corp_class""" + bus_ver_columns + """
+                             '' as corp_class,
+                             id as record_id""" + bus_ver_columns + """
                  FROM """ + self.get_table_prefix() + bus_table + """
                  WHERE identifier = """ + self.get_db_sql_param()
 
@@ -674,10 +678,12 @@ class BCReg_Lear(BCReg_Core):
             corps = []
             corp = None
 
+            LOGGER.info(">>> get corp info for: " + corp_num + "," + str(versions))
             cur = self.get_db_connection().cursor()
             cur.execute(sql_corp, (corp_num,))
             row = cur.fetchone()
             while row is not None:
+                LOGGER.info("    got corp rec: " + str(row[17]) + "," + row[0] + "," + row[1])
                 corp = {}
                 corp['current_date'] = timezone.localize(datetime.datetime.now())
                 corp['corp_num'] = row[0]
@@ -708,14 +714,15 @@ class BCReg_Lear(BCReg_Core):
                 corp['state_typ_effective_date'] = None
                 corp['corp_class'] = row[16]
                 if versions:
-                    state_filing_id = row[17]
+                    LOGGER.info("    get filings etc ...")
+                    state_filing_id = row[18]
                     corp['state_filing_id'] = state_filing_id
                     if state_filing_id and 0 < state_filing_id:
                         filings = self.get_corp_filings(filing_id=corp['state_filing_id'])
                         corp['filing'] = filings[0] if 0 < len(filings) else {}
                     else:
                         corp['filing'] = {}
-                    transaction_id = row[18]
+                    transaction_id = row[19]
                     if transaction_id and 0 < transaction_id:
                         transaction = self.get_event(corp['corp_num'], transaction_id)
                         corp['transaction'] = transaction
@@ -807,6 +814,7 @@ class BCReg_Lear(BCReg_Core):
 
             if versions:
                 # fill in effective dates for versions (name, status)
+                LOGGER.info("    sort version records for: " + corp_num)
                 corps = sorted(corps, key=lambda k: k['effective_date'])
                 corp_nme = None
                 corp_nme_effective_date = None
@@ -825,6 +833,7 @@ class BCReg_Lear(BCReg_Core):
                         state_typ_effective_date = corp_v['state_typ_effective_date']
                     else:
                         corp_v['state_typ_effective_date'] = state_typ_effective_date
+                LOGGER.info("    done.")
                 return corps
             else:
                 return corp
@@ -858,7 +867,10 @@ class BCReg_Lear(BCReg_Core):
         try:
             corp = self.get_basic_corp_info(corp_num, versions=False)
             corp_type = corp['corp_typ_cd']
-            corp['versions'] = self.get_basic_corp_info(corp_num, versions=True)
+            if corp_type in LEAR_CORP_TYPES_IN_SCOPE:
+                corp['versions'] = self.get_basic_corp_info(corp_num, versions=True)
+            else:
+                corp['versions'] = {}
 
             """
             # get parties
