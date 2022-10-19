@@ -35,6 +35,42 @@ MIN_START_DATE_TZ = timezone.localize(MIN_START_DATE)
 MAX_END_DATE_TZ   = timezone.localize(MAX_END_DATE)
 DATA_CONVERSION_DATE_TZ = timezone.localize(DATA_CONVERSION_DATE)
 
+CORP_TYPES_IN_SCOPE = {
+    "A":   "EXTRA PRO",
+    "B":   "EXTRA PRO",
+    "BC":  "BC COMPANY",
+    "BEN": "BENEFIT COMPANY",
+    "C":   "CONTINUE IN",
+    "CC":  "BC CCC",
+    "CP":  "COOP",
+    "CS":  "CONT IN SOCIETY",
+    "CUL": "ULC CONTINUE IN",
+    "EPR": "EXTRA PRO REG",
+    "FOR": "FOREIGN",
+    "GP":  "PARTNERSHIP",
+    #"FI":  "FINANCIAL", 
+    "LIC": "LICENSED",
+    "LL":  "LL PARTNERSHIP",
+    "LLC": "LIMITED CO",
+    "LP":  "LIM PARTNERSHIP",
+    "MF":  "MISC FIRM",
+    "PA":  "PRIVATE ACT",
+    #"PAR": "PARISHES",
+    "QA":  "CO 1860",
+    "QB":  "CO 1862",
+    "QC":  "CO 1878",
+    "QD":  "CO 1890",
+    "QE":  "CO 1897",
+    "REG": "REGISTRATION",
+    "S":   "SOCIETY",
+    "SP":  "SOLE PROP",
+    "ULC": "BC ULC COMPANY",
+    "XCP": "XPRO COOP",
+    "XL":  "XPRO LL PARTNR",
+    "XP":  "XPRO LIM PARTNR",
+    "XS":  "XPRO SOCIETY",
+}
+
 LOGGER = logging.getLogger(__name__)
 
 
@@ -989,7 +1025,7 @@ class BCRegistries(BCReg_Core):
                 cur.close()
                 cur = None
          
-                if deep_copy:
+                if deep_copy and corp['corp_type'] in CORP_TYPES_IN_SCOPE:
                     # get corp names
                     corp['org_names'] = self.get_names(corp_num, ['CO','NB'], corp['recognition_dts'])
                     self.flag_start_events_which_are_not_also_end_events(corp_num, corp['org_names'])
@@ -1078,51 +1114,52 @@ class BCRegistries(BCReg_Core):
 
             # get parties
             corp['parties'] = []
-            cur = self.get_db_connection().cursor()
-            cur.execute(sql_party, (corp_num, corp_num,))
-            row = cur.fetchone()
-            while row is not None:
-                corp_party = {}
-                corp_party['corp_num'] = row[0]
-                corp_party['corp_party_id'] = row[1]
-                corp_party['mailing_addr_id'] = row[2]
-                #corp_party['mailing_addr'] = self.get_address(corp_num, row[2])
-                corp_party['delivery_addr_id'] = row[3]
-                #corp_party['delivery_addr'] = self.get_address(corp_num, row[3])
-                corp_party['party_typ_cd'] = row[4]
-                corp_party['start_event_id'] = row[5]
-                corp_party['start_event'] = self.get_event(row[0], row[5], corp_type_cd=corp['corp_typ_cd'])
-                corp_party['effective_start_date'] = corp_party['start_event']['effective_date']
-                corp_party['end_event_id'] = row[6]
-                if corp_party['end_event_id'] is not None:
-                    corp_party['end_event'] = self.get_event(corp['corp_num'], corp_party['end_event_id'], corp_type_cd=corp['corp_typ_cd'])
-                    corp_party['effective_end_date'] = corp_party['end_event']['effective_date']
-                else:
-                    corp_party['effective_end_date'] = MAX_END_DATE
-                corp_party['cessation_dt'] = row[7]
-                corp_party['last_nme'] = row[8]
-                corp_party['middle_nme'] = row[9]
-                corp_party['first_nme'] = row[10]
-                corp_party['business_nme'] = row[11]
-                corp_party['bus_company_num'] = row[12]
-                corp_party['email_address'] = row[13]
-                corp_party['corp_party_seq_num'] = row[14]
-                corp_party['office_notification_dt'] = row[15]
-                corp_party['phone'] = row[16]
-                corp_party['reason_typ_cd'] = row[17]
-
-                # note we are only issuing a relationship credential (with the two corp_nums) 
-                # ... so just get basic info for the "other" corp in the relationship
-                if corp_num == corp_party['corp_num']:
-                    if corp['corp_typ_cd'] == 'FBO' and corp_party['bus_company_num'] is not None:
-                        corp_party['corp_info'] = self.get_basic_corp_info(corp_party['bus_company_num'], False)
-                else:
-                    corp_party['corp_info'] = self.get_basic_corp_info(corp_party['corp_num'], False)
-
-                corp['parties'].append(corp_party)
+            if corp_type in CORP_TYPES_IN_SCOPE:
+                cur = self.get_db_connection().cursor()
+                cur.execute(sql_party, (corp_num, corp_num,))
                 row = cur.fetchone()
-            cur.close()
-            cur = None
+                while row is not None:
+                    corp_party = {}
+                    corp_party['corp_num'] = row[0]
+                    corp_party['corp_party_id'] = row[1]
+                    corp_party['mailing_addr_id'] = row[2]
+                    #corp_party['mailing_addr'] = self.get_address(corp_num, row[2])
+                    corp_party['delivery_addr_id'] = row[3]
+                    #corp_party['delivery_addr'] = self.get_address(corp_num, row[3])
+                    corp_party['party_typ_cd'] = row[4]
+                    corp_party['start_event_id'] = row[5]
+                    corp_party['start_event'] = self.get_event(row[0], row[5], corp_type_cd=corp['corp_typ_cd'])
+                    corp_party['effective_start_date'] = corp_party['start_event']['effective_date']
+                    corp_party['end_event_id'] = row[6]
+                    if corp_party['end_event_id'] is not None:
+                        corp_party['end_event'] = self.get_event(corp['corp_num'], corp_party['end_event_id'], corp_type_cd=corp['corp_typ_cd'])
+                        corp_party['effective_end_date'] = corp_party['end_event']['effective_date']
+                    else:
+                        corp_party['effective_end_date'] = MAX_END_DATE
+                    corp_party['cessation_dt'] = row[7]
+                    corp_party['last_nme'] = row[8]
+                    corp_party['middle_nme'] = row[9]
+                    corp_party['first_nme'] = row[10]
+                    corp_party['business_nme'] = row[11]
+                    corp_party['bus_company_num'] = row[12]
+                    corp_party['email_address'] = row[13]
+                    corp_party['corp_party_seq_num'] = row[14]
+                    corp_party['office_notification_dt'] = row[15]
+                    corp_party['phone'] = row[16]
+                    corp_party['reason_typ_cd'] = row[17]
+
+                    # note we are only issuing a relationship credential (with the two corp_nums) 
+                    # ... so just get basic info for the "other" corp in the relationship
+                    if corp_num == corp_party['corp_num']:
+                        if corp['corp_typ_cd'] == 'FBO' and corp_party['bus_company_num'] is not None:
+                            corp_party['corp_info'] = self.get_basic_corp_info(corp_party['bus_company_num'], False)
+                    else:
+                        corp_party['corp_info'] = self.get_basic_corp_info(corp_party['corp_num'], False)
+
+                    corp['parties'].append(corp_party)
+                    row = cur.fetchone()
+                cur.close()
+                cur = None
 
             return corp
         except (Exception, psycopg2.DatabaseError) as error:

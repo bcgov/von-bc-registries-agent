@@ -22,11 +22,13 @@ with EventProcessor() as event_processor:
             print("Get last max event")
             max_event_date = bc_registries.get_max_event_date()
             max_event_id = bc_registries.get_max_event(max_event_date)
+            print(">>> max event --> ", max_event_id, max_event_date)
             
             # get unprocessed corps (there are about 2700)
             print("Get unprocessed corps")
             last_event_dt = bc_registries.get_event_effective_date(prev_event_id)
             max_event_dt = bc_registries.get_event_effective_date(max_event_id)
+            print(">>> last/max event --> ", last_event_dt, max_event_dt)
             corps = bc_registries.get_unprocessed_corps_data_load(prev_event_id, last_event_dt, max_event_id, max_event_dt)
             
             print("Update our queue")

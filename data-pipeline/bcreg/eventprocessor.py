@@ -13,8 +13,8 @@ import os
 import csv
 
 from bcreg.config import config
-from bcreg.bcregistries import BCRegistries, CustomJsonEncoder, event_dict, is_data_conversion_event, system_type
-from bcreg.bcreg_lear import BCReg_Lear, lear_system_type
+from bcreg.bcregistries import BCRegistries, CustomJsonEncoder, event_dict, is_data_conversion_event, system_type, CORP_TYPES_IN_SCOPE
+from bcreg.bcreg_lear import BCReg_Lear, lear_system_type, LEAR_CORP_TYPES_IN_SCOPE
 from bcreg.rocketchat_hooks import log_error, log_warning, log_info
 
 
@@ -79,48 +79,6 @@ MIN_VALID_DATE_TZ = timezone.localize(MIN_VALID_DATE)
 MAX_END_DATE_TZ   = timezone.localize(MAX_END_DATE)
 
 LOGGER = logging.getLogger(__name__)
-
-
-CORP_TYPES_IN_SCOPE = {
-    "A":   "EXTRA PRO",
-    "B":   "EXTRA PRO",
-    "BC":  "BC COMPANY",
-    "BEN": "BENEFIT COMPANY",
-    "C":   "CONTINUE IN",
-    "CC":  "BC CCC",
-    "CP":  "COOP",
-    "CS":  "CONT IN SOCIETY",
-    "CUL": "ULC CONTINUE IN",
-    "EPR": "EXTRA PRO REG",
-    "FOR": "FOREIGN",
-    "GP":  "PARTNERSHIP",
-    #"FI":  "FINANCIAL", 
-    "LIC": "LICENSED",
-    "LL":  "LL PARTNERSHIP",
-    "LLC": "LIMITED CO",
-    "LP":  "LIM PARTNERSHIP",
-    "MF":  "MISC FIRM",
-    "PA":  "PRIVATE ACT",
-    #"PAR": "PARISHES",
-    "QA":  "CO 1860",
-    "QB":  "CO 1862",
-    "QC":  "CO 1878",
-    "QD":  "CO 1890",
-    "QE":  "CO 1897",
-    "REG": "REGISTRATION",
-    "S":   "SOCIETY",
-    "SP":  "SOLE PROP",
-    "ULC": "BC ULC COMPANY",
-    "XCP": "XPRO COOP",
-    "XL":  "XPRO LL PARTNR",
-    "XP":  "XPRO LIM PARTNR",
-    "XS":  "XPRO SOCIETY",
-}
-
-LEAR_CORP_TYPES_IN_SCOPE = {
-    "GP":  "PARTNERSHIP",
-    "SP":  "SOLE PROP",
-}
 
 
 class DateTimeEncoder(json.JSONEncoder):
@@ -1104,15 +1062,7 @@ class EventProcessor:
         future_events = []
         past_events = []
         for corp_version in corp_info['versions']:
-            transaction = corp_version['transaction'] if 'transaction' in corp_version else {}
-            filing = corp_version['filing'] if 'filing' in corp_version else {}
-            effective_date = None
-            if 'effective_date' in transaction:
-                effective_date = transaction['effective_date']
-            elif 'completion_date' in filing:
-                effective_date = filing['completion_date']
-            else:
-                effective_date = corp_info['last_event_dt']
+            effective_date = corp_version['effective_date']
             if effective_date.tzinfo is None or effective_date.tzinfo.utcoffset(effective_date) is None:
                 effective_date = effective_date.replace(tzinfo=pytz.utc)
             current_date = corp_info['current_date']
@@ -1637,6 +1587,7 @@ class EventProcessor:
 
         # get events - only generate credentials for events in the past
         (effective_events, future_events) = self.current_and_future_corp_events(system_type_cd, corp_num, corp_info)
+        effective_events = sorted(effective_events, key=lambda k: k['effective_date'])
         # print(">>> lengths   :", corp_num, len(effective_events), len(future_events))
         # print(">>> effective :", corp_num, json.dumps(effective_events, cls=CustomJsonEncoder, sort_keys=True))
         # print(">>> future    :", corp_num, json.dumps(future_events, cls=CustomJsonEncoder, sort_keys=True))
@@ -1649,11 +1600,11 @@ class EventProcessor:
             corp_cred['registration_expiry_date'] = ''
             corp_cred['entity_type'] = corp_version_info['corp_typ_cd']
             corp_cred['entity_name'] = corp_version_info['corp_nme']
-            corp_cred['entity_name_effective'] = ''
+            corp_cred['entity_name_effective'] = corp_version_info['corp_nme_effective_date']
             corp_cred['entity_name_assumed'] = corp_version_info['corp_nme_as'] 
             corp_cred['entity_name_assumed_effective'] = ''
             corp_cred['entity_status'] = corp_version_info['state_typ_cd']
-            corp_cred['entity_status_effective'] = ''
+            corp_cred['entity_status_effective'] = corp_version_info['state_typ_effective_date']
             corp_cred['home_jurisdiction'] = 'BC'
             corp_cred['registered_jurisdiction'] = 'BC' 
             corp_cred['extra_jurisdictional_registration'] = ''

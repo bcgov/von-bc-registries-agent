@@ -7,8 +7,8 @@ import os
 import logging
 
 from bcreg.config import config
-from bcreg.bcreg_lear import BCReg_Lear, lear_system_type
-from bcreg.eventprocessor import EventProcessor, LEAR_CORP_TYPES_IN_SCOPE
+from bcreg.bcreg_lear import BCReg_Lear, lear_system_type, LEAR_CORP_TYPES_IN_SCOPE
+from bcreg.eventprocessor import EventProcessor
 from bcreg.rocketchat_hooks import log_error, log_warning, log_info
 
 LOG_LEVEL = os.environ.get('LOG_LEVEL', 'WARNING').upper()

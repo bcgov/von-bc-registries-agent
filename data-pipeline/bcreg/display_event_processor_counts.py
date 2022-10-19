@@ -4,8 +4,8 @@ import datetime
 import json
 import decimal
 from bcreg.config import config
-from bcreg.eventprocessor import EventProcessor, CORP_TYPES_IN_SCOPE
-from bcreg.bcregistries import BCRegistries
+from bcreg.eventprocessor import EventProcessor
+from bcreg.bcregistries import BCRegistries, CORP_TYPES_IN_SCOPE
 
 """
 This script identifies missing corps based on the Event Processor database, comparing input corporations

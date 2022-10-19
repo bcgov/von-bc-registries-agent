@@ -26,6 +26,11 @@ timezone = pytz.timezone("PST8PDT")
 
 LOGGER = logging.getLogger(__name__)
 
+LEAR_CORP_TYPES_IN_SCOPE = {
+    "GP":  "PARTNERSHIP",
+    "SP":  "SOLE PROP",
+}
+
 STATE_CODES = {
     "ACTIVE": "ACT",
     "HISTORICAL": "HIS",
@@ -248,8 +253,7 @@ class BCReg_Lear(BCReg_Core):
     def get_max_date_before_now(self):
         try:
             with self.conn.cursor() as cur:
-                cur.execute("""SET TIME ZONE """ + BC_REGISTRIES_TIMEZONE)
-                cur.execute("""SELECT max(issued_at) FROM """ + self.DB_TABLE_PREFIX + """transaction where issued_at <= NOW()::timestamp without time zone""")
+                cur.execute("""SELECT max(issued_at) FROM """ + self.DB_TABLE_PREFIX + """transaction""")
                 row = cur.fetchone()
                 return row[0]
         except (Exception, psycopg2.DatabaseError) as error:
@@ -512,8 +516,7 @@ class BCReg_Lear(BCReg_Core):
         if event_id == 0:
             return datetime.datetime(datetime.MINYEAR, 1, 1) # MIN_START_DATE
         event = self.get_event('0', event_id)
-        event_date = self.get_event_filing_effective_date(event)
-        return event_date
+        return event['issued_at']
 
     # find a specific event, 
     # return None if not found
@@ -631,6 +634,18 @@ class BCReg_Lear(BCReg_Core):
             if cur is not None:
                 cur.close()
 
+    def  get_corp_version_effective_date(self, corp):
+        effective_date = None
+        if 'transaction' in corp and 'effective_date' in corp['transaction']:
+            effective_date =  corp['transaction']['effective_date']
+        elif 'filing' in corp and 'effective_date' in corp['filing']:
+            effective_date =  corp['filing']['effective_date']
+        else:
+            effective_date = corp['last_event_dt']
+        if effective_date.tzinfo is None or effective_date.tzinfo.utcoffset(effective_date) is None:
+            effective_date = effective_date.replace(tzinfo=pytz.utc)
+        return effective_date
+
     def get_basic_corp_info(self, corp_num, deep_copy=True, versions=False):
         bus_table = 'businesses'
         bus_ver_columns = ''
@@ -653,7 +668,8 @@ class BCReg_Lear(BCReg_Core):
                              '' as othr_juris_desc,
                              state as state_typ_cd,
                              state as op_state_typ_cd,
-                             '' as corp_class""" + bus_ver_columns + """
+                             '' as corp_class,
+                             id as record_id""" + bus_ver_columns + """
                  FROM """ + self.get_table_prefix() + bus_table + """
                  WHERE identifier = """ + self.get_db_sql_param()
 
@@ -662,10 +678,12 @@ class BCReg_Lear(BCReg_Core):
             corps = []
             corp = None
 
+            LOGGER.info(">>> get corp info for: " + corp_num + "," + str(versions))
             cur = self.get_db_connection().cursor()
             cur.execute(sql_corp, (corp_num,))
             row = cur.fetchone()
             while row is not None:
+                LOGGER.info("    got corp rec: " + str(row[17]) + "," + row[0] + "," + row[1])
                 corp = {}
                 corp['current_date'] = timezone.localize(datetime.datetime.now())
                 corp['corp_num'] = row[0]
@@ -687,26 +705,30 @@ class BCReg_Lear(BCReg_Core):
                 corp['last_event_dt'] = row[8]
                 corp['corp_nme'] = row[9]
                 corp['corp_nme_as'] = row[10]
+                corp['corp_nme_effective_date'] = None
                 corp['can_jur_typ_cd'] = row[11]
                 corp['xpro_typ_cd'] = row[12]
                 corp['othr_juris_desc'] = row[13]
                 corp['state_typ_cd'] = STATE_CODES[row[14]] if row[14] in STATE_CODES else row[14]
                 corp['op_state_typ_cd'] = STATE_CODES[row[15]] if row[15] in STATE_CODES else row[15]
+                corp['state_typ_effective_date'] = None
                 corp['corp_class'] = row[16]
                 if versions:
-                    state_filing_id = row[17]
+                    LOGGER.info("    get filings etc ...")
+                    state_filing_id = row[18]
                     corp['state_filing_id'] = state_filing_id
                     if state_filing_id and 0 < state_filing_id:
                         filings = self.get_corp_filings(filing_id=corp['state_filing_id'])
                         corp['filing'] = filings[0] if 0 < len(filings) else {}
                     else:
                         corp['filing'] = {}
-                    transaction_id = row[18]
+                    transaction_id = row[19]
                     if transaction_id and 0 < transaction_id:
                         transaction = self.get_event(corp['corp_num'], transaction_id)
                         corp['transaction'] = transaction
                     else:
                         corp['transaction'] = {}
+                    corp['effective_date'] = self.get_corp_version_effective_date(corp)
 
                 if versions:
                     corps.append(corp)
@@ -788,8 +810,30 @@ class BCReg_Lear(BCReg_Core):
                 corp['recognition_dts'] = ''
                 corp['filing'] = {}
                 corp['transaction'] = {}
+                corp['effective_date'] = None
 
             if versions:
+                # fill in effective dates for versions (name, status)
+                LOGGER.info("    sort version records for: " + corp_num)
+                corps = sorted(corps, key=lambda k: k['effective_date'])
+                corp_nme = None
+                corp_nme_effective_date = None
+                state_typ_cd = None
+                state_typ_effective_date = None
+                for corp_v in corps:
+                    if (not corp_nme) or corp_v['corp_nme'] != corp_nme:
+                        corp_v['corp_nme_effective_date'] = corp_v['effective_date']
+                        corp_nme = corp_v['corp_nme']
+                        corp_nme_effective_date = corp_v['corp_nme_effective_date']
+                    else:
+                        corp_v['corp_nme_effective_date'] = corp_nme_effective_date
+                    if (not state_typ_cd) or corp_v['state_typ_cd'] != state_typ_cd:
+                        corp_v['state_typ_effective_date'] = corp_v['effective_date']
+                        state_typ_cd = corp_v['state_typ_cd']
+                        state_typ_effective_date = corp_v['state_typ_effective_date']
+                    else:
+                        corp_v['state_typ_effective_date'] = state_typ_effective_date
+                LOGGER.info("    done.")
                 return corps
             else:
                 return corp
@@ -823,7 +867,10 @@ class BCReg_Lear(BCReg_Core):
         try:
             corp = self.get_basic_corp_info(corp_num, versions=False)
             corp_type = corp['corp_typ_cd']
-            corp['versions'] = self.get_basic_corp_info(corp_num, versions=True)
+            if corp_type in LEAR_CORP_TYPES_IN_SCOPE:
+                corp['versions'] = self.get_basic_corp_info(corp_num, versions=True)
+            else:
+                corp['versions'] = {}
 
             """
             # get parties
