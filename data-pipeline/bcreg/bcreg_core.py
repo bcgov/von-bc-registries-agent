@@ -193,7 +193,7 @@ class BCReg_Core:
         if pg_type == 23 or pg_type == 21 or pg_type == 20:    # INT*
             return 'integer'
         if pg_type == 1114 or pg_type == 1184:  # DATE or DATETIME (or TZ)
-            return 'timestamp'
+            return 'text' # 'timestamp'
         if pg_type == 114 or pg_type == 3802:  # json or jsonb
             return 'text'
         # default for now
@@ -253,6 +253,7 @@ class BCReg_Core:
     #       to be used to generate sample data for unit testing
     def cache_bcreg_data(self, table, desc, rows, generate_individual_sql=False):
         create_sql = self.create_table_sql(table, desc)
+        # print("Creating cache table:", create_sql)
         col_keys = []
         insert_keys = ''
         insert_placeholders = ''
@@ -366,6 +367,8 @@ class BCReg_Core:
             if generate_individual_sql:
                 insert_sqls.append('insert into ' + INMEM_CACHE_TABLE_PREFIX + table + ' (' + insert_keys + ') values (' + insert_values + ')')
         insert_sql = 'insert into ' + INMEM_CACHE_TABLE_PREFIX + table + ' (' + insert_keys + ') values (' + insert_placeholders + ')'
+        # print("Inserting in cache:", insert_sql)
+        # print("                  :", inserts)
 
         if generate_individual_sql:
             self.generated_sqls.append(create_sql)

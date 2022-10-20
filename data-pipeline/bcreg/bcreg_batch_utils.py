@@ -1,8 +1,11 @@
 import psycopg2
 import datetime
+import pytz
 import os
 import logging
 
+from bcreg.bcregistries import system_type
+from bcreg.bcreg_lear import lear_system_type
 from bcreg.config import config
 from bcreg.rocketchat_hooks import log_error, log_warning, log_info
 
