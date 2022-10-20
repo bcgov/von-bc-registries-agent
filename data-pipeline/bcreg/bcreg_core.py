@@ -18,6 +18,8 @@ from bcreg.rocketchat_hooks import log_error, log_warning, log_info
 INMEM_CACHE_TABLE_PREFIX   = 'x'
 MAX_WHERE_IN = 1000
 
+LEAR_SYSTEM_TYPE = 'BCREG_LEAR'
+
 LOGGER = logging.getLogger(__name__)
 
 
@@ -33,6 +35,7 @@ class BCReg_Core:
     cache_miss = []
     generated_sqls = []
     generated_corp_nums = {}
+    source_system_type = None
 
     DB_TABLE_PREFIX = ""
     PG_DATABASE_NAME = ""
@@ -193,7 +196,10 @@ class BCReg_Core:
         if pg_type == 23 or pg_type == 21 or pg_type == 20:    # INT*
             return 'integer'
         if pg_type == 1114 or pg_type == 1184:  # DATE or DATETIME (or TZ)
-            return 'text' # 'timestamp'
+            if self.source_system_type == LEAR_SYSTEM_TYPE:
+                return 'text'
+            else:
+                return 'timestamp'
         if pg_type == 114 or pg_type == 3802:  # json or jsonb
             return 'text'
         # default for now
@@ -221,7 +227,7 @@ class BCReg_Core:
         if pg_type == 23 or pg_type == 21 or pg_type == 20:    # INT*
             return str(col_value)
         if pg_type == 1114 or pg_type == 1184:  # DATE or DATETIME (or TZ)
-            return "'" + str(col_value) + "'"  
+            return "'" + str(col_value) + "'"
         if pg_type == 114 or pg_type == 3802:  # json or jsonb
             return "'" + json.dumps(col_value) + "'"
         # default for now
