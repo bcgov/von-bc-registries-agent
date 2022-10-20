@@ -29,7 +29,7 @@ class Script {
     }
 
     if(projectName) {
-      statusMsg += ` message received from [${friendlyProjectName}](https://console.pathfinder.gov.bc.ca:8443/console/project/${projectName}/overview):`;
+      statusMsg += ` message received from [${friendlyProjectName}](https://console.apps.silver.devops.gov.bc.ca/k8s/cluster/projects/${projectName}/workloads):`;
     } else {
       statusMsg += ` message received:`;
     }
