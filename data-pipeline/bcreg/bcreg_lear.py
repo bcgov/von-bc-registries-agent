@@ -110,6 +110,7 @@ class BCReg_Lear(BCReg_Core):
     def __init__(self, cache=False):
         self.sql_local_cache = cache
         self.PG_DATABASE_NAME = BC_REGISTRIES_DATABASE_NAME
+        self.source_system_type = lear_system_type
         super().__init__(cache)
 
 

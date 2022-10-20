@@ -128,6 +128,7 @@ class BCRegistries(BCReg_Core):
         self.sql_local_cache = cache
         self.DB_TABLE_PREFIX = BC_REGISTRIES_TABLE_PREFIX
         self.PG_DATABASE_NAME = BC_REGISTRIES_DATABASE_NAME
+        self.source_system_type = system_type
         super().__init__(cache)
 
 
@@ -1025,7 +1026,7 @@ class BCRegistries(BCReg_Core):
                 cur.close()
                 cur = None
          
-                if deep_copy and corp['corp_type'] in CORP_TYPES_IN_SCOPE:
+                if deep_copy and corp['corp_typ_cd'] in CORP_TYPES_IN_SCOPE:
                     # get corp names
                     corp['org_names'] = self.get_names(corp_num, ['CO','NB'], corp['recognition_dts'])
                     self.flag_start_events_which_are_not_also_end_events(corp_num, corp['org_names'])
