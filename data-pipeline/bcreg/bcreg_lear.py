@@ -464,6 +464,20 @@ class BCReg_Lear(BCReg_Core):
     #  or against bc registries database directly)
     ###########################################################################
 
+    def to_lear_date(self, the_date):
+        if not the_date:
+            return the_date
+        if isinstance(the_date, datetime.datetime):
+            return the_date
+        # print(">>> converting:", the_date)
+        the_format = '%Y-%m-%d %H:%M:%S'
+        if 0 <= the_date.find('.'):
+            the_format += ".%f"
+        if 0 <= the_date.find('+'):
+            the_format += "%z"
+        the_date = datetime.datetime.strptime(the_date, the_format)
+        return the_date
+
     # return the "effective date" given an event and filing
     def get_event_filing_effective_date(self, event, corp_type_cd=None):
         ret_date = None
@@ -516,7 +530,7 @@ class BCReg_Lear(BCReg_Core):
         if event_id == 0:
             return datetime.datetime(datetime.MINYEAR, 1, 1) # MIN_START_DATE
         event = self.get_event('0', event_id)
-        return event['issued_at']
+        return self.to_lear_date(event['issued_at'])
 
     # find a specific event, 
     # return None if not found
@@ -545,6 +559,7 @@ class BCReg_Lear(BCReg_Core):
                     ret_event = event
             if ret_event is None:
                 return {}
+            ret_event['issued_at'] = self.to_lear_date(ret_event['issued_at'])
 
             # fill in filing
             if 'filing' not in ret_event:
@@ -576,7 +591,11 @@ class BCReg_Lear(BCReg_Core):
             cursor.close()
             cursor = None
             if len(filing_event) > 0:
-                return filing_event[0]
+                the_filing = filing_event[0]
+                the_filing['filing_date'] = self.to_lear_date(the_filing['filing_date'])
+                the_filing['completion_date'] = self.to_lear_date(the_filing['completion_date'])
+                the_filing['effective_date'] = self.to_lear_date(the_filing['effective_date'])
+                return the_filing
             # check for a cache miss
             if self.use_local_cache() and (not force_query_remote):
                 filing_event = self.get_filing_event(corp_num, event_id, event_type, True)
@@ -613,13 +632,13 @@ class BCReg_Lear(BCReg_Core):
                 filing = {
                     "id": row[0],
                     "filing_type": FILING_TYPE_CODES[row[1]] if row[1] in FILING_TYPE_CODES else row[1],
-                    "filing_date": row[2],
+                    "filing_date": self.to_lear_date(row[2]),
                     "filing_json": row[3],
                     "transaction_id": row[4],
                     "business_id": row[5],
                     "status": row[6],
-                    "completion_date": row[7],
-                    "effective_date": row[8],
+                    "completion_date": self.to_lear_date(row[7]),
+                    "effective_date": self.to_lear_date(row[8]),
                 }
                 filings.append(filing)
                 row = cur.fetchone()
@@ -693,16 +712,16 @@ class BCReg_Lear(BCReg_Core):
                     pass
                 corp['corp_typ_cd'] = row[1]
                 # corp['corp_type'] = self.get_corp_type(row[1])
-                corp['recognition_dts'] = row[2]
-                corp['last_ar_filed_dt'] = row[3]
+                corp['recognition_dts'] = self.to_lear_date(row[2])
+                corp['last_ar_filed_dt'] = self.to_lear_date(row[3])
                 bn_9 = ''
                 if row[4] and 9 <= len(row[4]):
                     bn_9 = row[4][:9]
                 corp['bn_9'] = bn_9
                 corp['bn_15'] = row[5]
                 corp['admin_email'] = row[6]
-                corp['last_ledger_dt'] = row[7]
-                corp['last_event_dt'] = row[8]
+                corp['last_ledger_dt'] = self.to_lear_date(row[7])
+                corp['last_event_dt'] = self.to_lear_date(row[8])
                 corp['corp_nme'] = row[9]
                 corp['corp_nme_as'] = row[10]
                 corp['corp_nme_effective_date'] = None
@@ -807,7 +826,7 @@ class BCReg_Lear(BCReg_Core):
                 corp = {}
                 corp['corp_num'] = ''
                 corp['corp_typ_cd'] = ''
-                corp['recognition_dts'] = ''
+                corp['recognition_dts'] = None
                 corp['filing'] = {}
                 corp['transaction'] = {}
                 corp['effective_date'] = None

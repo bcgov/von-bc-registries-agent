@@ -1582,7 +1582,7 @@ class EventProcessor:
         (for the initial load, prev_event is the genesis date of Jan 1, 0000)
         The event "date" is based on some complicated logic and can come from the event or the related filing.
         """
-        LOGGER.info("Generate credentials for", corp_num, prev_event, last_event)
+        # print("Generate credentials for", corp_num, prev_event, last_event)
         corp_creds = []
 
         # get events - only generate credentials for events in the past
