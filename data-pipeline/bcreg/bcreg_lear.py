@@ -836,6 +836,7 @@ class BCReg_Lear(BCReg_Core):
                 # fill in effective dates for versions (name, status)
                 LOGGER.info("    sort version records for: " + corp_num)
                 corps = sorted(corps, key=lambda k: k['effective_date'])
+                # print(">>> sorted versions:", corps)
                 corp_nme = None
                 corp_nme_effective_date = None
                 state_typ_cd = None
