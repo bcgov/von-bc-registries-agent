@@ -1698,7 +1698,8 @@ class EventProcessor:
                   (
                     SELECT RECORD_ID
                     FROM EVENT_BY_CORP_FILING 
-                    WHERE PROCESS_DATE is null
+                    WHERE SYSTEM_TYPE_CD = %s
+                    AND PROCESS_DATE is null
                     ORDER BY RECORD_ID
                     LIMIT !BS!
                   )
@@ -1717,7 +1718,8 @@ class EventProcessor:
                    (
                      SELECT RECORD_ID
                      FROM CORP_HISTORY_LOG 
-                     WHERE PROCESS_DATE is null
+                     WHERE SYSTEM_TYPE_CD = %s
+                     AND PROCESS_DATE is null
                      ORDER BY RECORD_ID
                      LIMIT !BS!
                    )
@@ -1756,7 +1758,7 @@ class EventProcessor:
                     # sql1 = find unprocessed events from our local table EVENT_BY_CORP_FILING
                     cur = self.conn.cursor()
                     sql1e = sql1.replace("!BS!", str(max_batch_size))
-                    cur.execute(sql1e, (system_type_cd,))
+                    cur.execute(sql1e, (system_type_cd,system_type_cd,))
                     row = cur.fetchone()
                     while row is not None:
                         # include the date(s) for the start and end events
@@ -1781,7 +1783,7 @@ class EventProcessor:
                     cur = self.conn.cursor()
                     sql1ae = sql1a.replace("!BS!", str(max_batch_size))
                     # print(">>> executing with:", system_type_cd, sql1ae)
-                    cur.execute(sql1ae, (system_type_cd,))
+                    cur.execute(sql1ae, (system_type_cd,system_type_cd,))
                     row = cur.fetchone()
                     while row is not None:
                         # includes the date(s) for the start and end events
