@@ -1608,7 +1608,7 @@ class EventProcessor:
             corp_cred['home_jurisdiction'] = 'BC'
             corp_cred['registered_jurisdiction'] = 'BC' 
             corp_cred['extra_jurisdictional_registration'] = ''
-            corp_cred['effective_date'] = corp_version_info['transaction']['effective_date']
+            corp_cred['effective_date'] = corp_version_info['effective_date']
 
             """
             TODO
