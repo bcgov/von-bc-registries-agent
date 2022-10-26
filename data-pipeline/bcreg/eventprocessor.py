@@ -2050,7 +2050,7 @@ class EventProcessor:
                   SET PROCESS_DATE = %s, PROCESS_SUCCESS = %s, PROCESS_MSG = %s
                   WHERE RECORD_ID = %s"""
 
-        print(datetime.datetime.now(), "Generating credentials for", system_type_cd, credential_typ_cd, "...")
+        # print(datetime.datetime.now(), "Generating credentials for", system_type_cd, credential_typ_cd, "...")
         cur = None
         i = 0
         while True:
@@ -2073,7 +2073,7 @@ class EventProcessor:
                 if len(corps) == 0:
                     return
 
-                print(datetime.datetime.now(), "Processing " + str(len(corps)) + " orgs for credential " + system_type_cd + " " + credential_typ_cd)
+                # print(datetime.datetime.now(), "Processing " + str(len(corps)) + " orgs for credential " + system_type_cd + " " + credential_typ_cd)
                 saved_creds = 0
                 for corp in corps:
                     corp_creds = []
@@ -2265,11 +2265,11 @@ class EventProcessor:
         for table in tables:
             process_ct     = self.get_record_count(table, False, system_type_cd=system_type_cd)
             outstanding_ct = self.get_record_count(table, True, system_type_cd=system_type_cd)
-            print('Table:', table, 'Processed:', process_ct, 'Outstanding:', outstanding_ct)
+            print(system_type_cd, ': Table:', table, 'Processed:', process_ct, 'Outstanding:', outstanding_ct)
 
             sql = "select count(*) from " + table + " where process_success = 'N'"
             error_ct = self.get_sql_record_count(sql)
-            print('      ', table, 'Process Errors:', error_ct)
+            print(system_type_cd, ':       ', table, 'Process Errors:', error_ct)
             if 0 < error_ct:
                 self.print_processing_errors(table)
 
