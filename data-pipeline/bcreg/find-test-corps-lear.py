@@ -31,6 +31,11 @@ specific_corps = [
     'FM0346781',
     'FM0346815',
     'FM1017072',
+    'BC1255957',
+    'FM0814438',
+    'FM0562853',
+    'FM0575361',
+    'FM0842476',
 ]
 
 num_corps_per_type = 20
@@ -65,7 +70,6 @@ with BCReg_Lear() as bc_registries:
         # get specific test corps (there are about 6)
         print("Get specific corps")
         corps = bc_registries.get_specific_corps(specific_corps)
-        print(">>> corps:", corps)
 
         print("Find unprocessed events for each corp")
         last_event_dt = bc_registries.get_event_effective_date(prev_event_id)
