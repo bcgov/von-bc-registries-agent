@@ -1153,9 +1153,9 @@ class BCRegistries(BCReg_Core):
                     # ... so just get basic info for the "other" corp in the relationship
                     if corp_num == corp_party['corp_num']:
                         if corp['corp_typ_cd'] == 'FBO' and corp_party['bus_company_num'] is not None:
-                            corp_party['corp_info'] = self.get_basic_corp_info(corp_party['bus_company_num'], False)
+                            corp_party['corp_info'] = self.get_basic_corp_info(corp_party['bus_company_num'], deep_copy=False)
                     else:
-                        corp_party['corp_info'] = self.get_basic_corp_info(corp_party['corp_num'], False)
+                        corp_party['corp_info'] = self.get_basic_corp_info(corp_party['corp_num'], deep_copy=False)
 
                     corp['parties'].append(corp_party)
                     row = cur.fetchone()

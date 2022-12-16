@@ -794,7 +794,9 @@ class EventProcessor:
 
         # corp_state reason code
         if 'filing_typ_cd' in loop_start_event['filing']:
-            corp_reason = 'Filing:' + loop_start_event['filing']['filing_typ_cd'] 
+            corp_reason = 'Filing:' + loop_start_event['filing']['filing_typ_cd']
+        elif 'filing_type' in loop_start_event['filing']:
+            corp_reason = 'Filing:' + loop_start_event['filing']['filing_type']
         else:
             corp_reason = 'Event:' + loop_start_event['event_typ_cd'] 
 
@@ -1173,8 +1175,8 @@ class EventProcessor:
             return False;
 
         # only look at FBO's (for now)
-        if party['party_typ_cd'] != 'FBO':
-            #LOGGER.info("  --> party['party_typ_cd'] != 'FBO', return False")
+        if party['party_typ_cd'] != 'FBO' and party['party_typ_cd'] != 'organization':
+            #LOGGER.info("  --> party['party_typ_cd'] != 'FBO'/'organization', return False")
             return False
 
         # special case where the corp_num and bus_company_num are the same
@@ -1182,6 +1184,7 @@ class EventProcessor:
         #    LOGGER.info("  --> party['bus_company_num'] == corp_num, return False")
         #    return False
 
+        """
         # include if this record is within the desired event range ...
         if ((prev_event['event_date'] <= party['start_event']['event_timestmp'] and party['start_event']['event_timestmp'] <= last_event['event_date']) or
             (party['end_event_id'] is not None and prev_event['event_date'] <= party['end_event']['event_timestmp'] and party['end_event']['event_timestmp'] <= last_event['event_date'])):
@@ -1195,6 +1198,12 @@ class EventProcessor:
             # TBD check for partnerships and amalgamations
             #if self.is_partnership() or self.is_amalgamation():
             #   return True
+        """
+
+        # ... AND it belongs to the correct company type/party type logic
+        if self.is_owned_sole_prop(party, corp_num, corp_info) or self.is_owner_of_sole_prop(party, corp_num, corp_info):
+            #LOGGER.info("  --->", self.is_owned_sole_prop(party, corp_num, corp_info), self.is_owner_of_sole_prop(party, corp_num, corp_info))
+            return True
 
         #LOGGER.info("  ---> fall-through, return False")
 
@@ -1592,8 +1601,12 @@ class EventProcessor:
         # print(">>> effective :", corp_num, json.dumps(effective_events, cls=CustomJsonEncoder, sort_keys=True))
         # print(">>> future    :", corp_num, json.dumps(future_events, cls=CustomJsonEncoder, sort_keys=True))
 
+        # print(">>> corp_info:", json.dumps(corp_info, cls=CustomJsonEncoder, sort_keys=True))
+
         for event in effective_events:
             corp_version_info = event
+            # print(">>> corp_version_info:", json.dumps(corp_version_info, cls=CustomJsonEncoder, sort_keys=True))
+
             corp_cred = {}
             corp_cred['registration_id'] = self.corp_num_with_prefix(corp_info['corp_typ_cd'], corp_info['corp_num'])
             corp_cred['registration_date'] = self.filter_min_date(corp_version_info['recognition_dts'])
@@ -1638,6 +1651,62 @@ class EventProcessor:
             else:
                 #LOGGER.info(" >>> Skip credential for reason Duplicate")
                 pass
+
+        corp_type = corp_info['corp_typ_cd']
+
+        # generate relationship credential(s)
+        if 'parties' in corp_info and 0 < len(corp_info['parties']):
+            # ensure relationship history is generated correctly
+            corp_parties = sorted(corp_info['parties'], key=lambda k: int(k['transaction_id']))
+            corp_parties = sorted(corp_parties, key=lambda k: k['effective_start_date'])
+            # first check if party records are for unique firms
+            party_count = {}
+            for party in corp_parties:
+                if self.should_generate_relationship_credential(party, prev_event, last_event, corp_num, corp_info):
+                    if corp_num == party['corp_num']:
+                        count_corp_num = party['bus_company_num']
+                    else:
+                        count_corp_num = party['corp_num']
+                    if count_corp_num in party_count:
+                        party_count[count_corp_num] = party_count[count_corp_num] + 1
+                    else:
+                        party_count[count_corp_num] = 1
+
+            # now generate credentials
+            for party in corp_parties:
+                if self.should_generate_relationship_credential(party, prev_event, last_event, corp_num, corp_info):
+                    dba_cred = {}
+                    dba_cred['registration_id'] = self.corp_num_with_prefix(corp_info['corp_typ_cd'], corp_info['corp_num'])
+                    dba_cred['associated_registration_id'] = self.corp_num_with_prefix(party['corp_info']['corp_typ_cd'], party['corp_info']['corp_num'])
+                    if self.is_owner_of_sole_prop(party, corp_num, corp_info):
+                        dba_cred['relationship'] = 'Owns'
+                        dba_cred['relationship_description'] = 'Does Business As'
+                        dba_cred['associated_registration_name'] = ''
+                    elif self.is_owned_sole_prop(party, corp_num, corp_info):
+                        dba_cred['relationship'] = 'IsOwned'
+                        dba_cred['relationship_description'] = 'Is Owned By'
+                        if 'business_nme' in party and 0 < len(party['business_nme']):
+                            dba_cred['associated_registration_name'] = party['business_nme']
+                        else:
+                            dba_cred['associated_registration_name'] = ''
+                    else:
+                        dba_cred['relationship'] = 'TBD' # party['']
+                        dba_cred['relationship_description'] = 'TBD' # party['']
+                        dba_cred['associated_registration_name'] = ''
+                    dba_cred['relationship_status'] = 'ACT'
+                    dba_cred['effective_date'] = party['effective_start_date']
+
+                    # if the start event is 'ADMIN' type and there is only one party record, use the firm effective date
+                    # if party['start_event']['event_typ_cd'] == 'ADMIN' and party_count[party['corp_info']['corp_num']] == 1 and party['corp_info']['recognition_dts']:
+                    #     dba_cred['effective_date'] = party['corp_info']['recognition_dts']
+
+                    dba_cred['relationship_status_effective'] = self.filter_min_date(dba_cred['effective_date'])
+                    if party['end_transaction_id'] is not None and party['end_transaction']['effective_date'] <= corp_info['current_date']:
+                        dba_cred['expiry_date'] = party['effective_end_date']
+                    else:
+                        dba_cred['expiry_date'] = ''
+                    reason_description = self.build_corp_reason_code(party['transaction'])
+                    corp_creds.append(self.build_credential_dict(dba_credential, dba_schema, dba_version, dba_cred['registration_id'], dba_cred, reason_description, dba_cred['effective_date']))
 
         # generate a BN credential if the corp has a BN
         effective_event = effective_events[0] if 0 < len(effective_events) else None
