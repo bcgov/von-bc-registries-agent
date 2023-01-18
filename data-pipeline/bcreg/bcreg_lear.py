@@ -19,6 +19,8 @@ from bcreg.rocketchat_hooks import log_error, log_warning, log_info
 lear_system_type = 'BCREG_LEAR'
 
 BC_REGISTRIES_DATABASE_NAME = 'bc_reg_lear'
+BC_REG_COLIN_TABLE_PREFIX = 'bc_registries.'
+BC_REG_COLIN_DATABASE_NAME = 'bc_registries'
 BC_REGISTRIES_TIMEZONE = 'PST8PDT'
 
 MIN_START_DATE = datetime.datetime(datetime.MINYEAR+1, 1, 1)
@@ -114,6 +116,8 @@ class BCReg_Lear(BCReg_Core):
         self.sql_local_cache = cache
         self.PG_DATABASE_NAME = BC_REGISTRIES_DATABASE_NAME
         self.source_system_type = lear_system_type
+        self.SEC_DB_TABLE_PREFIX = BC_REG_COLIN_TABLE_PREFIX
+        self.SEC_PG_DATABASE_NAME = BC_REG_COLIN_DATABASE_NAME
         super().__init__(cache)
 
 
@@ -121,101 +125,32 @@ class BCReg_Lear(BCReg_Core):
     # load all bc registries data for the specified corps into our in-mem cache
     ###########################################################################
 
-    # load everything:
-    code_tables =  ['corp_types']
-    # load by identifier (was corp_num)
-    corp_tables =  ['businesses',
-                    'businesses_version']
-    # load by business_id (id on businesses_version table)
-    other_tables = ['filings',
-                    'aliases',
-                    'aliases_version',
-                    'party_roles',
-                    'party_roles_version']
-    # custom load
-    other_other_tables = ['parties',
-                          'parties_version',]
-    other_other_other_tables = ['transaction',]
-
     # load all bc registries data for the specified corps into our in-mem cache
     def cache_bcreg_corps(self, specific_corps, generate_individual_sql=False):
         if self.use_local_cache():
-            self.cache_bcreg_corp_tables(specific_corps, generate_individual_sql)
-            self.cache_bcreg_code_tables(generate_individual_sql)
+            self.cache_lear_bcreg_corps(specific_corps, generate_individual_sql=generate_individual_sql)
 
     # load all bc registries data for the specified corps into our in-mem cache
     def cache_bcreg_corp_tables(self, specific_corps, generate_individual_sql=False):
         if self.use_local_cache():
-            # ensure we have a unique list
-            specific_corps = list({s_corp for s_corp in specific_corps})
-            specific_corps_lists = self.split_list(specific_corps, MAX_WHERE_IN)
-
-            LOGGER.info('Caching data for parties and events ...')
-            self.generated_sqls = []
-            self.generated_corp_nums = {}
-            LOGGER.info('Caching data for corporations ...')
-            for corp_nums_list in specific_corps_lists:
-                bus_ids_list = []
-                txn_ids_list = []
-                corp_nums_list = self.id_where_in(corp_nums_list, True)
-                corp_num_where = 'identifier in (' + corp_nums_list + ')'
-                for corp_table in self.corp_tables:
-                    _rows = self.get_bcreg_table(corp_table, corp_num_where, '', True, generate_individual_sql)
-                    if corp_table == 'businesses':
-                        for _row in _rows:
-                            bus_ids_list.append(_row['id'])
-                    elif corp_table == 'businesses_version':
-                        for _row in _rows:
-                            if _row['transaction_id'] is not None:
-                                txn_ids_list.append(_row['transaction_id'])
-
-                party_ids_list = []
-                bus_id_where = 'business_id in (' + self.id_where_in(bus_ids_list, True) + ')'
-                for other_table in self.other_tables:
-                    _rows = self.get_bcreg_table(other_table, bus_id_where, '', True, generate_individual_sql)
-                    if other_table == 'party_roles':
-                        for _row in _rows:
-                            if _row['party_id'] is not None:
-                                party_ids_list.append(_row['party_id'])
-                    elif other_table == 'filings':
-                        for _row in _rows:
-                            if _row['transaction_id'] is not None:
-                                txn_ids_list.append(_row['transaction_id'])
-
-                additional_identifiers = []
-                party_id_where = 'id in (' + self.id_where_in(party_ids_list, True) + ')'
-                for other_table in self.other_other_tables:
-                    _rows = self.get_bcreg_table(other_table, party_id_where, '', True, generate_individual_sql)
-                    if other_table == 'parties':
-                        for _row in _rows:
-                            if _row['identifier'] is not None and 0 < len(_row['identifier']):
-                                additional_identifiers.append(_row['identifier'])
-                if 0 < len(additional_identifiers):
-                    corp_nums_list = self.id_where_in(additional_identifiers, True)
-                    corp_num_where = 'identifier in (' + corp_nums_list + ')'
-                    for corp_table in self.corp_tables:
-                        _rows = self.get_bcreg_table(corp_table, corp_num_where, '', True, generate_individual_sql)
-
-                txn_id_where = 'id in (' + self.id_where_in(txn_ids_list, True) + ')'
-                for other_table in self.other_other_other_tables:
-                    _rows = self.get_bcreg_table(other_table, txn_id_where, '', True, generate_individual_sql)
+            self.cache_lear_bcreg_corp_tables(specific_corps, generate_individual_sql=generate_individual_sql)
 
     # load all bc registries data for the specified corps into our in-mem cache
     def cache_bcreg_code_tables(self, generate_individual_sql=False):
         if self.use_local_cache():
-            LOGGER.info('Caching data for code tables ...')
-            self.generated_sqls = []
-            self.generated_corp_nums = {}
-            for code_table in self.code_tables:
-                _rows = self.get_bcreg_table(code_table, '', '', True, generate_individual_sql)
+            self.cache_lear_bcreg_code_tables(generate_individual_sql=generate_individual_sql)
 
     # clear in-mem cache - delete all existing data
     def cache_cleanup(self):
-        for table in self.corp_tables:
+        for table in self.lear_corp_tables:
             self.cache_cleanup_data(table)
-        for table in self.other_tables:
+        for table in self.lear_other_tables:
             self.cache_cleanup_data(table)
-        for table in self.code_tables:
+        for table in self.lear_other_other_tables:
+            self.cache_cleanup_data(table)
+        for table in self.lear_other_other_other_tables:
+            self.cache_cleanup_data(table)
+        for table in self.lear_code_tables:
             self.cache_cleanup_data(table)
 
 
@@ -496,33 +431,6 @@ class BCReg_Lear(BCReg_Core):
     def get_event_filing_effective_date(self, event, corp_type_cd=None):
         ret_date = None
 
-        """
-        # TODO for now just return the filing completion_date
-        # if corp type is Firm and it is a dissolusion event the effective date will be in event.trigger_dts
-        if corp_type_cd and corp_type_cd in ('SP','GP','LP','XP','LL','XL','MF'):
-            if 'trigger_dts' in event and event['trigger_dts'] is not None:
-                ret_date = event['trigger_dts']
-
-        if ret_date is None:
-            # use the filing effective date if it is present
-            if 'filing' in event and 'effective_dt' in event['filing']:
-                ret_date = event['filing']['effective_dt']
-
-        # else use the conversion event if present
-        if ret_date is None and 'conv_event' in event and 'effective_dt' in event['conv_event']:
-            if event['conv_event']['effective_dt'] is not None:
-                ret_date = event['conv_event']['effective_dt']
-        
-        # finally use the event timestamp if we have no other option
-        if ret_date is None:
-            if event['event_timestmp'] is None or event['event_timestmp'] == '':
-                ret_date = None
-            else:
-                ret_date = event['event_timestmp']
-
-        if ret_date is None:
-            LOGGER.error('Error ret_date is None: ' + str(event))
-        """
         ret_date = event['issued_at']
         if 'filing' in event:
             if 'completion_date' in event['filing'] and event['filing']['completion_date']:
@@ -679,6 +587,58 @@ class BCReg_Lear(BCReg_Core):
             effective_date = effective_date.replace(tzinfo=pytz.utc)
         return effective_date
 
+    def get_basic_corp_info_from_colin(self, corp_num):
+        srch_corp_num = corp_num[2:] if corp_num.startswith('BC') else corp_num
+        sql_corp = """SELECT corp_num, corp_typ_cd, recognition_dts, last_ar_filed_dt, bn_9, bn_15, admin_email, last_ledger_dt
+                 FROM """ + self.get_sec_table_prefix(force_query_remote=True) + """corporation
+                 WHERE corp_num = '""" + srch_corp_num + """'""" 
+        # print(">>> looking for COLIN corp:", sql_corp)
+        corp = {}
+        corp['corp_num'] = ''
+        corp['corp_typ_cd'] = ''
+        corp['recognition_dts'] = None
+        corp['filing'] = {}
+        corp['transaction'] = {}
+        corp['effective_date'] = None
+
+        cur = None
+        try:
+            # assume there is just one corp record
+            cur = self.get_sec_db_connection(force_query_remote=True).cursor()
+            cur.execute(sql_corp)
+            row = cur.fetchone()
+            if row is None:
+                LOGGER.info("No corp rec found for " + str(corp_num))
+            else:
+                corp['current_date'] = datetime.datetime.now()
+                corp['corp_num'] = row[0]
+                corp['corp_typ_cd'] = row[1]
+                # TODO may need another query to get this info from COLIN
+                corp['corp_type'] = {
+                    "corp_typ_cd":corp['corp_typ_cd'],
+                    "colin_ind": "",
+                    "corp_class": "",
+                    "short_desc": corp['corp_typ_cd'],
+                    "full_desc": corp['corp_typ_cd'],
+                }
+                corp['recognition_dts'] = row[2]
+                corp['last_ar_filed_dt'] = row[3]
+                corp['bn_9'] = row[4]
+                corp['bn_15'] = row[5]
+                corp['admin_email'] = row[6]
+                corp['last_ledger_dt'] = row[7]
+            cur.close()
+            cur = None
+            return corp
+        except (Exception, psycopg2.DatabaseError) as error:
+            LOGGER.error(error)
+            LOGGER.error(traceback.print_exc())
+            log_error("BCRegistries exception reading corp info from DB: " + str(error))
+            raise 
+        finally:
+            if cur is not None:
+                cur.close()
+
     def get_basic_corp_info(self, corp_num, deep_copy=True, versions=False):
         bus_table = 'businesses'
         bus_ver_columns = ''
@@ -771,72 +731,11 @@ class BCReg_Lear(BCReg_Core):
 
                 if deep_copy:
                     corp['office'] = []
-                    """
-                    # get corp names
-                    # TODO
-                    corp['org_names'] = self.get_names(corp_num, ['CO','NB'], corp['recognition_dts'])
-                    self.flag_start_events_which_are_not_also_end_events(corp_num, corp['org_names'])
-                    for corp_name in corp['org_names']:
-                        if is_data_conversion_event(corp_name['start_event']) and not corp_name['start_event']['appears_as_end_event'] and corp['recognition_dts'] is not None:
-                            corp_name['start_event']['effective_date'] = corp['recognition_dts']
-                            corp_name['effective_start_date'] = corp['recognition_dts']
-                    corp['org_name_assumed'] = self.get_names(corp_num, ['AS'], corp['recognition_dts'])
-                    self.flag_start_events_which_are_not_also_end_events(corp_num, corp['org_name_assumed'])
-                    for corp_name in corp['org_name_assumed']:
-                        if is_data_conversion_event(corp_name['start_event']) and not corp_name['start_event']['appears_as_end_event'] and corp['recognition_dts'] is not None:
-                            corp_name['start_event']['effective_date'] = corp['recognition_dts']
-                            corp_name['effective_start_date'] = corp['recognition_dts']
-                    #corp['org_name_trans'] = self.get_names(corp_num, ['TR', 'NO'], corp['recognition_dts'])
-                    corp['office'] = self.get_offices(corp_num)
-
-                    # get corp state (active, historical), and get the start/end date of each state change
-                    corp_states = self.get_corp_states(corp_num)
-                    for corp_state in corp_states:
-                        corp_state['start_event'] = self.get_event(corp['corp_num'], corp_state['start_event_id'], corp_type_cd=corp['corp_typ_cd'])
-                        corp_state['event_date'] = corp_state['start_event']['effective_date']
-                        if corp_state['end_event_id'] is not None:
-                            corp_state['end_event'] = self.get_event(corp['corp_num'], corp_state['end_event_id'], corp_type_cd=corp['corp_typ_cd'])
-                            corp_state['effective_end_date'] = corp_state['end_event']['effective_date']
-                        else:
-                            corp_state['effective_end_date'] = MAX_END_DATE
-
-                        #if corp_state['event_date'] > corp_state['effective_end_date']:
-                        #    LOGGER.info(">>>Data Issue:Date:" + corp_num + ":Corp_State:", corp_state)
-                    self.flag_start_events_which_are_not_also_end_events(corp_num, corp_states)
-
-                    #self.check_same_start_date(corp_num, 'corp_state', corp_states, 'event_date')
-
-                    # sort to get in date order, and determine ACT/HIS transition dates
-                    corp_states = sorted(corp_states, key=lambda k: k['effective_end_date'])
-                    corp_states = sorted(corp_states, key=lambda k: int(k['start_event_id']))
-                    corp['corp_state'] = sorted(corp_states, key=lambda k: k['event_date'])
-                    prev_state = None
-                    for corp_state in corp['corp_state']:
-                        # check if state has changed
-                        use_registration_dt = False
-                        if prev_state is None and corp_state['op_state_typ_cd'] == 'ACT':
-                            use_registration_dt = True
-                        elif prev_state is None and is_data_conversion_event(corp_state['start_event']) and not corp_state['start_event']['appears_as_end_event']:
-                            use_registration_dt = True
-                        if prev_state is None or prev_state['op_state_typ_cd'] != corp_state['op_state_typ_cd']:
-                            # state has changed
-                            prev_state = corp_state
-                            prev_state['corp_state_effective_event'] = prev_state['start_event']
-                            if use_registration_dt and corp['recognition_dts'] is not None:
-                                prev_state['start_event']['effective_date'] = corp['recognition_dts']
-                                prev_state['effective_start_date'] = corp['recognition_dts']
-                            else:
-                                prev_state['effective_start_date'] = prev_state['event_date']
-                        corp_state['corp_state_effective_event'] = prev_state['corp_state_effective_event']
-                        corp_state['effective_start_date'] = prev_state['effective_start_date']
-                    """
-                    pass
 
             cur.close()
             cur = None
 
             if (not versions) and corp is None:
-                # TODO maybe check BC Reg database if the corp is not in the cache?
                 LOGGER.info("No corp rec found for " + str(corp_num))
                 corp = {}
                 corp['corp_num'] = ''
@@ -888,7 +787,8 @@ class BCReg_Lear(BCReg_Core):
     ###########################################################################
 
     def get_bc_reg_corp_info(self, corp_num):
-        sql_party = """SELECT parties.id as corp_party_id, 
+        sql_party = """SELECT businesses.identifier as corp_num,
+                               parties.id as corp_party_id, 
                                parties.mailing_address_id as mailing_addr_id, 
                                parties.delivery_address_id as delivery_addr_id, 
                                parties.party_type as party_typ_cd, 
@@ -905,9 +805,11 @@ class BCReg_Lear(BCReg_Core):
                                roles.role as role,
                                roles.transaction_id as role_transaction_id,
                                roles.end_transaction_id as role_end_transaction_id
-                      FROM """ + self.get_table_prefix() + """parties_version parties, 
+                      FROM """ + self.get_table_prefix() + """businesses businesses,
+                           """ + self.get_table_prefix() + """parties_version parties, 
                            """ + self.get_table_prefix() + """party_roles_version roles
-                      WHERE roles.party_id = parties.id 
+                      WHERE businesses.id = roles.business_id
+                        AND roles.party_id = parties.id 
                         AND parties.party_type = 'organization' and roles.role = 'proprietor'
                         AND (parties.identifier = """ + self.get_db_sql_param() + """ 
                              OR roles.business_id = (select id from """ + self.get_table_prefix() + """businesses where identifier = """ + self.get_db_sql_param() + """))
@@ -930,12 +832,12 @@ class BCReg_Lear(BCReg_Core):
             row = cur.fetchone()
             while row is not None:
                 corp_party = {}
-                corp_party['corp_num'] = corp_num
-                corp_party['corp_party_id'] = row[0]
-                corp_party['mailing_addr_id'] = row[1]
-                corp_party['delivery_addr_id'] = row[2]
-                corp_party['party_typ_cd'] = row[3]
-                transaction_id = row[4]
+                corp_party['corp_num'] = row[0]
+                corp_party['corp_party_id'] = row[1]
+                corp_party['mailing_addr_id'] = row[2]
+                corp_party['delivery_addr_id'] = row[3]
+                corp_party['party_typ_cd'] = row[4]
+                transaction_id = row[5]
                 corp_party['transaction_id'] = transaction_id
                 if transaction_id and 0 < transaction_id:
                     transaction = self.get_event(corp_party['corp_num'], transaction_id)
@@ -943,7 +845,7 @@ class BCReg_Lear(BCReg_Core):
                 else:
                     corp_party['transaction'] = {}
                 corp_party['effective_start_date'] = self.get_corp_version_effective_date(corp_party)
-                end_transaction_id = row[5]
+                end_transaction_id = row[6]
                 corp_party['end_transaction_id'] = end_transaction_id
                 if end_transaction_id and 0 < end_transaction_id:
                     end_transaction = self.get_event(corp_party['corp_num'], end_transaction_id)
@@ -952,20 +854,20 @@ class BCReg_Lear(BCReg_Core):
                 else:
                     corp_party['end_transaction'] = {}
                     corp_party['effective_end_date'] = MAX_END_DATE
-                corp_party['cessation_dt'] = row[6]
-                corp_party['last_nme'] = row[7]
-                corp_party['middle_nme'] = row[8]
-                corp_party['first_nme'] = row[9]
-                corp_party['business_nme'] = row[10]
-                corp_party['bus_company_num'] = row[11]
-                corp_party['email_address'] = row[12]
+                corp_party['cessation_dt'] = row[7]
+                corp_party['last_nme'] = row[8]
+                corp_party['middle_nme'] = row[9]
+                corp_party['first_nme'] = row[10]
+                corp_party['business_nme'] = row[11]
+                corp_party['bus_company_num'] = row[12]
+                corp_party['email_address'] = row[13]
                 corp_party['corp_party_seq_num'] = None
                 corp_party['office_notification_dt'] = None
                 corp_party['phone'] = None
                 corp_party['reason_typ_cd'] = None
-                corp_party['role_id'] = row[13]
-                corp_party['role'] = row[14]
-                role_transaction_id = row[15]
+                corp_party['role_id'] = row[14]
+                corp_party['role'] = row[15]
+                role_transaction_id = row[16]
                 corp_party['role_transaction_id'] = role_transaction_id
                 if role_transaction_id and 0 < role_transaction_id:
                     role_transaction = self.get_event(corp_party['corp_num'], role_transaction_id)
@@ -973,7 +875,7 @@ class BCReg_Lear(BCReg_Core):
                 else:
                     corp_party['role_transaction'] = {}
                 corp_party['role_effective_start_date'] = self.get_corp_version_effective_date(corp_party, txn_field='role_transaction', filing_field=None)
-                role_end_transaction_id = row[16]
+                role_end_transaction_id = row[17]
                 corp_party['role_end_transaction_id'] = role_end_transaction_id
                 if role_end_transaction_id and 0 < role_end_transaction_id:
                     role_end_transaction = self.get_event(corp_party['corp_num'], role_end_transaction_id)
@@ -989,6 +891,11 @@ class BCReg_Lear(BCReg_Core):
                     corp_party['corp_info'] = self.get_basic_corp_info(corp_party['bus_company_num'], deep_copy=False, versions=False)
                 else:
                     corp_party['corp_info'] = self.get_basic_corp_info(corp_party['corp_num'], deep_copy=False, versions=False)
+
+                # if the 'corp_info' doesn't exist in our "LEAR" database, check in "COLIN"
+                if corp_party['corp_info']['corp_num'] is None or corp_party['corp_info']['corp_num'] == '':
+                    if corp_num == corp_party['corp_num'] and corp_party['bus_company_num'] is not None:
+                        corp_party['corp_info'] = self.get_basic_corp_info_from_colin(corp_party['bus_company_num'])
 
                 corp['parties'].append(corp_party)
                 row = cur.fetchone()
