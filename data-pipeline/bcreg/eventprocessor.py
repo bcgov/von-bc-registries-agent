@@ -1144,12 +1144,8 @@ class EventProcessor:
         # check that self is a sole prop ...
         if ((not is_parent) and (corp_info['corp_typ_cd'] == 'SP' or corp_info['corp_typ_cd'] == 'MF')):
             # ... and parent bus_company_num exists
-            try:
-                if (party['bus_company_num'] is not None and 'corp_info' in party and 0 < len(party['corp_info']['corp_num'])):
-                    return True
-            except:
-                print(">>> party:", party)
-                raise
+            if (party['bus_company_num'] is not None and 'corp_info' in party and 0 < len(party['corp_info']['corp_num'])):
+                return True
 
         return False
 
