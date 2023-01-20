@@ -12,7 +12,7 @@ def config(filename='database.ini', section='postgresql'):
         db['password'] = os.environ.get('BC_REG_DB_PASSWORD', '')
     elif section == 'bc_reg_lear':
         db['host'] = os.environ.get('LEAR_DB_HOST', 'localhost')
-        db['port'] = os.environ.get('LEAR_DB_PORT', '5454')
+        db['port'] = os.environ.get('LEAR_DB_PORT', '5455')
         db['database'] = os.environ.get('LEAR_DB_DATABASE', 'lear')
         db['user'] = os.environ.get('LEAR_DB_USER', '')
         db['password'] = os.environ.get('LEAR_DB_PASSWORD', '')

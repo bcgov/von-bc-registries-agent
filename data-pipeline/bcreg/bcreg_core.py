@@ -15,9 +15,11 @@ from bcreg.config import config
 from bcreg.rocketchat_hooks import log_error, log_warning, log_info
 
 
-INMEM_CACHE_TABLE_PREFIX   = 'x'
+INMEM_CACHE_TABLE_PREFIX = 'x_'
+INMEM_CACHE_SEC_TABLE_PREFIX = 'x_sec_'
 MAX_WHERE_IN = 1000
 
+COLIN_SYSTEM_TYPE = 'BC_REG'
 LEAR_SYSTEM_TYPE = 'BCREG_LEAR'
 
 LOGGER = logging.getLogger(__name__)
@@ -39,6 +41,8 @@ class BCReg_Core:
 
     DB_TABLE_PREFIX = ""
     PG_DATABASE_NAME = ""
+    SEC_DB_TABLE_PREFIX = ""
+    SEC_PG_DATABASE_NAME = ""
 
     conn = None
 
@@ -56,11 +60,18 @@ class BCReg_Core:
             sqlite3.register_converter("decimal", convert_decimal)
             # connect to in-memory database
             self.cache = sqlite3.connect(':memory:', detect_types=sqlite3.PARSE_DECLTYPES|sqlite3.PARSE_COLNAMES)
+
+            # connect secondary datasource
+            secondary_params = config(section=self.SEC_PG_DATABASE_NAME)
+            self.sec_conn = psycopg2.connect(**secondary_params)
+            self.sec_conn.set_session(readonly=True)
+            self.sec_conn.set_isolation_level(psycopg2.extensions.ISOLATION_LEVEL_READ_COMMITTED)
         except (Exception) as error:
             LOGGER.error(error)
             LOGGER.error(traceback.print_exc())
             self.conn = None
             self.cache = None
+            self.sec_conn = None
             log_error("BCRegistries exception connecting to DB: " + str(error))
             raise
 
@@ -69,6 +80,8 @@ class BCReg_Core:
             self.conn.close()
         if self.cache:
             self.cache.close()
+        if self.sec_conn:
+            self.sec_conn.close()
 
     def __enter__(self):
         return self
@@ -89,6 +102,12 @@ class BCReg_Core:
         else:
             return self.conn
 
+    def get_sec_db_connection(self, force_query_remote=False):
+        if self.use_local_cache() and (not force_query_remote):
+            return self.cache
+        else:
+            return self.sec_conn
+
     def get_db_sql_param(self, force_query_remote=False):
         if self.use_local_cache() and (not force_query_remote):
             return '?'
@@ -100,6 +119,12 @@ class BCReg_Core:
             return INMEM_CACHE_TABLE_PREFIX
         else:
             return self.DB_TABLE_PREFIX
+
+    def get_sec_table_prefix(self, force_query_remote=False):
+        if self.use_local_cache() and (not force_query_remote):
+            return INMEM_CACHE_SEC_TABLE_PREFIX
+        else:
+            return self.SEC_DB_TABLE_PREFIX
 
     def add_cache_miss(self, table, corp_num, row_id, row):
         miss = {'table':table, 'corp_num':corp_num, 'row_id':row_id, 'row':row}
@@ -148,13 +173,18 @@ class BCReg_Core:
     ###########################################################################
 
     # return the table structure of a bcreg table
-    def get_bcreg_table_struct(self, table, where=""):
-        sql = "SELECT * from " + self.DB_TABLE_PREFIX + table
+    def get_bcreg_table_struct(self, table, where="", use_sec=False):
+        pfx = self.SEC_DB_TABLE_PREFIX if use_sec else self.DB_TABLE_PREFIX
+        sql = "SELECT * from " + pfx + table
         if 0 < len(where):
             sql = sql + " WHERE " + where
+        # print(">>> caching data with:", sql)
         cursor = None
         try:
-            cursor = self.conn.cursor()
+            if use_sec:
+                cursor = self.sec_conn.cursor()
+            else:
+                cursor = self.conn.cursor()
             cursor.execute(sql)
             desc = cursor.description
             cursor.close()
@@ -171,12 +201,13 @@ class BCReg_Core:
             cursor = None
 
     # return a sql to create an in-mem sqlite table
-    def create_table_sql(self, table, table_desc):
-        table_sql = 'create table if not exists ' + INMEM_CACHE_TABLE_PREFIX + table + ' ('
+    def create_table_sql(self, table, table_desc, use_sec=False):
+        pfx = INMEM_CACHE_SEC_TABLE_PREFIX if use_sec else INMEM_CACHE_TABLE_PREFIX
+        table_sql = 'create table if not exists ' + pfx + table + ' ('
         i = 0
         for col in table_desc:
             col_name = col[0]
-            col_type = self.get_sql_col_type(col[1])
+            col_type = self.get_sql_col_type(col[1], use_sec=use_sec)
             _col_len = col[3]
             table_sql = table_sql + col_name + ' ' + col_type 
             i = i + 1
@@ -186,7 +217,7 @@ class BCReg_Core:
                 table_sql = table_sql + ')'
         return table_sql
 
-    def get_sql_col_type(self, pg_type):
+    def get_sql_col_type(self, pg_type, use_sec=False):
         if pg_type == 1042:  # CHAR
             return 'text'  
         if pg_type == 1043:  # VARCHAR
@@ -196,7 +227,7 @@ class BCReg_Core:
         if pg_type == 23 or pg_type == 21 or pg_type == 20:    # INT*
             return 'integer'
         if pg_type == 1114 or pg_type == 1184:  # DATE or DATETIME (or TZ)
-            if self.source_system_type == LEAR_SYSTEM_TYPE:
+            if self.source_system_type == LEAR_SYSTEM_TYPE or (self.source_system_type == COLIN_SYSTEM_TYPE and use_sec):
                 return 'text'
             else:
                 return 'timestamp'
@@ -257,8 +288,9 @@ class BCReg_Core:
     # create the table if nencessary, based on the bc registries dictionary
     # note: "generate_individual_sql" will generate and print sql statements if True
     #       to be used to generate sample data for unit testing
-    def cache_bcreg_data(self, table, desc, rows, generate_individual_sql=False):
-        create_sql = self.create_table_sql(table, desc)
+    def cache_bcreg_data(self, table, desc, rows, generate_individual_sql=False, use_sec=False):
+        pfx = INMEM_CACHE_SEC_TABLE_PREFIX if use_sec else INMEM_CACHE_TABLE_PREFIX
+        create_sql = self.create_table_sql(table, desc, use_sec=use_sec)
         # print("Creating cache table:", create_sql)
         col_keys = []
         insert_keys = ''
@@ -371,8 +403,8 @@ class BCReg_Core:
                     insert_values = insert_values + ', '
             inserts.append(insert_row_vals)
             if generate_individual_sql:
-                insert_sqls.append('insert into ' + INMEM_CACHE_TABLE_PREFIX + table + ' (' + insert_keys + ') values (' + insert_values + ')')
-        insert_sql = 'insert into ' + INMEM_CACHE_TABLE_PREFIX + table + ' (' + insert_keys + ') values (' + insert_placeholders + ')'
+                insert_sqls.append('insert into ' + pfx + table + ' (' + insert_keys + ') values (' + insert_values + ')')
+        insert_sql = 'insert into ' + pfx + table + ' (' + insert_keys + ') values (' + insert_placeholders + ')'
         # print("Inserting in cache:", insert_sql)
         # print("                  :", inserts)
 
@@ -490,10 +522,13 @@ class BCReg_Core:
     # get all records and return in an array of dicts
     # returns a zero-length array if none found
     # optionally takes a WHERE clause and ORDER BY clause (must be valid SQL)
-    def get_bcreg_sql(self, table, sql, cache=False, generate_individual_sql=False):
+    def get_bcreg_sql(self, table, sql, cache=False, generate_individual_sql=False, use_sec=False):
         cursor = None
         try:
-            cursor = self.conn.cursor()
+            if use_sec:
+                cursor = self.sec_conn.cursor()
+            else:
+                cursor = self.conn.cursor()
             cursor.execute(sql)
             desc = cursor.description
             column_names = [col[0] for col in desc]
@@ -502,7 +537,7 @@ class BCReg_Core:
             cursor.close()
             cursor = None
             if self.use_local_cache() and cache:
-                self.cache_bcreg_data(table, desc, rows, generate_individual_sql)
+                self.cache_bcreg_data(table, desc, rows, generate_individual_sql, use_sec=use_sec)
             return rows
         except (Exception, psycopg2.DatabaseError) as error:
             LOGGER.error(error)
@@ -517,22 +552,24 @@ class BCReg_Core:
     # get all records and return in an array of dicts
     # returns a zero-length array if none found
     # optionally takes a WHERE clause and ORDER BY clause (must be valid SQL)
-    def get_bcreg_table(self, table, where="", orderby="", cache=False, generate_individual_sql=False):
-        sql = "SELECT * FROM " + self.DB_TABLE_PREFIX + table
+    def get_bcreg_table(self, table, where="", orderby="", cache=False, generate_individual_sql=False, use_sec=False):
+        pfx = self.SEC_DB_TABLE_PREFIX if use_sec else self.DB_TABLE_PREFIX
+        sql = "SELECT * FROM " + pfx + table
         if 0 < len(where):
             sql = sql + " WHERE " + where
         if 0 < len(orderby):
             sql = sql + " ORDER BY " + orderby
-        return self.get_bcreg_sql(table, sql, cache, generate_individual_sql)
+        # print(">>> caching data with:", sql)
+        return self.get_bcreg_sql(table, sql, cache, generate_individual_sql, use_sec=use_sec)
 
     # get all records and return in an array of dicts
     # returns a zero-length array if none found
     # optionally takes a WHERE clause and ORDER BY clause (must be valid SQL)
-    def get_bcreg_corp_table(self, table, corp_num, where="", orderby="", cache=False, generate_individual_sql=False):
+    def get_bcreg_corp_table(self, table, corp_num, where="", orderby="", cache=False, generate_individual_sql=False, use_sec=False):
         subwhere = "corp_num = '" + corp_num + "'"
         if 0 < len(where):
             subwhere = subwhere + " AND " + where
-        return self.get_bcreg_table(table, subwhere, orderby, cache, generate_individual_sql)
+        return self.get_bcreg_table(table, subwhere, orderby, cache, generate_individual_sql, use_sec=use_sec)
 
 
     ###########################################################################
@@ -542,10 +579,13 @@ class BCReg_Core:
     ###########################################################################
 
     # get the corporation's current state
-    def get_adhoc_query(self, sql):
+    def get_adhoc_query(self, sql, use_sec=False):
         cursor = None
         try:
-            cursor = self.get_db_connection().cursor()
+            if use_sec:
+                cursor = self.get_sec_db_connection().cursor()
+            else:
+                cursor = self.get_db_connection().cursor()
             cursor.execute(sql)
             desc = cursor.description
             column_names = [col[0] for col in desc]
@@ -562,3 +602,112 @@ class BCReg_Core:
         finally:
             if cursor is not None:
                 cursor.close()
+
+
+    ###########################################################################
+    # some LEAR-specific queries
+    ###########################################################################
+
+    # load everything:
+    lear_code_tables =  ['corp_types']
+    # load by identifier (was corp_num)
+    lear_corp_tables =  ['businesses',
+                    'businesses_version']
+    # load by business_id (id on businesses_version table)
+    lear_other_tables = ['filings',
+                    'aliases',
+                    'aliases_version',
+                    'party_roles',
+                    'party_roles_version']
+    # custom load
+    lear_other_other_tables = ['parties',
+                          'parties_version',]
+    lear_other_other_other_tables = ['transaction',]
+
+    # in colin if the corp_num is numeric we pre-pend 'BC' to it
+    def bc_ifiy(self, specific_corps):
+        corp_nums = []
+        for corp_num in specific_corps:
+            try:
+                i = int(corp_num)
+                corp_nums.append('BC' + corp_num)
+            except:
+                corp_nums.append(corp_num)
+        return corp_nums
+
+    # load all bc registries data for the specified corps into our in-mem cache
+    def cache_lear_bcreg_corps(self, specific_corps, generate_individual_sql=False, use_sec=False):
+        if self.use_local_cache():
+            self.cache_lear_bcreg_corp_tables(specific_corps, generate_individual_sql=generate_individual_sql, use_sec=use_sec)
+            self.cache_lear_bcreg_code_tables(generate_individual_sql=generate_individual_sql, use_sec=use_sec)
+
+    # load all bc registries data for the specified corps into our in-mem cache
+    def cache_lear_bcreg_corp_tables(self, specific_corps, generate_individual_sql=False, use_sec=False):
+        if self.use_local_cache():
+            # ensure we have a unique list
+            specific_corps = list({s_corp for s_corp in specific_corps})
+            specific_corps = self.bc_ifiy(specific_corps)
+            specific_corps_lists = self.split_list(specific_corps, MAX_WHERE_IN)
+
+            LOGGER.info('Caching data for parties and events ...')
+            self.generated_sqls = []
+            self.generated_corp_nums = {}
+            LOGGER.info('Caching data for corporations ...')
+            for corp_nums_list in specific_corps_lists:
+                bus_ids_list = []
+                txn_ids_list = []
+                corp_nums_list_str = self.id_where_in(corp_nums_list, True)
+                corp_num_where = 'identifier in (' + corp_nums_list_str + ')' if 0 < len(corp_nums_list_str) else "identifier = ''"
+                corp_num_where_ex = corp_num_where + " or id in (select business_id from party_roles, parties where party_roles.party_id = parties.id and parties." + corp_num_where + ")"
+                for corp_table in self.lear_corp_tables:
+                    _rows = self.get_bcreg_table(corp_table, corp_num_where_ex, '', True, generate_individual_sql, use_sec=use_sec)
+                    if corp_table == 'businesses':
+                        for _row in _rows:
+                            bus_ids_list.append(_row['id'])
+                    elif corp_table == 'businesses_version':
+                        for _row in _rows:
+                            if _row['transaction_id'] is not None:
+                                txn_ids_list.append(_row['transaction_id'])
+
+                party_ids_list = []
+                bus_id_where = 'business_id in (' + self.id_where_in(bus_ids_list, True) + ')' if 0 < len(bus_ids_list) else "business_id = 0"
+                bus_id_where += " or business_id in (select business_id from party_roles, parties where party_roles.party_id = parties.id and parties." + corp_num_where + ")"
+                for other_table in self.lear_other_tables:
+                    _rows = self.get_bcreg_table(other_table, bus_id_where, '', True, generate_individual_sql, use_sec=use_sec)
+                    if other_table == 'party_roles':
+                        for _row in _rows:
+                            if _row['party_id'] is not None:
+                                party_ids_list.append(_row['party_id'])
+                    elif other_table == 'filings':
+                        for _row in _rows:
+                            if _row['transaction_id'] is not None:
+                                txn_ids_list.append(_row['transaction_id'])
+
+                additional_identifiers = []
+                party_id_where = 'id in (' + self.id_where_in(party_ids_list, True) + ')' if 0 < len(party_ids_list) else "id = 0"
+                party_id_where += " or identifier in (" + self.id_where_in(corp_nums_list, True) + ")"
+                for other_table in self.lear_other_other_tables:
+                    _rows = self.get_bcreg_table(other_table, party_id_where, '', True, generate_individual_sql, use_sec=use_sec)
+                    if other_table == 'parties':
+                        for _row in _rows:
+                            if _row['identifier'] is not None and 0 < len(_row['identifier']):
+                                additional_identifiers.append(_row['identifier'])
+                if 0 < len(additional_identifiers):
+                    corp_nums_list_str = self.id_where_in(additional_identifiers, True)
+                    corp_num_where = 'identifier in (' + corp_nums_list_str + ')'
+                    for corp_table in self.lear_corp_tables:
+                        _rows = self.get_bcreg_table(corp_table, corp_num_where, '', True, generate_individual_sql, use_sec=use_sec)
+
+                txn_id_where = 'id in (' + self.id_where_in(txn_ids_list, True) + ')' if 0 < len(txn_ids_list) else "id = 0"
+                for other_table in self.lear_other_other_other_tables:
+                    _rows = self.get_bcreg_table(other_table, txn_id_where, '', True, generate_individual_sql, use_sec=use_sec)
+
+    # load all bc registries data for the specified corps into our in-mem cache
+    def cache_lear_bcreg_code_tables(self, generate_individual_sql=False, use_sec=False):
+        if self.use_local_cache():
+            LOGGER.info('Caching data for code tables ...')
+            self.generated_sqls = []
+            self.generated_corp_nums = {}
+            for code_table in self.lear_code_tables:
+                _rows = self.get_bcreg_table(code_table, '', '', True, generate_individual_sql, use_sec=use_sec)
+

@@ -1466,8 +1466,8 @@ class EventProcessor:
         # generate relationship credential(s) 
         if 'parties' in corp_info and 0 < len(corp_info['parties']):
             # ensure relationship history is generated correctly
-            corp_parties = sorted(corp_info['parties'], key=lambda k: int(k['start_event_id']))
-            corp_parties = sorted(corp_parties, key=lambda k: k['effective_start_date'])
+            # corp_parties = sorted(corp_info['parties'], key=lambda k: int(k['start_event_id']))
+            corp_parties = sorted(corp_info['parties'], key=lambda k: k['effective_start_date'])
             # first check if party records are for unique firms
             party_count = {}
             for party in corp_parties:
@@ -1506,15 +1506,18 @@ class EventProcessor:
                     dba_cred['effective_date'] = party['effective_start_date']
 
                     # if the start event is 'ADMIN' type and there is only one party record, use the firm effective date
-                    if party['start_event']['event_typ_cd'] == 'ADMIN' and party_count[party['corp_info']['corp_num']] == 1 and party['corp_info']['recognition_dts']:
+                    if 'start_event' in party and party['start_event']['event_typ_cd'] == 'ADMIN' and party_count[party['corp_info']['corp_num']] == 1 and party['corp_info']['recognition_dts']:
                         dba_cred['effective_date'] = party['corp_info']['recognition_dts']
 
                     dba_cred['relationship_status_effective'] = self.filter_min_date(dba_cred['effective_date'])
-                    if party['end_event_id'] is not None and party['end_event']['effective_date'] <= corp_info['current_date']:
+                    if 'end_event_id' in party and party['end_event_id'] is not None and party['end_event']['effective_date'] <= corp_info['current_date']:
                         dba_cred['expiry_date'] = party['effective_end_date']
                     else:
                         dba_cred['expiry_date'] = ''
-                    reason_description = self.build_corp_reason_code(party['start_event'])
+                    if 'start_event' in party:
+                        reason_description = self.build_corp_reason_code(party['start_event'])
+                    else:
+                        reason_description = ""
                     corp_creds.append(self.build_credential_dict(dba_credential, dba_schema, dba_version, dba_cred['registration_id'], dba_cred, reason_description, dba_cred['effective_date']))
 
         # generate a BN credential if the corp has a BN

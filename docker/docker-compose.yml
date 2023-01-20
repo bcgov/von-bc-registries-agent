@@ -154,7 +154,7 @@ services:
       - BC_REG_DB_PASSWORD=${BC_REG_DB_PASSWORD}
       # [bc_registries - LEAR]
       - LEAR_DB_HOST=${LEAR_DB_HOST:-host.docker.internal}
-      - LEAR_DB_PORT=${LEAR_DB_PORT:-5454}
+      - LEAR_DB_PORT=${LEAR_DB_PORT:-5455}
       - LEAR_DB_DATABASE=${LEAR_DB_DATABASE:-lear}
       - LEAR_DB_USER=${LEAR_DB_USER}
       - LEAR_DB_PASSWORD=${LEAR_DB_PASSWORD}
