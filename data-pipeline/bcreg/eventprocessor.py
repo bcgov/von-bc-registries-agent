@@ -1142,7 +1142,7 @@ class EventProcessor:
             is_parent = True
 
         # check that self is a sole prop ...
-        if ((not is_parent) and (corp_info['corp_typ_cd'] == 'SP' or corp_info['corp_typ_cd'] == 'MF')):
+        if ((not is_parent) and (corp_info['corp_typ_cd'] in ('SP', 'MF', 'GP'))):
             # ... and parent bus_company_num exists
             if (party['bus_company_num'] is not None and 'corp_info' in party and 0 < len(party['corp_info']['corp_num'])):
                 return True
@@ -1162,7 +1162,7 @@ class EventProcessor:
             is_parent = True
 
         # check that child is a sole prop
-        if (is_parent and 'corp_info' in party and (party['corp_info']['corp_typ_cd'] == 'SP' or party['corp_info']['corp_typ_cd'] == 'MF')):
+        if (is_parent and 'corp_info' in party and (party['corp_info']['corp_typ_cd'] in ('SP', 'MF', 'GP'))):
             return True
 
         return False
