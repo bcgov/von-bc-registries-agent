@@ -799,7 +799,7 @@ class BCReg_Lear(BCReg_Core):
                            """ + self.get_table_prefix() + """party_roles_version roles
                       WHERE businesses.id = roles.business_id
                         AND roles.party_id = parties.id 
-                        AND parties.party_type = 'organization' and roles.role in ('proprietor', 'partner')
+                        AND parties.party_type = 'organization' and roles.role = 'proprietor'
                         AND (parties.identifier = """ + self.get_db_sql_param() + """ 
                              OR roles.business_id = (select id from """ + self.get_table_prefix() + """businesses where identifier = """ + self.get_db_sql_param() + """))
                         """

@@ -1408,7 +1408,7 @@ class BCRegistries(BCReg_Core):
                                    """ + self.get_sec_table_prefix() + """party_roles_version roles
                               WHERE businesses.id = roles.business_id
                                 AND roles.party_id = parties.id 
-                                AND parties.party_type = 'organization' and roles.role in ('proprietor', 'partner')
+                                AND parties.party_type = 'organization' and roles.role = 'proprietor'
                                 AND (parties.identifier = '""" + lear_corp_num + """'
                                      OR roles.business_id = (select id from """ + self.get_sec_table_prefix() + """businesses
                                      where identifier = '""" + lear_corp_num + """'))
