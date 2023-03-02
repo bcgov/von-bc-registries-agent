@@ -1,7 +1,9 @@
 
 # VON Event Processor
 
-Note that this document is not up-to-date with the latest data processing logic, however it provides a valuable overview of the overall process.  Links to the current code have been added to the doc - if you are interested in the most up-to-date documentation and logic, please look at the code.
+Note that this document is not up-to-date with the latest data processing logic, however it provides a high-level overview of the overall process.
+
+Links to the current code have been added to the doc - if you are interested in the most up-to-date documentation and logic, please look at the code.
 
 ## Event Processor Overview
 
@@ -18,6 +20,126 @@ The Event processor consists of:
 * A local database, for tracking input events processed and output credentials generated
 * A local in-memory cache, to improve performance loading and processing BC Registries corporations
 * An admin interface (based on Mara), for monitoring the overall processing status
+
+## Event Processor Data Model
+
+The following data model is used within the Event Processor to track data that has been processed from source database(s).
+
+The following requirements are supported:
+
+* Publish a sub-set of Event/Filing Types in the initial release, however support inclusion of additional Types in later releases
+* Support publishing of specific companies or corporations
+* Support re-start if the processing fails (re-start from the point of failure)
+* Support for administrative functions (update of configuration, monitoring of event processing)
+
+The Event Processor data model is illustrated as follows:
+
+```mermaid
+erDiagram
+  LAST_EVENT {
+    string SYSTEM_TYPE_CD
+    int EVENT_ID
+    date EVENT_DATE
+  }
+
+  EVENT_BY_CORP_FILING {
+    string SYSTEM_TYPE_CD
+    string CORP_NUM
+    int PREV_EVENT_ID
+    int LAST_EVENT_ID
+    date PROCESS_DATE
+  }
+
+  EVENT_BY_CORP_FILING {
+    string SYSTEM_TYPE_CD
+    string CORP_NUM
+    string CORP_STATE
+    json PREV_EVENT
+    json LAST_EVENT
+    json CORP_JSON
+    date PROCESS_DATE
+  }
+
+  CREDENTIAL_LOG {
+    string SYSTEM_TYPE_CD
+    string CORP_NUM
+    string CORP_STATE
+    json PREV_EVENT
+    json LAST_EVENT
+    string SCHEMA_ID
+    string SCHEMA_VERSION
+    json CREDENTIAL_JSON
+    date PROCESS_DATE
+  }
+```
+
+Table descriptions are as follows:
+
+Table LAST_EVENT: tracks the latest processed Event - a record is added for each batch of Events processed:
+
+| Column         | Description |
+| ------         | ----------- |
+| RECORD_ID      | Internal database record ID |
+| SYSTEM_TYPE_CD | Source system identifier (to allow the Event Processor to source data from multiple systems) |
+| EVENT_ID       | ID of last event (from source system) |
+| EVENT_DATE     | Date of the event (from source system) |
+| ENTRY_DATE     | Date the event was processed (added to Event Processor DB) |
+
+Table EVENT_BY_CORP_FILING: tracks the company processed for each Event batch:
+
+| Column          | Description |
+| ------          | ----------- |
+| RECORD_ID       | Internal database record ID |
+| SYSTEM_TYPE_CD  | Source system identifier (to allow the Event Processor to source data from multiple systems) |
+| CORP_NUM        | Corporation number relating to this event |
+| PREV_EVENT_ID   | Previous event id processed for this company |
+| PREV_EVENT_DATE | Previous event date processed for this company |
+| LAST_EVENT_ID   | Newest event id processed for this company |
+| LAST_EVENT_DATE | Newest event date processed for this company |
+| ENTRY_DATE      | Date this record was added to Event Processor DB |
+| PROCESS_DATE    | Date this record was processed |
+| PROCESS_SUCCESS | "Y" if the processing was successful, "N" if error, "S" if skipped (company type out of scope etc) |
+| PROCESS_MSG     | Details about record processing (error messge, reason record was skipped, etc) |
+
+Table CORP_HISTORY_LOG: data is loaded for each company prior to generating credentials:
+
+| Column          | Description |
+| ------          | ----------- |
+| RECORD_ID       | Internal database record ID |
+| SYSTEM_TYPE_CD  | Source system identifier (to allow the Event Processor to source data from multiple systems) |
+| CORP_NUM        | Corporation number relating to this event |
+| CORP_STATE      | Latest company state, ACTive or HIStorical |
+| PREV_EVENT      | Previous event processed for this company |
+| LAST_EVENT      | Newest event processed for this company |
+| CORP_JSON       | Data loaded from source system in json format |
+| ENTRY_DATE      | Date this record was added to Event Processor DB |
+| PROCESS_DATE    | Date this record was processed |
+| PROCESS_SUCCESS | "Y" if the processing was successful, "N" if error, "S" if skipped (company type out of scope etc) |
+| PROCESS_MSG     | Details about record processing (error messge, reason record was skipped, etc) |
+
+Table CREDENTIAL_LOG: generated output credentials generated
+
+| Column          | Description |
+| ------          | ----------- |
+| RECORD_ID       | Internal database record ID |
+| SYSTEM_TYPE_CD  | Source system identifier (to allow the Event Processor to source data from multiple systems) |
+| CORP_NUM        | Corporation number relating to this event |
+| CORP_STATE      | Latest company state, ACTive or HIStorical |
+| PREV_EVENT      | Previous event processed for this company |
+| LAST_EVENT      | Newest event processed for this company |
+| CREDENTIAL_TYPE_CD | Identifies credential type |
+| CREDENTIAL_ID   | To uniquely identify the credential within this table |
+| SCHEMA_ID       | Schema name for this credential |
+| SCHEMA_VERSION  | Schema version for this credential |
+| CREDENTIAL_JSON | Json contents of the credential |
+| CREDENTIAL_HASH | A unique hash of the credential json, used to prevent duplicates |
+| ENTRY_DATE      | Date this record was added to Event Processor DB |
+| END_DATE        | (I don't think this column is used) |
+| PROCESS_DATE    | Date this record was processed |
+| PROCESS_SUCCESS | "Y" if the processing was successful, "N" if error, "S" if skipped (company type out of scope etc) |
+| PROCESS_MSG     | Details about record processing (error messge, reason record was skipped, etc) |
+
+There are other tables in the Event Processor DB, but they are no longer used.
 
 ## BC Registries Data Model
 
@@ -155,77 +277,6 @@ After the initial data load, the event processor will process new Events that ca
 * Events that cancel, or disable, existing Corporate credentials
 
 In all update scenarios, the existing credential will be expired (by setting end_date = event_date) and new Credentials created.
-
-## Event Processor Data Model
-
-The following data model will be implemented within the Event Processor to support conversion of the BC Registries dataset.  The following requirements are supported:
-
-* Publish a sub-set of Event/Filing Types in the initial release, however support inclusion of additional Types in later releases
-* Support publishing of specific companies or corporations
-* Support re-start if the processing fails (re-start from the point of failure)
-* Support for administrative functions (update of configuration, monitoring of event processing)
-
-The Event Processor data model is illustrated as follows:
-
-![VON Event Processor Data Model](https://github.com/ianco/von-bc-registries-agent/raw/master/doc/Event-Processor-Data-Model.png "VON Event Processor Data Model")
-
-Table descriptions are as follows:
-
-Table EVENT_LOG: tracks each processed Event - a record is added for each Event processed:
-
-| Column | Description |
-| ------ | ----------- |
-| EVENT_ID | Last event id processed |
-| FILING_TYPE | Filing type of last event id |
-| CORP_NUM | Corporation of last event id |
-| FILING_DATA | Json blob with data of interest (may vary based on filing type) |
-| CREDS_DATA | Json blob with pointers to any generated credentials |
-| EVENT_DATE | Date of the event, from corp reg database |
-| PROCESSED_DATE | Date credentials were created and sent |
-
-Table EVENT_BY_FILING_TYP: Last EVENT_ID processed for each FILING_TYPE:
-
-| Column | Description |
-| ------ | ----------- |
-| EVENT_ID | Last event id processed |
-| FILING_TYPE | Filing type of last event id |
-
-Table EVENT_BY_CORP_FILING: Last EVENT_ID processed for each CORP_NUM/FILING_TYPE:
-
-| Column | Description |
-| ------ | ----------- |
-| EVENT_ID | Last event id processed |
-| FILING_TYPE | Filing type of last event id |
-| CORP_NUM | Corporation of last event id |
-
-Table CREDENTIAL_SCHEMA: description of each output credential supported:
-
-| Column | Description |
-| ------ | ----------- |
-| CREDENTIAL_TYP_CD | Identifies credential type |
-| CREDENTIAL_NAME | Description of credential |
-| CREDENTIAL_SCHEMA | Data format required for credential |
-
-Table EVENT_CREDENTIAL_MAP: mapping between input events and output credentials
-
-| Column | Description |
-| ------ | ----------- |
-| EVENT_TYP_CD | Input event type |
-| FILING_TYP_CD | Input filing type |
-| CREDENTIAL_TYP_CD | Output credential type |
-| MAPPING_SCRIPT | Mapping between input event and output credential |
-
-Table CREDENTIAL_LOG: generated output credentials generated
-
-| Column | Description |
-| ------ | ----------- |
-| EVENT_ID | Last event id processed |
-| FILING_TYPE | Filing type of last event id |
-| CORP_NUM | Corporation of last event id |
-| CREDENTIAL_TYP_CD | Identifies credential type |
-| CREDS_DATA | Json blob with pointers to any generated credentials |
-| PROCESSED_DATE | Date credentials were created and sent |
-
 
 ## BC Registries Event Processing description
 
