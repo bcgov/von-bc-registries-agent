@@ -73,8 +73,6 @@ RUN make install-packages
 # pin previous version of sqlalchemy_utils work avoid bug in 0.36.8
 RUN pip install sqlalchemy==1.3.23
 RUN pip install sqlalchemy_utils==0.36.7
-# pin previous version of flask to avoid bug in mara-app docker build
-RUN pip install flask==2.2.3
 
 # Set ownership and permissions
 # Set scripts as executable (make files and python files do not have to be marked)
