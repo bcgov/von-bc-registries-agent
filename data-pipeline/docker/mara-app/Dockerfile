@@ -1,26 +1,26 @@
-FROM ubuntu:18.04
+FROM ubuntu:22.04
 
 # mara-base section
-ARG python_version=3.8
+ARG python_version=3.10
 
 RUN apt-get update -y \
     && apt-get install -y \
-                build-essential \
-                git \
-                dialog \
-                coreutils \
-                graphviz \
-                software-properties-common \
-                postgresql-client \
-                rsync
+    build-essential \
+    git \
+    dialog \
+    coreutils \
+    graphviz \
+    software-properties-common \
+    postgresql-client \
+    rsync
 RUN add-apt-repository ppa:deadsnakes/ppa
 RUN apt-get update -y \
     && apt-get install -y \
-                python$python_version \
-                python$python_version-dev \
-                python$python_version-venv \
-                python-psycopg2 \
-                libpq-dev
+    python$python_version \
+    python$python_version-dev \
+    python$python_version-venv \
+    python3-psycopg2 \
+    libpq-dev
 
 # ========================================================================================================
 # Install go-crond (from https://github.com/webdevops/go-crond)
