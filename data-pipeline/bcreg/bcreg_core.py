@@ -285,7 +285,7 @@ class BCReg_Core:
             cache_cursor = None
 
     # cache data from bc registries database into a local in-mem sqlite table
-    # create the table if nencessary, based on the bc registries dictionary
+    # create the table if necessary, based on the bc registries dictionary
     # note: "generate_individual_sql" will generate and print sql statements if True
     #       to be used to generate sample data for unit testing
     def cache_bcreg_data(self, table, desc, rows, generate_individual_sql=False, use_sec=False):

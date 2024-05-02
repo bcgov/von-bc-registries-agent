@@ -1743,6 +1743,27 @@ class EventProcessor:
         else:
             raise Exception(f"Unknown system type: {system_type_cd}")
 
+    def get_max_event_for_other_system_type(self, system_type_cd, use_cache=False):
+        use_system_type_cd = lear_system_type if system_type_cd == system_type else system_type
+        if system_type_cd == system_type:
+            reg_system = BCRegistries(use_cache)
+        elif system_type_cd == lear_system_type:
+            reg_system = BCReg_Lear(use_cache)
+        else:
+            raise Exception(f"Unknown system type: {system_type_cd}")
+        max_event_date = reg_system.get_max_event_date()
+        max_event_id = reg_system.get_max_event(max_event_date)
+        return (max_event_date, max_event_id)
+
+    def get_in_scope_corps_for_other_system_type(self, system_type_cd):
+        use_system_type_cd = lear_system_type if system_type_cd == system_type else system_type
+        if system_type_cd == system_type:
+            return LEAR_CORP_TYPES_IN_SCOPE
+        elif system_type_cd == lear_system_type:
+            return CORP_TYPES_IN_SCOPE
+        else:
+            raise Exception(f"Unknown system type: {system_type_cd}")
+
     # process corps that have been queued - update data from bc_registries
     def process_corp_event_queue_internal(self, system_type_cd, load_regs=True, generate_creds=False, use_cache=False, corp_types=CORP_TYPES_IN_SCOPE):
         """
@@ -1810,6 +1831,10 @@ class EventProcessor:
         sql3a = """UPDATE CORP_HISTORY_LOG
                   SET PROCESS_DATE = %s, PROCESS_SUCCESS = %s, PROCESS_MSG = %s
                   WHERE RECORD_ID = %s"""
+
+        # get max event for "other" system in case we need to re-direct an company for processing
+        (other_max_event_date, other_max_event_id) = self.get_max_event_for_other_system_type(system_type_cd)
+        other_in_scope_corps = self.get_in_scope_corps_for_other_system_type(system_type_cd)
 
         cur = None
         start_time = time.perf_counter()
@@ -1908,6 +1933,7 @@ class EventProcessor:
                         process_success = True
                         process_msg = None
                         corp_in_scope = False
+                        corp_in_scope_other = False
                         if (i % 100 == 0) or (i+1 == len(corps)):
                             processing_time = time.perf_counter() - start_time
                             print('Processing: ' + str(processing_time))
@@ -1928,6 +1954,8 @@ class EventProcessor:
 
                                     corp_info_json = bc_registries.to_json(corp_info)
                                     corp_in_scope = True
+                                elif corp_info['corp_typ_cd'] in other_in_scope_corps:
+                                    corp_in_scope_other = True
 
                                 prev_event_json = event_json(corp['PREV_EVENT'])
                                 last_event_json = event_json(corp['LAST_EVENT'])
@@ -1943,7 +1971,10 @@ class EventProcessor:
                             corp_info_json = bc_registries.to_json(corp_info)
                             prev_event_json = corp['PREV_EVENT']
                             last_event_json = corp['LAST_EVENT']
-                            corp_in_scope = True
+                            if corp_info['corp_typ_cd'] in corp_types:
+                                corp_in_scope = True
+                            elif corp_info['corp_typ_cd'] in other_in_scope_corps:
+                                corp_in_scope_other = True
 
                         # at this point we have all the corp data, now generate credentials
                         if corp_in_scope and process_success:
@@ -2059,7 +2090,20 @@ class EventProcessor:
                             if corp_in_scope:
                                 cur.execute(sql3, (datetime.datetime.now(), 'Y', corp_info['corp_typ_cd'], corp['RECORD_ID'], ))
                             else:
-                                cur.execute(sql3, (datetime.datetime.now(), 'S', corp_info['corp_typ_cd'] + ": Skipped, not in scope", corp['RECORD_ID'], ))
+                                if not corp_in_scope_other:
+                                    cur.execute(sql3, (datetime.datetime.now(), 'S', corp_info['corp_typ_cd'] + ": Skipped, not in scope", corp['RECORD_ID'], ))
+                                else:
+                                    # add a record to trigger this company to process from the "in scope" source DB
+                                    use_system_type_cd = lear_system_type if corp['SYSTEM_TYPE_CD'] == system_type else system_type
+                                    if use_system_type_cd == system_type:
+                                        # for now just drop a "BC" prefx if we are processing from COLIN
+                                        use_corp_num = corp['CORP_NUM'][2:] if corp['CORP_NUM'].startswith("BC") else corp['CORP_NUM']
+                                    else:
+                                        use_corp_num = corp['CORP_NUM']
+                                    cur.execute(sql2b, (use_system_type_cd, 0, "0001-01-01",
+                                                        other_max_event_id, other_max_event_date,
+                                                        use_corp_num, datetime.datetime.now(),))
+                                    cur.execute(sql3, (datetime.datetime.now(), 'S', corp_info['corp_typ_cd'] + ": Skipped, requeue in " + use_system_type_cd, corp['RECORD_ID'], ))
                         else:
                             if 255 < len(process_msg):
                                 res = process_msg[:250] + '...'
