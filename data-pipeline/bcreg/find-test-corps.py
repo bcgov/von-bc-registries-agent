@@ -255,8 +255,8 @@ with BCRegistries() as bc_registries:
         # get specific test corps (there are about 6)
         print("Get specific corps")
         corps = bc_registries.get_specific_corps(specific_corps)
-        corps_2 = bc_registries.get_specific_corps(specific_corps_2)
-        corps.extend(corps_2)
+        #corps_2 = bc_registries.get_specific_corps(specific_corps_2)
+        #corps.extend(corps_2)
 
         print("Find unprocessed events for each corp")
         last_event_dt = bc_registries.get_event_effective_date(prev_event_id)
