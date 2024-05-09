@@ -1180,6 +1180,14 @@ class EventProcessor:
             #LOGGER.info("  --> party['party_typ_cd'] != 'FBO'/'organization', return False")
             return False
 
+        # check if either company is "withdrawn"
+        if 'corp_typ_cd' in corp_info and corp_info['corp_typ_cd'] == CORP_WITHDRAWN_STATE:
+            LOGGER.info("  --> corp_info['corp_typ_cd'] is "withdrawn", return False")
+            return False
+        if 'corp_typ_cd' in party['corp_info'] and party['corp_info']['corp_typ_cd'] == CORP_WITHDRAWN_STATE:
+            LOGGER.info("  --> party['corp_info']['corp_typ_cd'] is "withdrawn", return False")
+            return False
+
         # special case where the corp_num and bus_company_num are the same
         #if 'bus_company_num' in party and party['bus_company_num'] == corp_num:
         #    LOGGER.info("  --> party['bus_company_num'] == corp_num, return False")

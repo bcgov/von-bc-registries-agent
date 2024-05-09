@@ -601,9 +601,8 @@ class BCReg_Lear(BCReg_Core):
             row = cur.fetchone()
             if row is None:
                 LOGGER.info("No corp rec found for " + str(corp_num))
-                #elif row[8] == CORP_WITHDRAWN_STATE:
-                #    LOGGER.info("Corporation is withdrawn, skipping for " + str(corp_num))
-                #    return None
+            elif row[8] == CORP_WITHDRAWN_STATE:
+                LOGGER.info("Corporation is withdrawn, skipping for " + str(corp_num))
             else:
                 corp['current_date'] = datetime.datetime.now()
                 corp['corp_num'] = row[0]
@@ -894,7 +893,7 @@ class BCReg_Lear(BCReg_Core):
                         corp_party['corp_info'] = self.get_basic_corp_info_from_colin(corp_party['bus_company_num'])
 
                 # if there is no corp info (cant find related corp) don't add the relationship
-                if corp_party['corp_info'] is not None:
+                if not (corp_party['corp_info'] is None or corp_party['corp_info']['corp_num'] is None or corp_party['corp_info']['corp_num'] == ''):
                     corp['parties'].append(corp_party)
 
                 row = cur.fetchone()
