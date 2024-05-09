@@ -250,6 +250,8 @@ specific_corps = [
 'FM1045877',
 'FM1045885',
 'FM1045893',
+    'FM0055113',
+    'FM0020924',
 ]
 
 num_corps_per_type = 20

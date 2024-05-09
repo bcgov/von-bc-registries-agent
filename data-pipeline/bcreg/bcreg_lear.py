@@ -11,7 +11,7 @@ import types
 import traceback
 import logging
 
-from bcreg.bcreg_core import BCReg_Core, MAX_WHERE_IN
+from bcreg.bcreg_core import BCReg_Core, MAX_WHERE_IN, CORP_WITHDRAWN_STATE
 from bcreg.config import config
 from bcreg.rocketchat_hooks import log_error, log_warning, log_info
 
@@ -578,9 +578,12 @@ class BCReg_Lear(BCReg_Core):
 
     def get_basic_corp_info_from_colin(self, corp_num):
         srch_corp_num = corp_num[2:] if corp_num.startswith('BC') else corp_num
-        sql_corp = """SELECT corp_num, corp_typ_cd, recognition_dts, last_ar_filed_dt, bn_9, bn_15, admin_email, last_ledger_dt
-                 FROM """ + self.get_sec_table_prefix(force_query_remote=True) + """corporation
-                 WHERE corp_num = '""" + srch_corp_num + """'""" 
+        sql_corp = """SELECT c.corp_num corp_num, corp_typ_cd, recognition_dts, last_ar_filed_dt, bn_9, bn_15, 
+                      admin_email, last_ledger_dt, s.state_typ_cd state_typ_cd
+                 FROM """ + self.get_sec_table_prefix(force_query_remote=True) + """corporation c,
+                      """ + self.get_sec_table_prefix(force_query_remote=True) + """corp_state s
+                 WHERE c.corp_num = '""" + srch_corp_num + """'
+                   AND s.corp_num = c.corp_num and s.end_event_id is null""" 
         # print(">>> looking for COLIN corp:", sql_corp)
         corp = {}
         corp['corp_num'] = ''
@@ -598,6 +601,9 @@ class BCReg_Lear(BCReg_Core):
             row = cur.fetchone()
             if row is None:
                 LOGGER.info("No corp rec found for " + str(corp_num))
+                #elif row[8] == CORP_WITHDRAWN_STATE:
+                #    LOGGER.info("Corporation is withdrawn, skipping for " + str(corp_num))
+                #    return None
             else:
                 corp['current_date'] = datetime.datetime.now()
                 corp['corp_num'] = row[0]
@@ -616,6 +622,7 @@ class BCReg_Lear(BCReg_Core):
                 corp['bn_15'] = row[5]
                 corp['admin_email'] = row[6]
                 corp['last_ledger_dt'] = row[7]
+                corp['state_typ_cd'] = row[8]
             cur.close()
             cur = None
             return corp
@@ -886,7 +893,10 @@ class BCReg_Lear(BCReg_Core):
                     if corp_num == corp_party['corp_num'] and corp_party['bus_company_num'] is not None:
                         corp_party['corp_info'] = self.get_basic_corp_info_from_colin(corp_party['bus_company_num'])
 
-                corp['parties'].append(corp_party)
+                # if there is no corp info (cant find related corp) don't add the relationship
+                if corp_party['corp_info'] is not None:
+                    corp['parties'].append(corp_party)
+
                 row = cur.fetchone()
             cur.close()
             cur = None
