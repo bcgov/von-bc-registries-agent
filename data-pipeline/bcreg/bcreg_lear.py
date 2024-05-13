@@ -357,20 +357,20 @@ class BCReg_Lear(BCReg_Core):
         """
 
         # since a related corp may be impacted by a corp change, check for related corps via corp_party table
-        """
-        # TODO need to see how this applies in the new LEAR database
-        sql1 = " " "select corp_num from " " " + self.DB_TABLE_PREFIX + " " "corp_party
-                    where bus_company_num = %s
-                    and party_typ_cd = 'FBO'
-                    union
-                    select bus_company_num from bc_registries.corp_party
-                    where corp_num = %s
-                    and party_typ_cd = 'FBO'" " "
+        sql1 = """SELECT parties.identifier corp_num
+                  FROM businesses businesses,
+                       parties_version parties, 
+                       party_roles_version roles
+                  WHERE businesses.id = roles.business_id
+                    AND roles.party_id = parties.id 
+                    AND parties.party_type = 'organization' and roles.role = 'proprietor'
+                    AND (parties.identifier = %s
+                         OR roles.business_id = (select id from businesses where identifier = %s))"""
         new_corps = []
         for corp in corps:
             cur = None
             try:
-                #LOGGER.info("Executing: " + sql1 + " with" + str(corp['CORP_NUM']))
+                # LOGGER.info("Executing: " + sql1 + " with" + str(corp['CORP_NUM']))
                 cur = self.conn.cursor()
                 cur.execute(sql1, (corp['CORP_NUM'],corp['CORP_NUM'],))
                 row = cur.fetchone()
@@ -391,7 +391,6 @@ class BCReg_Lear(BCReg_Core):
                     cur.close()
         LOGGER.info("Loaded corps: " + str(len(new_corps)))
         corps.extend(new_corps)
-        """
 
         return corps
 
