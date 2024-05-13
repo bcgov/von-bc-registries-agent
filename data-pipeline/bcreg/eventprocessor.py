@@ -14,6 +14,7 @@ import csv
 
 from bcreg.config import config
 from bcreg.bcregistries import BCRegistries, CustomJsonEncoder, event_dict, is_data_conversion_event, system_type, CORP_TYPES_IN_SCOPE
+from bcreg.bcreg_core import CORP_WITHDRAWN_STATE
 from bcreg.bcreg_lear import BCReg_Lear, lear_system_type, LEAR_CORP_TYPES_IN_SCOPE
 from bcreg.rocketchat_hooks import log_error, log_warning, log_info
 
@@ -1179,6 +1180,14 @@ class EventProcessor:
             #LOGGER.info("  --> party['party_typ_cd'] != 'FBO'/'organization', return False")
             return False
 
+        # check if either company is "withdrawn"
+        if 'corp_typ_cd' in corp_info and corp_info['corp_typ_cd'] == CORP_WITHDRAWN_STATE:
+            LOGGER.info("  --> corp_info['corp_typ_cd'] is 'withdrawn', return False")
+            return False
+        if 'corp_typ_cd' in party['corp_info'] and party['corp_info']['corp_typ_cd'] == CORP_WITHDRAWN_STATE:
+            LOGGER.info("  --> party['corp_info']['corp_typ_cd'] is 'withdrawn', return False")
+            return False
+
         # special case where the corp_num and bus_company_num are the same
         #if 'bus_company_num' in party and party['bus_company_num'] == corp_num:
         #    LOGGER.info("  --> party['bus_company_num'] == corp_num, return False")
@@ -1985,7 +1994,7 @@ class EventProcessor:
                             corp_active_state = self.get_corp_active_state(corp['SYSTEM_TYPE_CD'], corp_info)
 
                             # if corporation is "withdrawn" then don't create any events
-                            withdrawn_corp = (corp_active_state is not None) and ('state_typ_cd' in corp_active_state) and (corp_active_state['state_typ_cd'] == 'HWT')
+                            withdrawn_corp = (corp_active_state is not None) and ('state_typ_cd' in corp_active_state) and (corp_active_state['state_typ_cd'] == CORP_WITHDRAWN_STATE)
                             if withdrawn_corp:
                                 # setting these to empty arrays will force a status update with no creds generated
                                 effective_events = []
