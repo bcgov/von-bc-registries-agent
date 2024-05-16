@@ -29,6 +29,9 @@ MAX_END_DATE   = datetime.datetime(datetime.MAXYEAR-1, 12, 31)
 # for now, we are in PST time
 timezone = pytz.timezone("PST8PDT")
 
+MIN_START_DATE_TZ = timezone.localize(MIN_START_DATE)
+MAX_END_DATE_TZ   = timezone.localize(MAX_END_DATE)
+
 LOGGER = logging.getLogger(__name__)
 
 LEAR_CORP_TYPES_IN_SCOPE = {
@@ -89,9 +92,14 @@ class CustomJsonEncoder(json.JSONEncoder):
                 ret = o.astimezone(pytz.utc).isoformat()
                 return ret
             except (Exception) as error:
-                LOGGER.error(error)
-                LOGGER.error(traceback.print_exc())
-                raise error
+                #LOGGER.error(error)
+                #LOGGER.error(traceback.print_exc())
+                #raise error
+                if o.year <= datetime.MINYEAR+1:
+                    return MIN_START_DATE_TZ.astimezone(pytz.utc).isoformat()
+                elif o.year >= datetime.MAXYEAR-1:
+                    return MAX_END_DATE_TZ.astimezone(pytz.utc).isoformat()
+                return o.isoformat()
         elif isinstance(o, (list, dict, str, int, float, bool, type(None))):
             return JSONEncoder.default(self, o)        
         elif isinstance(o, decimal.Decimal):
