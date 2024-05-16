@@ -623,6 +623,7 @@ class BCReg_Lear(BCReg_Core):
                 corp['state_typ_cd'] = row[8]
             cur.close()
             cur = None
+            #LOGGER.error("Returning corp from COLIN: {corp}")
             return corp
         except (Exception, psycopg2.DatabaseError) as error:
             LOGGER.error(error)
@@ -813,7 +814,13 @@ class BCReg_Lear(BCReg_Core):
         try:
             corp = self.get_basic_corp_info(corp_num, versions=False)
             corp_type = corp['corp_typ_cd']
-            if corp_type in LEAR_CORP_TYPES_IN_SCOPE:
+            if (not corp_type or corp_type == ''):
+                # corp not found in LEAR, return basic data from COLIN
+                corp = self.get_basic_corp_info_from_colin(corp_num)
+                corp['versions'] = {}
+                corp['parties'] = []
+                return corp
+            elif corp_type in LEAR_CORP_TYPES_IN_SCOPE:
                 corp['versions'] = self.get_basic_corp_info(corp_num, versions=True)
             else:
                 corp['versions'] = {}

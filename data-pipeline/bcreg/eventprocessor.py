@@ -1170,7 +1170,7 @@ class EventProcessor:
 
     # check if we should build a relationship credential for the given party record
     def should_generate_relationship_credential(self, party, prev_event, last_event, corp_num, corp_info):
-        #LOGGER.info("should_generate_relationship_credential", party['corp_num'], party['bus_company_num'], party['party_typ_cd'])
+        #LOGGER.info(f"??? should_generate_relationship_credential: {party}")
         if not 'corp_info' in party:
             #LOGGER.info("  --> no corp_info, return False")
             return False;
@@ -1182,10 +1182,10 @@ class EventProcessor:
 
         # check if either company is "withdrawn"
         if 'corp_typ_cd' in corp_info and corp_info['corp_typ_cd'] == CORP_WITHDRAWN_STATE:
-            LOGGER.info("  --> corp_info['corp_typ_cd'] is 'withdrawn', return False")
+            #LOGGER.info("  --> corp_info['corp_typ_cd'] is 'withdrawn', return False")
             return False
         if 'corp_typ_cd' in party['corp_info'] and party['corp_info']['corp_typ_cd'] == CORP_WITHDRAWN_STATE:
-            LOGGER.info("  --> party['corp_info']['corp_typ_cd'] is 'withdrawn', return False")
+            #LOGGER.info("  --> party['corp_info']['corp_typ_cd'] is 'withdrawn', return False")
             return False
 
         # special case where the corp_num and bus_company_num are the same
@@ -1211,7 +1211,7 @@ class EventProcessor:
 
         # ... AND it belongs to the correct company type/party type logic
         if self.is_owned_sole_prop(party, corp_num, corp_info) or self.is_owner_of_sole_prop(party, corp_num, corp_info):
-            #LOGGER.info("  --->", self.is_owned_sole_prop(party, corp_num, corp_info), self.is_owner_of_sole_prop(party, corp_num, corp_info))
+            #LOGGER.info("  ---> owned/owner: " + str(self.is_owned_sole_prop(party, corp_num, corp_info)) + ", " + str(self.is_owner_of_sole_prop(party, corp_num, corp_info)))
             return True
 
         #LOGGER.info("  ---> fall-through, return False")
@@ -1980,7 +1980,9 @@ class EventProcessor:
                             corp_info_json = bc_registries.to_json(corp_info)
                             prev_event_json = corp['PREV_EVENT']
                             last_event_json = corp['LAST_EVENT']
-                            if corp_info['corp_typ_cd'] in corp_types:
+                            if corp_info['corp_typ_cd'] is null or corp_info['corp_typ_cd'] == '':
+                                LOGGER.error(f"Error no corp_type: {corp_info_json}")
+                            elif corp_info['corp_typ_cd'] in corp_types:
                                 corp_in_scope = True
                             elif corp_info['corp_typ_cd'] in other_in_scope_corps:
                                 corp_in_scope_other = True
