@@ -12,7 +12,9 @@ LOG_LEVEL = os.environ.get('LOG_LEVEL', 'WARNING').upper()
 logging.basicConfig(level=LOG_LEVEL)
 
 
-specific_corps = [
+specific_corps = []
+
+specific_corps_keep = [
     'CP0000672',
     'CP0001309',
     'CP0001311',
@@ -252,6 +254,29 @@ specific_corps = [
 'FM1045893',
     'FM0055113',
     'FM0020924',
+'FM0159814',
+'FM0314345',
+'FM0417824',
+'FM0436851',
+'FM0575737',
+'FM0604892',
+'FM0604920',
+'FM0617274',
+'FM0617289',
+'FM0617323',
+'FM0617329',
+'FM0662620',
+'FM0664011',
+'FM0679497',
+'FM0735809',
+'FM0744665',
+'FM0785710',
+'FM0823104',
+'FM0823108',
+'FM0836965',
+'FM0841769',
+'FM1003299',
+'FM1030599',
 ]
 
 num_corps_per_type = 20
