@@ -1008,9 +1008,11 @@ class EventProcessor:
 
     # currently active state record
     def get_corp_active_state_lear(self, corp_info):
+        if not 'state_typ_cd' in corp_info:
+            return None
         return {
             "state_typ_cd": corp_info['state_typ_cd'],
-            "op_state_typ_cd": corp_info['op_state_typ_cd'],
+            "op_state_typ_cd": corp_info['op_state_typ_cd'] if 'op_state_typ_cd' in corp_info else ''
         }
 
     # currently active state record
