@@ -54,7 +54,8 @@ class BCReg_Core:
             params = config(section=self.PG_DATABASE_NAME)
             self.conn = psycopg2.connect(**params)
             self.conn.set_session(readonly=True)
-            self.conn.set_isolation_level(psycopg2.extensions.ISOLATION_LEVEL_READ_COMMITTED)
+            #self.conn.set_isolation_level(psycopg2.extensions.ISOLATION_LEVEL_READ_COMMITTED)
+            self.conn.set_isolation_level(psycopg2.extensions.ISOLATION_LEVEL_REPEATABLE_READ)
 
             # Register the adapter
             sqlite3.register_adapter(decimal.Decimal, adapt_decimal)
@@ -67,7 +68,8 @@ class BCReg_Core:
             secondary_params = config(section=self.SEC_PG_DATABASE_NAME)
             self.sec_conn = psycopg2.connect(**secondary_params)
             self.sec_conn.set_session(readonly=True)
-            self.sec_conn.set_isolation_level(psycopg2.extensions.ISOLATION_LEVEL_READ_COMMITTED)
+            #self.sec_conn.set_isolation_level(psycopg2.extensions.ISOLATION_LEVEL_READ_COMMITTED)
+            self.sec_conn.set_isolation_level(psycopg2.extensions.ISOLATION_LEVEL_REPEATABLE_READ)
         except (Exception) as error:
             LOGGER.error(error)
             LOGGER.error(traceback.print_exc())
