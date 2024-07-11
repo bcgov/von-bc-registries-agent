@@ -65,8 +65,8 @@ org_rel_credential = 'OGR'
 org_rel_schema = 'demo.org_relationship.registries.ca'
 org_rel_version = '1.0.42'
 
-CORP_BATCH_SIZE = 3000
-FALLBACK_CORP_BATCH_SIZE = 300
+CORP_BATCH_SIZE = int(os.environ.get('CORP_BATCH_SIZE', 3000))
+FALLBACK_CORP_BATCH_SIZE = CORP_BATCH_SIZE % 10
 
 MIN_START_DATE = datetime.datetime(datetime.MINYEAR+1, 1, 1)
 MIN_VALID_DATE = datetime.datetime(datetime.MINYEAR+10, 1, 1)

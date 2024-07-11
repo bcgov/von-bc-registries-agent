@@ -10,10 +10,13 @@ import random
 import types
 import traceback
 import logging
+import os
 
 from bcreg.config import config
 from bcreg.rocketchat_hooks import log_error, log_warning, log_info
 
+
+DEBUG_SQL_STATEMENTS = bool(os.environ.get('DEBUG_SQL_STATEMENTS'))
 
 INMEM_CACHE_TABLE_PREFIX = 'x_'
 INMEM_CACHE_SEC_TABLE_PREFIX = 'x_sec_'
@@ -184,7 +187,8 @@ class BCReg_Core:
         sql = "SELECT * from " + pfx + table
         if 0 < len(where):
             sql = sql + " WHERE " + where
-        # print(">>> caching data with:", sql)
+        if DEBUG_SQL_STATEMENTS:
+            print(">>> caching data with:", sql)
         cursor = None
         try:
             if use_sec:
@@ -529,6 +533,8 @@ class BCReg_Core:
     # returns a zero-length array if none found
     # optionally takes a WHERE clause and ORDER BY clause (must be valid SQL)
     def get_bcreg_sql(self, table, sql, cache=False, generate_individual_sql=False, use_sec=False):
+        if DEBUG_SQL_STATEMENTS:
+            print(">>> sql for caching:", sql)
         cursor = None
         try:
             if use_sec:
@@ -586,6 +592,8 @@ class BCReg_Core:
 
     # get the corporation's current state
     def get_adhoc_query(self, sql, use_sec=False):
+        if DEBUG_SQL_STATEMENTS:
+            print(">>> caching with adhoc query:", sql)
         cursor = None
         try:
             if use_sec:
