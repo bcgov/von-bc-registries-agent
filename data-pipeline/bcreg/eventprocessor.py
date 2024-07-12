@@ -670,12 +670,14 @@ class EventProcessor:
                  VALUES(%s, %s, %s, %s) RETURNING RECORD_ID;"""
         cur = None
         try:
-            for i,corp in enumerate(corps): 
-                cur = self.conn.cursor()
-                cur.execute(sql, (system_type_cd, corp['PREV_EVENT']['event_id'], corp['PREV_EVENT']['event_date'], corp['LAST_EVENT']['event_id'], corp['LAST_EVENT']['event_date'], corp['CORP_NUM'], datetime.datetime.now(),))
-                _record_id = cur.fetchone()[0]
-                cur.close()
-                cur = None
+            for i,corp in enumerate(corps):
+                # skip null, empty or blank corp numbers
+                if corp['CORP_NUM'] and corp['CORP_NUM'].strip():
+                    cur = self.conn.cursor()
+                    cur.execute(sql, (system_type_cd, corp['PREV_EVENT']['event_id'], corp['PREV_EVENT']['event_date'], corp['LAST_EVENT']['event_id'], corp['LAST_EVENT']['event_date'], corp['CORP_NUM'], datetime.datetime.now(),))
+                    _record_id = cur.fetchone()[0]
+                    cur.close()
+                    cur = None
             cur = self.conn.cursor()
             cur.execute(sql2, (system_type_cd, max_event_id, max_event_date, datetime.datetime.now(),))
             self.conn.commit()
