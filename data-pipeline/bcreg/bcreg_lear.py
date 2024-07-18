@@ -607,7 +607,7 @@ class BCReg_Lear(BCReg_Core):
             cur.execute(sql_corp)
             row = cur.fetchone()
             if row is None:
-                LOGGER.info("No corp rec found for " + str(corp_num))
+                LOGGER.debug("No corp rec found for " + str(corp_num))
             elif row[8] == CORP_WITHDRAWN_STATE:
                 LOGGER.info("Corporation is withdrawn, skipping for " + str(corp_num))
             else:
@@ -674,72 +674,73 @@ class BCReg_Lear(BCReg_Core):
             corps = []
             corp = None
 
-            LOGGER.info(">>> get corp info for: " + corp_num + "," + str(versions))
-            cur = self.get_db_connection().cursor()
-            cur.execute(sql_corp, (corp_num,))
-            row = cur.fetchone()
-            while row is not None:
-                LOGGER.info("    got corp rec: " + str(row[17]) + "," + row[0] + "," + row[1])
-                corp = {}
-                corp['current_date'] = timezone.localize(datetime.datetime.now())
-                corp['corp_num'] = row[0]
-                if deep_copy:
-                    # TODO
-                    # corp['jurisdiction'] = self.get_jurisdictions(row[0])
-                    pass
-                corp['corp_typ_cd'] = row[1]
-                # corp['corp_type'] = self.get_corp_type(row[1])
-                corp['recognition_dts'] = self.to_lear_date(row[2])
-                corp['last_ar_filed_dt'] = self.to_lear_date(row[3])
-                bn_9 = ''
-                if row[4] and 9 <= len(row[4]):
-                    bn_9 = row[4][:9]
-                corp['bn_9'] = bn_9
-                corp['bn_15'] = row[5]
-                corp['admin_email'] = row[6]
-                corp['last_ledger_dt'] = self.to_lear_date(row[7])
-                corp['last_event_dt'] = self.to_lear_date(row[8])
-                corp['corp_nme'] = row[9]
-                corp['corp_nme_as'] = row[10]
-                corp['corp_nme_effective_date'] = None
-                corp['can_jur_typ_cd'] = row[11]
-                corp['xpro_typ_cd'] = row[12]
-                corp['othr_juris_desc'] = row[13]
-                corp['state_typ_cd'] = STATE_CODES[row[14]] if row[14] in STATE_CODES else row[14]
-                corp['op_state_typ_cd'] = STATE_CODES[row[15]] if row[15] in STATE_CODES else row[15]
-                corp['state_typ_effective_date'] = None
-                corp['corp_class'] = row[16]
-                if versions:
-                    LOGGER.info("    get filings etc ...")
-                    state_filing_id = row[18]
-                    corp['state_filing_id'] = state_filing_id
-                    if state_filing_id and 0 < state_filing_id:
-                        filings = self.get_corp_filings(filing_id=corp['state_filing_id'])
-                        corp['filing'] = filings[0] if 0 < len(filings) else {}
+            if corp_num is not None and len(str(corp_num)) > 0:
+                LOGGER.debug(">>> get corp info for: " + corp_num + "," + str(versions))
+                cur = self.get_db_connection().cursor()
+                cur.execute(sql_corp, (corp_num,))
+                row = cur.fetchone()
+                while row is not None:
+                    LOGGER.debug("    got corp rec: " + str(row[17]) + "," + row[0] + "," + row[1])
+                    corp = {}
+                    corp['current_date'] = timezone.localize(datetime.datetime.now())
+                    corp['corp_num'] = row[0]
+                    if deep_copy:
+                        # TODO
+                        # corp['jurisdiction'] = self.get_jurisdictions(row[0])
+                        pass
+                    corp['corp_typ_cd'] = row[1]
+                    # corp['corp_type'] = self.get_corp_type(row[1])
+                    corp['recognition_dts'] = self.to_lear_date(row[2])
+                    corp['last_ar_filed_dt'] = self.to_lear_date(row[3])
+                    bn_9 = ''
+                    if row[4] and 9 <= len(row[4]):
+                        bn_9 = row[4][:9]
+                    corp['bn_9'] = bn_9
+                    corp['bn_15'] = row[5]
+                    corp['admin_email'] = row[6]
+                    corp['last_ledger_dt'] = self.to_lear_date(row[7])
+                    corp['last_event_dt'] = self.to_lear_date(row[8])
+                    corp['corp_nme'] = row[9]
+                    corp['corp_nme_as'] = row[10]
+                    corp['corp_nme_effective_date'] = None
+                    corp['can_jur_typ_cd'] = row[11]
+                    corp['xpro_typ_cd'] = row[12]
+                    corp['othr_juris_desc'] = row[13]
+                    corp['state_typ_cd'] = STATE_CODES[row[14]] if row[14] in STATE_CODES else row[14]
+                    corp['op_state_typ_cd'] = STATE_CODES[row[15]] if row[15] in STATE_CODES else row[15]
+                    corp['state_typ_effective_date'] = None
+                    corp['corp_class'] = row[16]
+                    if versions:
+                        LOGGER.debug("    get filings etc ...")
+                        state_filing_id = row[18]
+                        corp['state_filing_id'] = state_filing_id
+                        if state_filing_id and 0 < state_filing_id:
+                            filings = self.get_corp_filings(filing_id=corp['state_filing_id'])
+                            corp['filing'] = filings[0] if 0 < len(filings) else {}
+                        else:
+                            corp['filing'] = {}
+                        transaction_id = row[19]
+                        if transaction_id and 0 < transaction_id:
+                            transaction = self.get_event(corp['corp_num'], transaction_id)
+                            corp['transaction'] = transaction
+                        else:
+                            corp['transaction'] = {}
+                        corp['effective_date'] = self.get_corp_version_effective_date(corp)
+
+                    if versions:
+                        corps.append(corp)
+                        row = cur.fetchone()
                     else:
-                        corp['filing'] = {}
-                    transaction_id = row[19]
-                    if transaction_id and 0 < transaction_id:
-                        transaction = self.get_event(corp['corp_num'], transaction_id)
-                        corp['transaction'] = transaction
-                    else:
-                        corp['transaction'] = {}
-                    corp['effective_date'] = self.get_corp_version_effective_date(corp)
+                        row = None
 
-                if versions:
-                    corps.append(corp)
-                    row = cur.fetchone()
-                else:
-                    row = None
+                    if deep_copy:
+                        corp['office'] = []
 
-                if deep_copy:
-                    corp['office'] = []
-
-            cur.close()
-            cur = None
+                cur.close()
+                cur = None
 
             if (not versions) and corp is None:
-                LOGGER.info("No corp rec found for " + str(corp_num))
+                LOGGER.debug("No corp rec found for " + str(corp_num))
                 corp = {}
                 corp['corp_num'] = ''
                 corp['corp_typ_cd'] = ''
