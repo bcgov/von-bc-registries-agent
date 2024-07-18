@@ -1027,42 +1027,43 @@ class BCRegistries(BCReg_Core):
         try:
             corp = None
 
-            LOGGER.info(">>> get corp info for: " + corp_num)
-            cur = self.get_sec_db_connection().cursor()
-            cur.execute(sql_corp)
-            row = cur.fetchone()
-            if row is not None:
-                LOGGER.info("    got corp rec: " + str(row[17]) + "," + row[0] + "," + row[1])
-                corp = {}
-                corp['current_date'] = timezone.localize(datetime.datetime.now())
-                corp['corp_num'] = row[0]
-                corp['corp_typ_cd'] = row[1]
-                # corp['corp_type'] = self.get_corp_type(row[1])
-                corp['recognition_dts'] = self.to_lear_date(row[2])
-                corp['last_ar_filed_dt'] = self.to_lear_date(row[3])
-                bn_9 = ''
-                if row[4] and 9 <= len(row[4]):
-                    bn_9 = row[4][:9]
-                corp['bn_9'] = bn_9
-                corp['bn_15'] = row[5]
-                corp['admin_email'] = row[6]
-                corp['last_ledger_dt'] = self.to_lear_date(row[7])
-                corp['last_event_dt'] = self.to_lear_date(row[8])
-                corp['corp_nme'] = row[9]
-                corp['corp_nme_as'] = row[10]
-                corp['corp_nme_effective_date'] = None
-                corp['can_jur_typ_cd'] = row[11]
-                corp['xpro_typ_cd'] = row[12]
-                corp['othr_juris_desc'] = row[13]
-                corp['state_typ_cd'] = STATE_CODES[row[14]] if row[14] in STATE_CODES else row[14]
-                corp['op_state_typ_cd'] = STATE_CODES[row[15]] if row[15] in STATE_CODES else row[15]
-                corp['state_typ_effective_date'] = None
-                corp['corp_class'] = row[16]
-            cur.close()
-            cur = None
+            if corp_num is not None and len(str(corp_num)) > 0:
+                LOGGER.debug(">>> get corp info for: " + corp_num)
+                cur = self.get_sec_db_connection().cursor()
+                cur.execute(sql_corp)
+                row = cur.fetchone()
+                if row is not None:
+                    LOGGER.debug("    got corp rec: " + str(row[17]) + "," + row[0] + "," + row[1])
+                    corp = {}
+                    corp['current_date'] = timezone.localize(datetime.datetime.now())
+                    corp['corp_num'] = row[0]
+                    corp['corp_typ_cd'] = row[1]
+                    # corp['corp_type'] = self.get_corp_type(row[1])
+                    corp['recognition_dts'] = self.to_lear_date(row[2])
+                    corp['last_ar_filed_dt'] = self.to_lear_date(row[3])
+                    bn_9 = ''
+                    if row[4] and 9 <= len(row[4]):
+                        bn_9 = row[4][:9]
+                    corp['bn_9'] = bn_9
+                    corp['bn_15'] = row[5]
+                    corp['admin_email'] = row[6]
+                    corp['last_ledger_dt'] = self.to_lear_date(row[7])
+                    corp['last_event_dt'] = self.to_lear_date(row[8])
+                    corp['corp_nme'] = row[9]
+                    corp['corp_nme_as'] = row[10]
+                    corp['corp_nme_effective_date'] = None
+                    corp['can_jur_typ_cd'] = row[11]
+                    corp['xpro_typ_cd'] = row[12]
+                    corp['othr_juris_desc'] = row[13]
+                    corp['state_typ_cd'] = STATE_CODES[row[14]] if row[14] in STATE_CODES else row[14]
+                    corp['op_state_typ_cd'] = STATE_CODES[row[15]] if row[15] in STATE_CODES else row[15]
+                    corp['state_typ_effective_date'] = None
+                    corp['corp_class'] = row[16]
+                cur.close()
+                cur = None
 
             if corp is None:
-                LOGGER.info("No corp rec found for " + str(corp_num))
+                LOGGER.debug("No corp rec found for " + str(corp_num))
                 corp = {}
                 corp['corp_num'] = ''
                 corp['corp_typ_cd'] = ''
@@ -1096,7 +1097,7 @@ class BCRegistries(BCReg_Core):
             cur.execute(sql_corp, (corp_num,))
             row = cur.fetchone()
             if row is None:
-                LOGGER.info("No corp rec found for " + str(corp_num))
+                LOGGER.debug("No corp rec found for " + str(corp_num))
                 corp['corp_num'] = ''
                 corp['corp_typ_cd'] = ''
                 corp['recognition_dts'] = ''
