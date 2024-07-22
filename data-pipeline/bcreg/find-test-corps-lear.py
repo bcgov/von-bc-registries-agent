@@ -1190,6 +1190,7 @@ with BCReg_Lear() as bc_registries:
                from businesses
                where legal_type = '""" + corp_type + """'
                order by last_modified desc
+               limit 100
               """
         corps = bc_registries.get_bcreg_sql("corps_by_type", sql, cache=False)
         n_corps = min(len(corps), num_corps_per_type)

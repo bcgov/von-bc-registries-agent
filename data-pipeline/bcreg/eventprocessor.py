@@ -1923,10 +1923,18 @@ class EventProcessor:
                 # now generate credentials from the corporate data
                 # with BCRegistries(use_cache) as bc_registries:
                 with self.bc_reg_processor(system_type_cd, use_cache=use_cache) as bc_registries:
+                    # for BC_REG, we need to do LEAR queries as well
+                    if system_type_cd == system_type:
+                        lear_processor = self.bc_reg_processor(lear_system_type, use_cache=use_cache)
+                    else:
+                        lear_processor = None
                     if use_cache:
                         try:
                             # cache BC Reg data into local in-memory sqlite database (for performance)
                             bc_registries.cache_bcreg_corps(specific_corps)
+                            # for BC_REG, cache all the LEAR tables as well (so we can lookup relationships)
+                            if system_type_cd == system_type:
+                                lear_processor.cache_bcreg_corps(specific_corps)
                         except (Exception, psycopg2.DatabaseError, psycopg2.DataError) as error:
                             # raises a SQL error if error during caching
                             LOGGER.error(error)
@@ -1957,6 +1965,10 @@ class EventProcessor:
                             try:
                                 # fetch corp info from bc_registries
                                 corp_info = bc_registries.get_bc_reg_corp_info(corp['CORP_NUM'])
+
+                                # for BC_REG, lookup all relationships in LEAR
+                                if system_type_cd == system_type:
+                                    corp_info = lear_processor.get_lear_relationship_info(corp_info)
 
                                 if corp_info['corp_typ_cd'] in corp_types:
                                     # the following is COLIN-specific processing

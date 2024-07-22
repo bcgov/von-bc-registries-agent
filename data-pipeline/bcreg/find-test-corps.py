@@ -410,6 +410,7 @@ with BCRegistries() as bc_registries:
                from bc_registries.corporation
                where corp_typ_cd = '""" + corp_type + """'
                order by corp_num desc
+               limit 100
               """
        corps = bc_registries.get_bcreg_sql("corps_by_type", sql, cache=False)
        n_corps = min(len(corps), num_corps_per_type)
