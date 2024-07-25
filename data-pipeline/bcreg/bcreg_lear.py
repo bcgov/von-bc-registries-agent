@@ -819,11 +819,10 @@ class BCReg_Lear(BCReg_Core):
                              OR roles.business_id = (select id from """ + self.get_table_prefix() + """businesses where identifier = """ + self.get_db_sql_param() + """))
                         """
 
-        corp_num = corp_info['corp_num']
+        corp_num = self.bc_ifiy_one(corp_info['corp_num'])
         cur = None
         try:
             cur = self.get_db_connection().cursor()
-            # print(">>>", corp_num, corp_num, sql_party)
             cur.execute(sql_party, (corp_num, corp_num,))
             row = cur.fetchone()
             while row is not None:

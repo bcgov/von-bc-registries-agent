@@ -645,14 +645,18 @@ class BCReg_Core:
     lear_other_other_other_tables = ['transaction',]
 
     # in colin if the corp_num is numeric we pre-pend 'BC' to it
+    def bc_ifiy_one(self, corp_num):
+        try:
+            i = int(corp_num)
+            corp_num = 'BC' + corp_num
+        except:
+            pass
+        return corp_num
+
     def bc_ifiy(self, specific_corps):
         corp_nums = []
         for corp_num in specific_corps:
-            try:
-                i = int(corp_num)
-                corp_nums.append('BC' + corp_num)
-            except:
-                corp_nums.append(corp_num)
+            corp_nums.append(self.bc_ifiy_one(corp_num))
         return corp_nums
 
     # load all bc registries data for the specified corps into our in-mem cache
