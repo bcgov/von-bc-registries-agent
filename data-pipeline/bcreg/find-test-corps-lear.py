@@ -1174,7 +1174,17 @@ specific_corps_2 = [
 "FM1050885",
 "BC1491537",
 "FM1050886",
+"BC1026494",
+"FM0650512",
+"BC1024239",
+"FM1048326",
+"A0132048",
+"A0133092",
+"FM0733881",
+"FM0733880",
+"FM0650512",
 ]
+
 
 num_corps_per_type = 20
 
@@ -1190,6 +1200,7 @@ with BCReg_Lear() as bc_registries:
                from businesses
                where legal_type = '""" + corp_type + """'
                order by last_modified desc
+               limit 100
               """
         corps = bc_registries.get_bcreg_sql("corps_by_type", sql, cache=False)
         n_corps = min(len(corps), num_corps_per_type)

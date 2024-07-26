@@ -395,6 +395,14 @@ specific_corps_2 = [
                     'FM0406835',
                     'FM0550116',
                     'FM0167199',
+                    '1026494',
+                    'FM0650512',
+                    '1024239',
+                    'FM1048326',
+                    'A0132048',
+                    'A0133092',
+                    'BC1489198',
+                    'BC1026494',
 ]
 
 
@@ -410,6 +418,7 @@ with BCRegistries() as bc_registries:
                from bc_registries.corporation
                where corp_typ_cd = '""" + corp_type + """'
                order by corp_num desc
+               limit 100
               """
        corps = bc_registries.get_bcreg_sql("corps_by_type", sql, cache=False)
        n_corps = min(len(corps), num_corps_per_type)

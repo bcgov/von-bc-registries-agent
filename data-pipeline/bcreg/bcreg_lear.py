@@ -751,7 +751,7 @@ class BCReg_Lear(BCReg_Core):
 
             if versions:
                 # fill in effective dates for versions (name, status)
-                LOGGER.info("    sort version records for: " + corp_num)
+                LOGGER.debug("    sort version records for: " + corp_num)
                 corps = sorted(corps, key=lambda k: k['effective_date'])
                 # print(">>> sorted versions:", corps)
                 corp_nme = None
@@ -771,7 +771,7 @@ class BCReg_Lear(BCReg_Core):
                         state_typ_effective_date = corp_v['state_typ_effective_date']
                     else:
                         corp_v['state_typ_effective_date'] = state_typ_effective_date
-                LOGGER.info("    done.")
+                LOGGER.debug("    done.")
                 return corps
             else:
                 return corp
@@ -790,7 +790,7 @@ class BCReg_Lear(BCReg_Core):
     # primary method to load all bc registries data for the specified corporation
     ###########################################################################
 
-    def get_bc_reg_corp_info(self, corp_num):
+    def get_lear_relationship_info(self, corp_info):
         sql_party = """SELECT businesses.identifier as corp_num,
                                parties.id as corp_party_id, 
                                parties.mailing_address_id as mailing_addr_id, 
@@ -819,25 +819,10 @@ class BCReg_Lear(BCReg_Core):
                              OR roles.business_id = (select id from """ + self.get_table_prefix() + """businesses where identifier = """ + self.get_db_sql_param() + """))
                         """
 
+        corp_num = self.bc_ifiy_one(corp_info['corp_num'])
         cur = None
         try:
-            corp = self.get_basic_corp_info(corp_num, versions=False)
-            corp_type = corp['corp_typ_cd']
-            if (not corp_type or corp_type == ''):
-                # corp not found in LEAR, return basic data from COLIN
-                corp = self.get_basic_corp_info_from_colin(corp_num)
-                corp['versions'] = {}
-                corp['parties'] = []
-                return corp
-            elif corp_type in LEAR_CORP_TYPES_IN_SCOPE:
-                corp['versions'] = self.get_basic_corp_info(corp_num, versions=True)
-            else:
-                corp['versions'] = {}
-
-            # get parties
-            corp['parties'] = []
             cur = self.get_db_connection().cursor()
-            # print(">>>", corp_num, corp_num, sql_party)
             cur.execute(sql_party, (corp_num, corp_num,))
             row = cur.fetchone()
             while row is not None:
@@ -909,13 +894,13 @@ class BCReg_Lear(BCReg_Core):
 
                 # if there is no corp info (cant find related corp) don't add the relationship
                 if not (corp_party['corp_info'] is None or corp_party['corp_info']['corp_num'] is None or corp_party['corp_info']['corp_num'] == ''):
-                    corp['parties'].append(corp_party)
+                    corp_info['parties'].append(corp_party)
 
                 row = cur.fetchone()
             cur.close()
             cur = None
 
-            return corp
+            return corp_info
         except (Exception, psycopg2.DatabaseError) as error:
             LOGGER.error(error)
             LOGGER.error(traceback.print_exc())
@@ -924,6 +909,28 @@ class BCReg_Lear(BCReg_Core):
         finally:
             if cur is not None:
                 cur.close()
+
+
+    def get_bc_reg_corp_info(self, corp_num):
+        corp = self.get_basic_corp_info(corp_num, versions=False)
+        corp_type = corp['corp_typ_cd']
+        if (not corp_type or corp_type == ''):
+            # corp not found in LEAR, return basic data from COLIN
+            corp = self.get_basic_corp_info_from_colin(corp_num)
+            corp['versions'] = {}
+            corp['parties'] = []
+            return corp
+        elif corp_type in LEAR_CORP_TYPES_IN_SCOPE:
+            corp['versions'] = self.get_basic_corp_info(corp_num, versions=True)
+        else:
+            corp['versions'] = {}
+
+        # get parties
+        corp['parties'] = []
+        corp = self.get_lear_relationship_info(corp)
+
+        return corp
+
 
     # convert object to JSON, converting data types (decimal, date) to string
     def to_json(self, data):
