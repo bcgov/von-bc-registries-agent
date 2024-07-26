@@ -821,6 +821,9 @@ class EventProcessor:
         if cred_attr not in corp_cred or corp_cred[cred_attr] is None or corp_cred[cred_attr] == '':
             LOGGER.info(">>>Data Issue:Credential: " + corp_num + " " + cred_attr + " " + corp_cred)
 
+    def is_timezone_aware(self, d):
+        return (d.tzinfo is not None and d.tzinfo.utcoffset(d) is not None)
+
     def compare_dates(self, first_date, op, second_date, msg):
         # check for empty or null strings
         if first_date is None or (isinstance(first_date, str) and 0 == len(first_date)):
@@ -832,6 +835,13 @@ class EventProcessor:
             second_date = str(second_date)
         elif isinstance(second_date, str) and not isinstance(first_date, str):
             first_date = str(first_date)
+        # check for timezone awareness (they just need to be the same)
+        if self.is_timezone_aware(first_date) != self.is_timezone_aware(second_date):
+            # make them both timezone-aware
+            if not self.is_timezone_aware(first_date):
+                first_date = timezone.localize(first_date)
+            if not self.is_timezone_aware(second_date):
+                second_date = timezone.localize(second_date)
         # now do the comparison
         if op == "==" or op == '=':
             return first_date == second_date
@@ -1309,7 +1319,7 @@ class EventProcessor:
                 #     dba_cred['effective_date'] = party['corp_info']['recognition_dts']
 
                 dba_cred['relationship_status_effective'] = self.filter_min_date(dba_cred['effective_date'])
-                if party['end_transaction_id'] is not None and party['end_transaction']['effective_date'] <= corp_info['current_date']:
+                if party['end_transaction_id'] is not None and self.compare_dates(party['end_transaction']['effective_date'], "<=", corp_info['current_date'], "Relationships"):
                     dba_cred['expiry_date'] = party['effective_end_date']
                 else:
                     dba_cred['expiry_date'] = ''
