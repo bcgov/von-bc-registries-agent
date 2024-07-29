@@ -850,6 +850,9 @@ class BCReg_Lear(BCReg_Core):
                     corp_party['end_transaction'] = {}
                     corp_party['effective_end_date'] = MAX_END_DATE
                 corp_party['cessation_dt'] = row[7]
+                # use "cessation_date" as the end date (if available), regardless of the transaction status
+                if corp_party['cessation_dt']:
+                    corp_party['effective_end_date'] = corp_party['cessation_dt']
                 corp_party['last_nme'] = row[8]
                 corp_party['middle_nme'] = row[9]
                 corp_party['first_nme'] = row[10]
