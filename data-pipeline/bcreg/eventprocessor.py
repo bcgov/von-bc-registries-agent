@@ -1321,9 +1321,9 @@ class EventProcessor:
                 dba_cred['relationship_status_effective'] = self.filter_min_date(dba_cred['effective_date'])
                 if party['end_transaction_id'] is not None and self.compare_dates(party['end_transaction']['effective_date'], "<=", corp_info['current_date'], "Relationships"):
                     dba_cred['expiry_date'] = party['effective_end_date']
-                elif party['effective_end_date'] is not None:
+                elif party['cessation_dt'] is not None:
                     # scenario where the "cessation_dt" is the expiry date, with no transaction
-                    dba_cred['expiry_date'] = party['effective_end_date']
+                    dba_cred['expiry_date'] = party['cessation_dt']
                 else:
                     dba_cred['expiry_date'] = ''
                 reason_description = self.build_corp_reason_code(party['transaction'])
