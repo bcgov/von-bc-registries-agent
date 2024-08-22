@@ -643,6 +643,7 @@ class BCReg_Core:
     lear_other_other_tables = ['parties',
                           'parties_version',]
     lear_other_other_other_tables = ['transaction',]
+    lear_other_other_other_other_tables = ['filings',]
 
     # in colin if the corp_num is numeric we pre-pend 'BC' to it
     def bc_ifiy_one(self, corp_num):
@@ -724,6 +725,10 @@ class BCReg_Core:
 
                 txn_id_where = 'id in (' + self.id_where_in(txn_ids_list, True) + ')' if 0 < len(txn_ids_list) else "id = 0"
                 for other_table in self.lear_other_other_other_tables:
+                    _rows = self.get_bcreg_table(other_table, txn_id_where, '', True, generate_individual_sql, use_sec=use_sec)
+
+                txn_id_where = 'transaction_id in (' + self.id_where_in(txn_ids_list, True) + ')' if 0 < len(txn_ids_list) else "transaction_id = 0"
+                for other_table in self.lear_other_other_other_other_tables:
                     _rows = self.get_bcreg_table(other_table, txn_id_where, '', True, generate_individual_sql, use_sec=use_sec)
 
     # load all bc registries data for the specified corps into our in-mem cache

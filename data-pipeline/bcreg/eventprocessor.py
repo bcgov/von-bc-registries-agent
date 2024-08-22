@@ -15,7 +15,7 @@ import csv
 from bcreg.config import config
 from bcreg.bcregistries import BCRegistries, CustomJsonEncoder, event_dict, is_data_conversion_event, system_type, CORP_TYPES_IN_SCOPE
 from bcreg.bcreg_core import CORP_WITHDRAWN_STATE
-from bcreg.bcreg_lear import BCReg_Lear, lear_system_type, LEAR_CORP_TYPES_IN_SCOPE
+from bcreg.bcreg_lear import BCReg_Lear, lear_system_type, LEAR_CORP_TYPES_IN_SCOPE, LEAR_CONVERSION_DATE_TZ
 from bcreg.rocketchat_hooks import log_error, log_warning, log_info
 
 
@@ -1312,15 +1312,15 @@ class EventProcessor:
                     dba_cred['relationship_description'] = 'TBD' # party['']
                     dba_cred['associated_registration_name'] = ''
                 dba_cred['relationship_status'] = 'ACT'
-                dba_cred['effective_date'] = party['effective_start_date']
+                dba_cred['effective_date'] = party['appointment_dt']
 
                 # if the start event is 'ADMIN' type and there is only one party record, use the firm effective date
                 # if party['start_event']['event_typ_cd'] == 'ADMIN' and party_count[party['corp_info']['corp_num']] == 1 and party['corp_info']['recognition_dts']:
                 #     dba_cred['effective_date'] = party['corp_info']['recognition_dts']
 
                 dba_cred['relationship_status_effective'] = self.filter_min_date(dba_cred['effective_date'])
-                if party['end_transaction_id'] is not None and self.compare_dates(party['end_transaction']['effective_date'], "<=", corp_info['current_date'], "Relationships"):
-                    dba_cred['expiry_date'] = party['effective_end_date']
+                if party['end_transaction_id'] is not None and self.compare_dates(party['end_transaction']['effective_date'], "<=", LEAR_CONVERSION_DATE_TZ, "Relationships"):
+                    dba_cred['expiry_date'] = party['end_transaction']['effective_date']
                 elif party['cessation_dt'] is not None:
                     # scenario where the "cessation_dt" is the expiry date, with no transaction
                     dba_cred['expiry_date'] = party['cessation_dt']

@@ -25,12 +25,14 @@ BC_REGISTRIES_TIMEZONE = 'PST8PDT'
 
 MIN_START_DATE = datetime.datetime(datetime.MINYEAR+1, 1, 1)
 MAX_END_DATE   = datetime.datetime(datetime.MAXYEAR-1, 12, 31)
+LEAR_CONVERSION_DATE = datetime.datetime(2022, 10, 22)
 
 # for now, we are in PST time
 timezone = pytz.timezone("PST8PDT")
 
 MIN_START_DATE_TZ = timezone.localize(MIN_START_DATE)
 MAX_END_DATE_TZ   = timezone.localize(MAX_END_DATE)
+LEAR_CONVERSION_DATE_TZ = timezone.localize(LEAR_CONVERSION_DATE)
 
 LOGGER = logging.getLogger(__name__)
 
@@ -371,7 +373,7 @@ class BCReg_Lear(BCReg_Core):
                        party_roles_version roles
                   WHERE businesses.id = roles.business_id
                     AND roles.party_id = parties.id 
-                    AND parties.party_type = 'organization' and roles.role = 'proprietor'
+                    AND parties.party_type = 'organization' and roles.role in ('proprietor','partner')
                     AND (parties.identifier = %s
                          OR roles.business_id = (select id from businesses where identifier = %s))"""
         new_corps = []
@@ -799,6 +801,7 @@ class BCReg_Lear(BCReg_Core):
                                parties.transaction_id as transaction_id,
                                parties.end_transaction_id as end_transaction_id,
                                roles.cessation_date as cessation_dt,
+                               roles.appointment_date as appointment_dt,
                                parties.last_name as last_nme, 
                                parties.middle_initial as middle_nme, 
                                parties.first_name as first_nme, 
@@ -814,7 +817,7 @@ class BCReg_Lear(BCReg_Core):
                            """ + self.get_table_prefix() + """party_roles_version roles
                       WHERE businesses.id = roles.business_id
                         AND roles.party_id = parties.id 
-                        AND parties.party_type = 'organization' and roles.role = 'proprietor'
+                        AND parties.party_type = 'organization' and roles.role in ('proprietor','partner')
                         AND (parties.identifier = """ + self.get_db_sql_param() + """ 
                              OR roles.business_id = (select id from """ + self.get_table_prefix() + """businesses where identifier = """ + self.get_db_sql_param() + """))
                         """
@@ -851,19 +854,20 @@ class BCReg_Lear(BCReg_Core):
                     corp_party['effective_end_date'] = MAX_END_DATE
                 corp_party['cessation_dt'] = row[7]
                 # use "cessation_date" as the end date (if available), regardless of the transaction status
-                corp_party['last_nme'] = row[8]
-                corp_party['middle_nme'] = row[9]
-                corp_party['first_nme'] = row[10]
-                corp_party['business_nme'] = row[11]
-                corp_party['bus_company_num'] = row[12]
-                corp_party['email_address'] = row[13]
+                corp_party['appointment_dt'] = row[8]
+                corp_party['last_nme'] = row[9]
+                corp_party['middle_nme'] = row[10]
+                corp_party['first_nme'] = row[11]
+                corp_party['business_nme'] = row[12]
+                corp_party['bus_company_num'] = row[13]
+                corp_party['email_address'] = row[14]
                 corp_party['corp_party_seq_num'] = None
                 corp_party['office_notification_dt'] = None
                 corp_party['phone'] = None
                 corp_party['reason_typ_cd'] = None
-                corp_party['role_id'] = row[14]
-                corp_party['role'] = row[15]
-                role_transaction_id = row[16]
+                corp_party['role_id'] = row[15]
+                corp_party['role'] = row[16]
+                role_transaction_id = row[17]
                 corp_party['role_transaction_id'] = role_transaction_id
                 if role_transaction_id and 0 < role_transaction_id:
                     role_transaction = self.get_event(corp_party['corp_num'], role_transaction_id)
@@ -871,7 +875,7 @@ class BCReg_Lear(BCReg_Core):
                 else:
                     corp_party['role_transaction'] = {}
                 corp_party['role_effective_start_date'] = self.get_corp_version_effective_date(corp_party, txn_field='role_transaction', filing_field=None)
-                role_end_transaction_id = row[17]
+                role_end_transaction_id = row[18]
                 corp_party['role_end_transaction_id'] = role_end_transaction_id
                 if role_end_transaction_id and 0 < role_end_transaction_id:
                     role_end_transaction = self.get_event(corp_party['corp_num'], role_end_transaction_id)
