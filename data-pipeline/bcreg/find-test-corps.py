@@ -401,8 +401,9 @@ specific_corps_2 = [
                     'FM1048326',
                     'A0132048',
                     'A0133092',
-                    'BC1489198',
-                    'BC1026494',
+                    '1489198',
+                    '1026494',
+                    '0593892',
 ]
 
 
@@ -438,8 +439,8 @@ with BCRegistries() as bc_registries:
         # get specific test corps (there are about 6)
         print("Get specific corps")
         corps = bc_registries.get_specific_corps(specific_corps)
-        #corps_2 = bc_registries.get_specific_corps(specific_corps_2)
-        #corps.extend(corps_2)
+        corps_2 = bc_registries.get_specific_corps(specific_corps_2)
+        corps.extend(corps_2)
 
         print("Find unprocessed events for each corp")
         last_event_dt = bc_registries.get_event_effective_date(prev_event_id)
