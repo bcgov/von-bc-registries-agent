@@ -683,7 +683,7 @@ class BCReg_Core:
                 txn_ids_list = []
                 corp_nums_list_str = self.id_where_in(corp_nums_list, True)
                 corp_num_where = 'identifier in (' + corp_nums_list_str + ')' if 0 < len(corp_nums_list_str) else "identifier = ''"
-                corp_num_where_ex = corp_num_where + f" UNION {UNION_SELECT_PLACEHOLDER} WHERE id in (select business_id from party_roles, parties where party_roles.party_id = parties.id and parties." + corp_num_where + ")"
+                corp_num_where_ex = corp_num_where + f" UNION {UNION_SELECT_PLACEHOLDER} WHERE id in (select distinct business_id from party_roles_version, parties_version where party_roles_version.party_id = parties_version.id and parties_version." + corp_num_where + ")"
                 for corp_table in self.lear_corp_tables:
                     _rows = self.get_bcreg_table(corp_table, corp_num_where_ex, '', True, generate_individual_sql, use_sec=use_sec)
                     if corp_table == 'businesses':
@@ -696,7 +696,7 @@ class BCReg_Core:
 
                 party_ids_list = []
                 bus_id_where = 'business_id in (' + self.id_where_in(bus_ids_list, True) + ')' if 0 < len(bus_ids_list) else "business_id = 0"
-                bus_id_where += f" UNION {UNION_SELECT_PLACEHOLDER} WHERE business_id in (select business_id from party_roles, parties where party_roles.party_id = parties.id and parties." + corp_num_where + ")"
+                bus_id_where += f" UNION {UNION_SELECT_PLACEHOLDER} WHERE business_id in (select distinct business_id from party_roles_version, parties_version where party_roles_version.party_id = parties_version.id and parties_version." + corp_num_where + ")"
                 for other_table in self.lear_other_tables:
                     _rows = self.get_bcreg_table(other_table, bus_id_where, '', True, generate_individual_sql, use_sec=use_sec)
                     if other_table == 'party_roles':
