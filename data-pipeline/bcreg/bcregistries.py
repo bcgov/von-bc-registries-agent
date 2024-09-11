@@ -1027,42 +1027,43 @@ class BCRegistries(BCReg_Core):
         try:
             corp = None
 
-            LOGGER.info(">>> get corp info for: " + corp_num)
-            cur = self.get_sec_db_connection().cursor()
-            cur.execute(sql_corp)
-            row = cur.fetchone()
-            if row is not None:
-                LOGGER.info("    got corp rec: " + str(row[17]) + "," + row[0] + "," + row[1])
-                corp = {}
-                corp['current_date'] = timezone.localize(datetime.datetime.now())
-                corp['corp_num'] = row[0]
-                corp['corp_typ_cd'] = row[1]
-                # corp['corp_type'] = self.get_corp_type(row[1])
-                corp['recognition_dts'] = self.to_lear_date(row[2])
-                corp['last_ar_filed_dt'] = self.to_lear_date(row[3])
-                bn_9 = ''
-                if row[4] and 9 <= len(row[4]):
-                    bn_9 = row[4][:9]
-                corp['bn_9'] = bn_9
-                corp['bn_15'] = row[5]
-                corp['admin_email'] = row[6]
-                corp['last_ledger_dt'] = self.to_lear_date(row[7])
-                corp['last_event_dt'] = self.to_lear_date(row[8])
-                corp['corp_nme'] = row[9]
-                corp['corp_nme_as'] = row[10]
-                corp['corp_nme_effective_date'] = None
-                corp['can_jur_typ_cd'] = row[11]
-                corp['xpro_typ_cd'] = row[12]
-                corp['othr_juris_desc'] = row[13]
-                corp['state_typ_cd'] = STATE_CODES[row[14]] if row[14] in STATE_CODES else row[14]
-                corp['op_state_typ_cd'] = STATE_CODES[row[15]] if row[15] in STATE_CODES else row[15]
-                corp['state_typ_effective_date'] = None
-                corp['corp_class'] = row[16]
-            cur.close()
-            cur = None
+            if corp_num is not None and len(str(corp_num)) > 0:
+                LOGGER.debug(">>> get corp info for: " + corp_num)
+                cur = self.get_sec_db_connection().cursor()
+                cur.execute(sql_corp)
+                row = cur.fetchone()
+                if row is not None:
+                    LOGGER.debug("    got corp rec: " + str(row[17]) + "," + row[0] + "," + row[1])
+                    corp = {}
+                    corp['current_date'] = timezone.localize(datetime.datetime.now())
+                    corp['corp_num'] = row[0]
+                    corp['corp_typ_cd'] = row[1]
+                    # corp['corp_type'] = self.get_corp_type(row[1])
+                    corp['recognition_dts'] = self.to_lear_date(row[2])
+                    corp['last_ar_filed_dt'] = self.to_lear_date(row[3])
+                    bn_9 = ''
+                    if row[4] and 9 <= len(row[4]):
+                        bn_9 = row[4][:9]
+                    corp['bn_9'] = bn_9
+                    corp['bn_15'] = row[5]
+                    corp['admin_email'] = row[6]
+                    corp['last_ledger_dt'] = self.to_lear_date(row[7])
+                    corp['last_event_dt'] = self.to_lear_date(row[8])
+                    corp['corp_nme'] = row[9]
+                    corp['corp_nme_as'] = row[10]
+                    corp['corp_nme_effective_date'] = None
+                    corp['can_jur_typ_cd'] = row[11]
+                    corp['xpro_typ_cd'] = row[12]
+                    corp['othr_juris_desc'] = row[13]
+                    corp['state_typ_cd'] = STATE_CODES[row[14]] if row[14] in STATE_CODES else row[14]
+                    corp['op_state_typ_cd'] = STATE_CODES[row[15]] if row[15] in STATE_CODES else row[15]
+                    corp['state_typ_effective_date'] = None
+                    corp['corp_class'] = row[16]
+                cur.close()
+                cur = None
 
             if corp is None:
-                LOGGER.info("No corp rec found for " + str(corp_num))
+                LOGGER.debug("No corp rec found for " + str(corp_num))
                 corp = {}
                 corp['corp_num'] = ''
                 corp['corp_typ_cd'] = ''
@@ -1096,7 +1097,7 @@ class BCRegistries(BCReg_Core):
             cur.execute(sql_corp, (corp_num,))
             row = cur.fetchone()
             if row is None:
-                LOGGER.info("No corp rec found for " + str(corp_num))
+                LOGGER.debug("No corp rec found for " + str(corp_num))
                 corp['corp_num'] = ''
                 corp['corp_typ_cd'] = ''
                 corp['recognition_dts'] = ''
@@ -1336,162 +1337,7 @@ class BCRegistries(BCReg_Core):
 
             # get parties
             corp['parties'] = []
-            if corp_type in CORP_TYPES_IN_SCOPE:
-                cur = self.get_db_connection().cursor()
-                cur.execute(sql_party, (corp_num, corp_num,))
-                row = cur.fetchone()
-                while row is not None:
-                    corp_party = {}
-                    corp_party['corp_num'] = row[0]
-                    corp_party['corp_party_id'] = row[1]
-                    corp_party['mailing_addr_id'] = row[2]
-                    #corp_party['mailing_addr'] = self.get_address(corp_num, row[2])
-                    corp_party['delivery_addr_id'] = row[3]
-                    #corp_party['delivery_addr'] = self.get_address(corp_num, row[3])
-                    corp_party['party_typ_cd'] = row[4]
-                    corp_party['start_event_id'] = row[5]
-                    corp_party['start_event'] = self.get_event(row[0], row[5], corp_type_cd=corp['corp_typ_cd'])
-                    corp_party['effective_start_date'] = corp_party['start_event']['effective_date']
-                    corp_party['end_event_id'] = row[6]
-                    if corp_party['end_event_id'] is not None:
-                        corp_party['end_event'] = self.get_event(corp['corp_num'], corp_party['end_event_id'], corp_type_cd=corp['corp_typ_cd'])
-                        corp_party['effective_end_date'] = corp_party['end_event']['effective_date']
-                    else:
-                        corp_party['effective_end_date'] = MAX_END_DATE
-                    corp_party['cessation_dt'] = row[7]
-                    corp_party['last_nme'] = row[8]
-                    corp_party['middle_nme'] = row[9]
-                    corp_party['first_nme'] = row[10]
-                    corp_party['business_nme'] = row[11]
-                    corp_party['bus_company_num'] = row[12]
-                    corp_party['email_address'] = row[13]
-                    corp_party['corp_party_seq_num'] = row[14]
-                    corp_party['office_notification_dt'] = row[15]
-                    corp_party['phone'] = row[16]
-                    corp_party['reason_typ_cd'] = row[17]
-
-                    # note we are only issuing a relationship credential (with the two corp_nums) 
-                    # ... so just get basic info for the "other" corp in the relationship
-                    if corp_num == corp_party['corp_num']:
-                        if corp['corp_typ_cd'] == 'FBO' and corp_party['bus_company_num'] is not None:
-                            corp_party['corp_info'] = self.get_basic_corp_info(corp_party['bus_company_num'], deep_copy=False)
-                    else:
-                        corp_party['corp_info'] = self.get_basic_corp_info(corp_party['corp_num'], deep_copy=False)
-
-                    corp['parties'].append(corp_party)
-                    row = cur.fetchone()
-                cur.close()
-                cur = None
-
-                # need to check LEAR database for relationships, for new DBA's added/updated in LEAR
-                lear_corp_num = self.corp_num_with_prefix(corp_type, corp_num)
-                # print(">>> check LEAR relationships for:", lear_corp_num)
-                sql_party_lear = """SELECT businesses.identifier as corp_num,
-                                       parties.id as corp_party_id, 
-                                       parties.mailing_address_id as mailing_addr_id, 
-                                       parties.delivery_address_id as delivery_addr_id, 
-                                       parties.party_type as party_typ_cd, 
-                                       parties.transaction_id as transaction_id,
-                                       parties.end_transaction_id as end_transaction_id,
-                                       roles.cessation_date as cessation_dt,
-                                       parties.last_name as last_nme, 
-                                       parties.middle_initial as middle_nme, 
-                                       parties.first_name as first_nme, 
-                                       parties.organization_name as business_nme, 
-                                       parties.identifier as bus_company_num, 
-                                       parties.email as email_address, 
-                                       roles.id as role_id,
-                                       roles.role as role,
-                                       roles.transaction_id as role_transaction_id,
-                                       roles.end_transaction_id as role_end_transaction_id
-                              FROM """ + self.get_sec_table_prefix() + """businesses businesses,
-                                   """ + self.get_sec_table_prefix() + """parties_version parties,
-                                   """ + self.get_sec_table_prefix() + """party_roles_version roles
-                              WHERE businesses.id = roles.business_id
-                                AND roles.party_id = parties.id 
-                                AND parties.party_type = 'organization' and roles.role = 'proprietor'
-                                AND (parties.identifier = '""" + lear_corp_num + """'
-                                     OR roles.business_id = (select id from """ + self.get_sec_table_prefix() + """businesses
-                                     where identifier = '""" + lear_corp_num + """'))
-                                """
-
-                cur = self.get_sec_db_connection().cursor()
-                cur.execute(sql_party_lear)
-                # print(">>> fetch party row ...", sql_party_lear)
-                row = cur.fetchone()
-                while row is not None:
-                    corp_party = {}
-                    corp_party['corp_num'] = row[0]
-                    corp_party['corp_party_id'] = row[1]
-                    corp_party['mailing_addr_id'] = row[2]
-                    corp_party['delivery_addr_id'] = row[3]
-                    corp_party['party_typ_cd'] = row[4]
-                    transaction_id = row[5]
-                    corp_party['transaction_id'] = transaction_id
-                    if transaction_id and 0 < transaction_id:
-                        transaction = self.get_lear_event(transaction_id)
-                        corp_party['transaction'] = transaction
-                    else:
-                        corp_party['transaction'] = {}
-                    corp_party['effective_start_date'] = self.get_lear_corp_version_effective_date(corp_party)
-                    end_transaction_id = row[6]
-                    corp_party['end_transaction_id'] = end_transaction_id
-                    if end_transaction_id and 0 < end_transaction_id:
-                        end_transaction = self.get_lear_event(end_transaction_id)
-                        corp_party['end_transaction'] = end_transaction
-                        corp_party['effective_end_date'] = self.get_lear_corp_version_effective_date(corp_party, txn_field='end_transaction', filing_field=None)
-                    else:
-                        corp_party['end_transaction'] = {}
-                        corp_party['effective_end_date'] = MAX_END_DATE
-                    corp_party['cessation_dt'] = row[7]
-                    corp_party['last_nme'] = row[8]
-                    corp_party['middle_nme'] = row[9]
-                    corp_party['first_nme'] = row[10]
-                    corp_party['business_nme'] = row[11]
-                    corp_party['bus_company_num'] = row[12]
-                    corp_party['email_address'] = row[13]
-                    corp_party['corp_party_seq_num'] = None
-                    corp_party['office_notification_dt'] = None
-                    corp_party['phone'] = None
-                    corp_party['reason_typ_cd'] = None
-                    corp_party['role_id'] = row[14]
-                    corp_party['role'] = row[15]
-                    role_transaction_id = row[16]
-                    corp_party['role_transaction_id'] = role_transaction_id
-                    if role_transaction_id and 0 < role_transaction_id:
-                        role_transaction = self.get_lear_event(role_transaction_id)
-                        corp_party['role_transaction'] = role_transaction
-                    else:
-                        corp_party['role_transaction'] = {}
-                    corp_party['role_effective_start_date'] = self.get_lear_corp_version_effective_date(corp_party, txn_field='role_transaction', filing_field=None)
-                    role_end_transaction_id = row[17]
-                    corp_party['role_end_transaction_id'] = role_end_transaction_id
-                    if role_end_transaction_id and 0 < role_end_transaction_id:
-                        role_end_transaction = self.get_lear_event(role_end_transaction_id)
-                        corp_party['role_end_transaction'] = role_end_transaction
-                        corp_party['role_effective_end_date'] = self.get_lear_corp_version_effective_date(corp_party, txn_field='role_end_transaction', filing_field=None)
-                    else:
-                        corp_party['role_end_transaction'] = {}
-                        corp_party['role_effective_end_date'] = MAX_END_DATE
-
-                    # note we are only issuing a relationship credential (with the two corp_nums) 
-                    # ... so just get basic info for the "other" corp in the relationship
-                    # print(">>> check for company info ...")
-                    if corp_num == corp_party['corp_num'] and corp_party['bus_company_num'] is not None:
-                        corp_party['corp_info'] = self.get_basic_corp_info(corp_party['bus_company_num'], deep_copy=False)
-                    else:
-                        corp_party['corp_info'] = self.get_basic_corp_info(corp_party['corp_num'], deep_copy=False)
-
-                    # if the 'corp_info' doesn't exist in our "COLIN" database, check in "LEAR"
-                    if corp_party['corp_info']['corp_num'] is None or corp_party['corp_info']['corp_num'] == '':
-                        # print(">>> check for LEAR company info ...")
-                        corp_party['corp_info'] = self.get_basic_corp_info_from_lear(corp_party['corp_num'])
-
-                    corp['parties'].append(corp_party)
-                    # print(">>> fetch party row ...")
-                    row = cur.fetchone()
-                cur.close()
-                cur = None
+            # all party info comes from LEAR - the caller should deal with this
 
             return corp
         except (Exception, psycopg2.DatabaseError) as error:

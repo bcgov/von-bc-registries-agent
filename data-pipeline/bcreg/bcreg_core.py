@@ -10,10 +10,13 @@ import random
 import types
 import traceback
 import logging
+import os
 
 from bcreg.config import config
 from bcreg.rocketchat_hooks import log_error, log_warning, log_info
 
+
+DEBUG_SQL_STATEMENTS = bool(os.environ.get('DEBUG_SQL_STATEMENTS'))
 
 INMEM_CACHE_TABLE_PREFIX = 'x_'
 INMEM_CACHE_SEC_TABLE_PREFIX = 'x_sec_'
@@ -23,6 +26,8 @@ COLIN_SYSTEM_TYPE = 'BC_REG'
 LEAR_SYSTEM_TYPE = 'BCREG_LEAR'
 
 CORP_WITHDRAWN_STATE = 'HWT'
+
+UNION_SELECT_PLACEHOLDER = "*UNION_SELECT_PLACEHOLDER*"
 
 LOGGER = logging.getLogger(__name__)
 
@@ -181,8 +186,10 @@ class BCReg_Core:
         pfx = self.SEC_DB_TABLE_PREFIX if use_sec else self.DB_TABLE_PREFIX
         sql = "SELECT * from " + pfx + table
         if 0 < len(where):
+            where = where.replace(UNION_SELECT_PLACEHOLDER, sql)
             sql = sql + " WHERE " + where
-        # print(">>> caching data with:", sql)
+        if DEBUG_SQL_STATEMENTS:
+            print(">>> caching data with:", sql)
         cursor = None
         try:
             if use_sec:
@@ -527,6 +534,8 @@ class BCReg_Core:
     # returns a zero-length array if none found
     # optionally takes a WHERE clause and ORDER BY clause (must be valid SQL)
     def get_bcreg_sql(self, table, sql, cache=False, generate_individual_sql=False, use_sec=False):
+        if DEBUG_SQL_STATEMENTS:
+            print(">>> sql for caching:", sql)
         cursor = None
         try:
             if use_sec:
@@ -560,10 +569,12 @@ class BCReg_Core:
         pfx = self.SEC_DB_TABLE_PREFIX if use_sec else self.DB_TABLE_PREFIX
         sql = "SELECT * FROM " + pfx + table
         if 0 < len(where):
+            where = where.replace(UNION_SELECT_PLACEHOLDER, sql)
             sql = sql + " WHERE " + where
         if 0 < len(orderby):
             sql = sql + " ORDER BY " + orderby
-        # print(">>> caching data with:", sql)
+        if DEBUG_SQL_STATEMENTS:
+            print(">>> caching data with:", sql)
         return self.get_bcreg_sql(table, sql, cache, generate_individual_sql, use_sec=use_sec)
 
     # get all records and return in an array of dicts
@@ -572,6 +583,7 @@ class BCReg_Core:
     def get_bcreg_corp_table(self, table, corp_num, where="", orderby="", cache=False, generate_individual_sql=False, use_sec=False):
         subwhere = "corp_num = '" + corp_num + "'"
         if 0 < len(where):
+            where = where.replace(UNION_SELECT_PLACEHOLDER, sql)
             subwhere = subwhere + " AND " + where
         return self.get_bcreg_table(table, subwhere, orderby, cache, generate_individual_sql, use_sec=use_sec)
 
@@ -584,6 +596,8 @@ class BCReg_Core:
 
     # get the corporation's current state
     def get_adhoc_query(self, sql, use_sec=False):
+        if DEBUG_SQL_STATEMENTS:
+            print(">>> caching with adhoc query:", sql)
         cursor = None
         try:
             if use_sec:
@@ -627,16 +641,21 @@ class BCReg_Core:
     lear_other_other_tables = ['parties',
                           'parties_version',]
     lear_other_other_other_tables = ['transaction',]
+    lear_other_other_other_other_tables = ['filings',]
 
     # in colin if the corp_num is numeric we pre-pend 'BC' to it
+    def bc_ifiy_one(self, corp_num):
+        try:
+            i = int(corp_num)
+            corp_num = 'BC' + corp_num
+        except:
+            pass
+        return corp_num
+
     def bc_ifiy(self, specific_corps):
         corp_nums = []
         for corp_num in specific_corps:
-            try:
-                i = int(corp_num)
-                corp_nums.append('BC' + corp_num)
-            except:
-                corp_nums.append(corp_num)
+            corp_nums.append(self.bc_ifiy_one(corp_num))
         return corp_nums
 
     # load all bc registries data for the specified corps into our in-mem cache
@@ -662,7 +681,7 @@ class BCReg_Core:
                 txn_ids_list = []
                 corp_nums_list_str = self.id_where_in(corp_nums_list, True)
                 corp_num_where = 'identifier in (' + corp_nums_list_str + ')' if 0 < len(corp_nums_list_str) else "identifier = ''"
-                corp_num_where_ex = corp_num_where + " or id in (select business_id from party_roles, parties where party_roles.party_id = parties.id and parties." + corp_num_where + ")"
+                corp_num_where_ex = corp_num_where + f" UNION {UNION_SELECT_PLACEHOLDER} WHERE id in (select distinct business_id from party_roles_version, parties_version where party_roles_version.party_id = parties_version.id and parties_version." + corp_num_where + ")"
                 for corp_table in self.lear_corp_tables:
                     _rows = self.get_bcreg_table(corp_table, corp_num_where_ex, '', True, generate_individual_sql, use_sec=use_sec)
                     if corp_table == 'businesses':
@@ -675,7 +694,7 @@ class BCReg_Core:
 
                 party_ids_list = []
                 bus_id_where = 'business_id in (' + self.id_where_in(bus_ids_list, True) + ')' if 0 < len(bus_ids_list) else "business_id = 0"
-                bus_id_where += " or business_id in (select business_id from party_roles, parties where party_roles.party_id = parties.id and parties." + corp_num_where + ")"
+                bus_id_where += f" UNION {UNION_SELECT_PLACEHOLDER} WHERE business_id in (select distinct business_id from party_roles_version, parties_version where party_roles_version.party_id = parties_version.id and parties_version." + corp_num_where + ")"
                 for other_table in self.lear_other_tables:
                     _rows = self.get_bcreg_table(other_table, bus_id_where, '', True, generate_individual_sql, use_sec=use_sec)
                     if other_table == 'party_roles':
@@ -689,7 +708,7 @@ class BCReg_Core:
 
                 additional_identifiers = []
                 party_id_where = 'id in (' + self.id_where_in(party_ids_list, True) + ')' if 0 < len(party_ids_list) else "id = 0"
-                party_id_where += " or identifier in (" + self.id_where_in(corp_nums_list, True) + ")"
+                party_id_where += f" UNION {UNION_SELECT_PLACEHOLDER} WHERE identifier in (" + self.id_where_in(corp_nums_list, True) + ")"
                 for other_table in self.lear_other_other_tables:
                     _rows = self.get_bcreg_table(other_table, party_id_where, '', True, generate_individual_sql, use_sec=use_sec)
                     if other_table == 'parties':
@@ -704,6 +723,10 @@ class BCReg_Core:
 
                 txn_id_where = 'id in (' + self.id_where_in(txn_ids_list, True) + ')' if 0 < len(txn_ids_list) else "id = 0"
                 for other_table in self.lear_other_other_other_tables:
+                    _rows = self.get_bcreg_table(other_table, txn_id_where, '', True, generate_individual_sql, use_sec=use_sec)
+
+                txn_id_where = 'transaction_id in (' + self.id_where_in(txn_ids_list, True) + ')' if 0 < len(txn_ids_list) else "transaction_id = 0"
+                for other_table in self.lear_other_other_other_other_tables:
                     _rows = self.get_bcreg_table(other_table, txn_id_where, '', True, generate_individual_sql, use_sec=use_sec)
 
     # load all bc registries data for the specified corps into our in-mem cache
