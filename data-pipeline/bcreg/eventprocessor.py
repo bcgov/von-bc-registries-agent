@@ -813,7 +813,7 @@ class EventProcessor:
         
     # determine reason for address credential - returns reason code only
     def build_lear_corp_reason_code(self, event):
-        filing = event['transaction']['filing']
+        filing = event['transaction'].get('filing')
         corp_reason = filing['filing_type'] if (filing and 'filing_type' in filing) else ''
         return corp_reason
 
