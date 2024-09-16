@@ -61,7 +61,6 @@ class BCReg_Core:
             self.conn.set_session(readonly=True)
             #self.conn.set_isolation_level(psycopg2.extensions.ISOLATION_LEVEL_READ_COMMITTED)
             self.conn.set_isolation_level(psycopg2.extensions.ISOLATION_LEVEL_REPEATABLE_READ)
-            self.conn.autocommit = True
 
             # Register the adapter
             sqlite3.register_adapter(decimal.Decimal, adapt_decimal)
@@ -76,7 +75,6 @@ class BCReg_Core:
             self.sec_conn.set_session(readonly=True)
             #self.sec_conn.set_isolation_level(psycopg2.extensions.ISOLATION_LEVEL_READ_COMMITTED)
             self.sec_conn.set_isolation_level(psycopg2.extensions.ISOLATION_LEVEL_REPEATABLE_READ)
-            self.sec_conn.autocommit = True
         except (Exception) as error:
             LOGGER.error(error)
             LOGGER.error(traceback.print_exc())

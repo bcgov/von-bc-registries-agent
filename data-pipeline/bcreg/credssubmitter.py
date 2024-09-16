@@ -39,6 +39,10 @@ from bcreg.rocketchat_hooks import log_error, log_warning, log_info
 CONTROLLER_URL = os.environ.get('CONTROLLER_URL', 'http://localhost:5002')
 NOTIFY_OF_CREDENTIAL_POSTING_ERRORS = os.environ.get('NOTIFY_OF_CREDENTIAL_POSTING_ERRORS', 'false')
 
+ISSUE_CRED_VERSION = os.getenv('ISSUE_CRED_VERSION', 'V10')
+if not ISSUE_CRED_VERSION in ['V10', 'V20']:
+    raise Exception(f"Unsupported Issue Credential version: {ISSUE_CRED_VERSION}")  
+
 CREDS_BATCH_SIZE = int(os.getenv('CREDS_BATCH_SIZE', '3000'))
 CREDS_REQUEST_SIZE = int(os.getenv('CREDS_REQUEST_SIZE', '5'))
 MAX_CREDS_REQUESTS = int(os.getenv('MAX_CREDS_REQUESTS', '32'))
@@ -138,24 +142,28 @@ async def submit_cred_batch(creds):
         print(traceback.format_exc())
         raise
 
-async def submit_cred(attrs, schema, version):
+@backoff.on_exception(backoff.expo,
+                      (
+                        aiohttp.ClientError,
+                      ),
+                      max_tries=5)
+async def submit_cred_batch_v20(creds):
     try:
         async with aiohttp.ClientSession() as local_http_client:
             response = await local_http_client.post(
-                '{}/issue-credential'.format(CONTROLLER_URL),
-                params={'schema': schema, 'version': version},
-                json=attrs
+                '{}/issue-credential-v20'.format(CONTROLLER_URL),
+                json=creds
             )
             if response.status != 200:
                 raise RuntimeError(
-                    'Credential could not be processed: {}'.format(await response.text())
+                    'Credentials could not be processed: {}'.format(await response.text())
                 )
             result_json = await response.json()
             return result_json
     except Exception as exc:
         print(exc)
         print(traceback.format_exc())
-        raise 
+        raise
 
 # add reason code to the submitted credential
 def inject_reason(attributes, reason):
@@ -183,7 +191,10 @@ async def post_credentials(conn, credentials):
     cur2 = None
     try:
         results = None
-        results = await submit_cred_batch(post_creds)
+        if ISSUE_CRED_VERSION == "V20":
+            results = await submit_cred_batch_v20(post_creds)
+        else:
+            results = await submit_cred_batch(post_creds)
 
     except (Exception) as error:
         # posting to the controller failed :-(
