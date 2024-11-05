@@ -15,7 +15,7 @@ gunicorn
 #awscli<1.14.0
 JSONBender
 aiohttp
-pytz
+pytz==2024.2
 cffi>=1.13
 backoff
 
