@@ -77,6 +77,21 @@ DEFAULT_CONTAINERS=""
 # Functions:
 # -----------------------------------------------------------------------------------------------------------------
 
+# Global variable to hold Docker Compose command
+compose_cmd=""
+
+# Function to determine the correct Docker Compose command
+get_docker_compose_command() {
+  if command -v "docker" > /dev/null && docker compose version > /dev/null 2>&1; then
+    compose_cmd="docker compose "
+  elif command -v docker-compose > /dev/null 2>&1; then
+    compose_cmd="docker-compose "
+  else
+    echo "Error: Neither 'docker compose' nor 'docker-compose' is installed." >&2
+    exit 1
+  fi
+}
+
 configureEnvironment () {
 
   if [ -f .env ]; then
@@ -180,15 +195,15 @@ getStartupParams() {
 build() {
   # Build all containers in the docker-compose file
   echo -e "\nBuilding containers ..."
-  echo docker-compose build $@
-  docker-compose build $@
+  echo $compose_cmd build $@
+  $compose_cmd build $@
 }
 
 deleteVolumes() {
   _projectName=${COMPOSE_PROJECT_NAME:-docker}
 
   echo "Stopping and removing any running containers ..."
-  docker-compose rm -svf >/dev/null
+  $compose_cmd rm -svf >/dev/null
 
   _pattern="^${_projectName}_\|^docker_"
   _volumes=$(docker volume ls -q | grep ${_pattern})
@@ -203,6 +218,8 @@ deleteVolumes() {
 
 # =================================================================================================================
 
+get_docker_compose_command
+
 pushd ${SCRIPT_HOME} >/dev/null
 COMMAND=$1
 shift || true
@@ -211,8 +228,8 @@ case "$COMMAND" in
   start|up)
     _startupParams=$(getStartupParams $@)
     configureEnvironment $@
-    docker-compose up -d ${_startupParams}
-    docker-compose logs -f
+    $compose_cmd up -d ${_startupParams}
+    $compose_cmd logs -f
     ;;
   scale|upscale)
     _startupParams=$(getStartupParams $@)
@@ -221,25 +238,25 @@ case "$COMMAND" in
     echo "NOTE make sure you have removed the port mapping in docker-compose.yml for bcreg-agent!!!"
     echo "Press any key to continue or <CRTL-C> to abort"
     read anykey
-    docker-compose up --scale bcreg-agent=5 -d ${_startupParams}
-    docker-compose logs -f
+    $compose_cmd up --scale bcreg-agent=5 -d ${_startupParams}
+    $compose_cmd logs -f
     ;;
   logs)
     configureEnvironment $@
-    docker-compose logs -f
+    $compose_cmd logs -f
     ;;
   stop)
     configureEnvironment $@
-    docker-compose stop
+    $compose_cmd stop
     ;;
   startdb)
     configureEnvironment $@
-    docker-compose up -d bcregdb
-    docker-compose logs -f
+    $compose_cmd up -d bcregdb
+    $compose_cmd logs -f
    ;;
   stopdb)
     configureEnvironment
-    docker-compose stop bcregdb
+    $compose_cmd stop bcregdb
    ;;
   rm|down)
     configureEnvironment $@
