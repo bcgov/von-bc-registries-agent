@@ -779,7 +779,7 @@ class EventProcessor:
     # corp num with prefix
     def corp_num_with_prefix(self, corp_typ_cd, corp_num):
         p_corp_num = corp_num
-        if p_corp_num.startswith('BC'):
+        if p_corp_num.startswith('BC') or p_corp_num.startswith('C0') or p_corp_num.startswith('C1') or p_corp_num.startswith('Q'):
             return p_corp_num
         if corp_typ_cd == 'BC':
             p_corp_num = 'BC' + corp_num
