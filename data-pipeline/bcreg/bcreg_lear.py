@@ -465,14 +465,14 @@ class BCReg_Lear(BCReg_Core):
 
     # find a specific event, 
     # return None if not found
-    def get_event(self, corp_num, event_id, corp_type_cd=None):
+    def get_event(self, corp_num, event_id, corp_type_cd=None, force_query_remote=False):
         sql = """SELECT id, issued_at
-                    FROM """ + self.get_table_prefix() + """transaction 
-                    WHERE id = """ + self.get_db_sql_param()
+                    FROM """ + self.get_table_prefix(force_query_remote=force_query_remote) + """transaction 
+                    WHERE id = """ + self.get_db_sql_param(force_query_remote=force_query_remote)
         ret_event = None
         cursor = None
         try:
-            cursor = self.get_db_connection().cursor()
+            cursor = self.get_db_connection(force_query_remote=force_query_remote).cursor()
             cursor.execute(sql, (event_id,))
             desc = cursor.description
             column_names = [col[0] for col in desc]
@@ -483,12 +483,15 @@ class BCReg_Lear(BCReg_Core):
             if len(event) > 0:
                 ret_event = event[0]
             if ret_event is None:
-                return {}
+                if force_query_remote:
+                    return {}
+                else:
+                    return self.get_event(corp_num, event_id, corp_type_cd=corp_type_cd, force_query_remote=True)
             ret_event['issued_at'] = self.to_lear_date(ret_event['issued_at'])
 
             # fill in filing
             if 'filing' not in ret_event:
-                ret_event['filing'] = self.get_filing_event(corp_num, event_id, None)
+                ret_event['filing'] = self.get_filing_event(corp_num, event_id, None, force_query_remote=force_query_remote)
             ret_event['effective_date'] = self.get_event_filing_effective_date(ret_event, corp_type_cd)
             return ret_event
         except (Exception, psycopg2.DatabaseError) as error:
@@ -500,14 +503,14 @@ class BCReg_Lear(BCReg_Core):
             if cursor is not None:
                 cursor.close()
 
-    def get_filing_event(self, corp_num, event_id, event_type):
+    def get_filing_event(self, corp_num, event_id, event_type, force_query_remote=False):
         sql_filing = """SELECT filing.id, filing_type, filing_date, filing_json, filing.transaction_id, effective_date, completion_date, 
                         status, business_id, corp.identifier as corp_num 
-                        from """ + self.get_table_prefix() + """filings filing, """ + self.get_table_prefix() + """businesses corp
-                        WHERE filing.transaction_id = """ + self.get_db_sql_param() + """ and corp.id = filing.business_id"""
+                        from """ + self.get_table_prefix(force_query_remote=force_query_remote) + """filings filing, """ + self.get_table_prefix(force_query_remote=force_query_remote) + """businesses corp
+                        WHERE filing.transaction_id = """ + self.get_db_sql_param(force_query_remote=force_query_remote) + """ and corp.id = filing.business_id"""
         cursor = None
         try:
-            cursor = self.get_db_connection().cursor()
+            cursor = self.get_db_connection(force_query_remote=force_query_remote).cursor()
             cursor.execute(sql_filing, (event_id,))
             desc = cursor.description
             column_names = [col[0] for col in desc]
@@ -579,8 +582,10 @@ class BCReg_Lear(BCReg_Core):
             effective_date =  corp[txn_field]['effective_date']
         elif filing_field and filing_field in corp and 'effective_date' in corp[filing_field]:
             effective_date =  corp[filing_field]['effective_date']
-        else:
+        elif 'effective_date' in corp:
             effective_date = corp['last_event_dt']
+        else:
+            effective_date = MAX_END_DATE
         if effective_date.tzinfo is None or effective_date.tzinfo.utcoffset(effective_date) is None:
             effective_date = effective_date.replace(tzinfo=pytz.utc)
         return effective_date
