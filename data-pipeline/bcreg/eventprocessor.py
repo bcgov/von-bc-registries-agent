@@ -800,8 +800,10 @@ class EventProcessor:
             corp_reason = 'Filing:' + loop_start_event['filing']['filing_typ_cd']
         elif 'filing_type' in loop_start_event['filing']:
             corp_reason = 'Filing:' + loop_start_event['filing']['filing_type']
-        else:
+        elif 'event_typ_cd' in loop_start_event:
             corp_reason = 'Event:' + loop_start_event['event_typ_cd'] 
+        else:
+            corp_reason = 'N/A'
 
         if (len(corp_reason) > 0 and corp_reason.startswith(", ")):
             corp_reason = corp_reason[2:]
