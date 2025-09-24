@@ -250,61 +250,61 @@ issuers:
                 input: reason_description
                 from: claim
 
-      - schema: address.registries.ca
-        issuer_url: $APPLICATION_URL_ADDRESS
-        details:
-          url_en: $APPLICATION_URL_ADDRESS
-        credential:
-          effective_date:
-            input: effective_date
-            from: claim
-          revoked_date:
-            input: expiry_date
-            from: claim
-        topic:
-          source_id:
-            input: registration_id
-            from: claim
-          type:
-            input: registration.registries.ca
-            from: value
-        cardinality_fields:
-          - address_type
-        mapping:
-          - model: address
-            fields:
-              addressee:
-                input: addressee
-                from: claim
-              civic_address:
-                input: civic_address
-                from: claim
-              city:
-                input: municipality
-                from: claim
-              province:
-                input: province
-                from: claim
-              postal_code:
-                input: postal_code
-                from: claim
-              country:
-                input: country
-                from: claim
-              type:
-                input: address_type
-                from: claim
-          - model: attribute
-            fields:
-              type:
-                input: reason_description
-                from: value
-              format:
-                input: category
-                from: value
-              value:
-                input: reason_description
-                from: claim
+      # - schema: address.registries.ca
+      #   issuer_url: $APPLICATION_URL_ADDRESS
+      #   details:
+      #     url_en: $APPLICATION_URL_ADDRESS
+      #   credential:
+      #     effective_date:
+      #       input: effective_date
+      #       from: claim
+      #     revoked_date:
+      #       input: expiry_date
+      #       from: claim
+      #   topic:
+      #     source_id:
+      #       input: registration_id
+      #       from: claim
+      #     type:
+      #       input: registration.registries.ca
+      #       from: value
+      #   cardinality_fields:
+      #     - address_type
+      #   mapping:
+      #     - model: address
+      #       fields:
+      #         addressee:
+      #           input: addressee
+      #           from: claim
+      #         civic_address:
+      #           input: civic_address
+      #           from: claim
+      #         city:
+      #           input: municipality
+      #           from: claim
+      #         province:
+      #           input: province
+      #           from: claim
+      #         postal_code:
+      #           input: postal_code
+      #           from: claim
+      #         country:
+      #           input: country
+      #           from: claim
+      #         type:
+      #           input: address_type
+      #           from: claim
+      #     - model: attribute
+      #       fields:
+      #         type:
+      #           input: reason_description
+      #           from: value
+      #         format:
+      #           input: category
+      #           from: value
+      #         value:
+      #           input: reason_description
+      #           from: claim
 
       - schema: business_number.registries.ca
         issuer_url: $APPLICATION_URL_ADDRESS
@@ -346,265 +346,265 @@ issuers:
                 input: business_number
                 from: claim
 
-      - schema: demo.verified_person.registries.ca
-        issuer_url: $APPLICATION_URL_ADDRESS
-        description: TODO
-        details:
-          label_en: Verified Person
-          url_en: $APPLICATION_URL_ADDRESS
-        credential:
-          effective_date:
-            input: effective_date
-            from: claim
-          inactive:
-            input: entity_status
-            from: claim
-            processor:
-              - bcgov.entity_status.is_historical
-          revoked_date:
-            input: expiry_date
-            from: claim
-        topic:
-          source_id:
-            input: registration_id
-            from: claim
-          type:
-            input: demo.verified_person.registries.ca
-            from: value
-        mapping:
-          - model: name
-            fields:
-              type:
-                input: full_name
-                from: value
-              text:
-                input: full_name
-                from: claim
-          - model: attribute
-            fields:
-              type:
-                input: entity_status
-                from: value
-              format:
-                input: category
-                from: value
-              value:
-                input: entity_status
-                from: claim
-          - model: attribute
-            fields:
-              type:
-                input: first_name
-                from: value
-              value:
-                input: first_name
-                from: claim
-          - model: attribute
-            fields:
-              type:
-                input: last_name
-                from: value
-              value:
-                input: last_name
-                from: claim
-          - model: attribute
-            fields:
-              type:
-                input: email_address
-                from: value
-              value:
-                input: email_address
-                from: claim
-          - model: attribute
-            fields:
-              type:
-                input: phone_number
-                from: value
-              value:
-                input: phone_number
-                from: claim
+      # - schema: demo.verified_person.registries.ca
+      #   issuer_url: $APPLICATION_URL_ADDRESS
+      #   description: TODO
+      #   details:
+      #     label_en: Verified Person
+      #     url_en: $APPLICATION_URL_ADDRESS
+      #   credential:
+      #     effective_date:
+      #       input: effective_date
+      #       from: claim
+      #     inactive:
+      #       input: entity_status
+      #       from: claim
+      #       processor:
+      #         - bcgov.entity_status.is_historical
+      #     revoked_date:
+      #       input: expiry_date
+      #       from: claim
+      #   topic:
+      #     source_id:
+      #       input: registration_id
+      #       from: claim
+      #     type:
+      #       input: demo.verified_person.registries.ca
+      #       from: value
+      #   mapping:
+      #     - model: name
+      #       fields:
+      #         type:
+      #           input: full_name
+      #           from: value
+      #         text:
+      #           input: full_name
+      #           from: claim
+      #     - model: attribute
+      #       fields:
+      #         type:
+      #           input: entity_status
+      #           from: value
+      #         format:
+      #           input: category
+      #           from: value
+      #         value:
+      #           input: entity_status
+      #           from: claim
+      #     - model: attribute
+      #       fields:
+      #         type:
+      #           input: first_name
+      #           from: value
+      #         value:
+      #           input: first_name
+      #           from: claim
+      #     - model: attribute
+      #       fields:
+      #         type:
+      #           input: last_name
+      #           from: value
+      #         value:
+      #           input: last_name
+      #           from: claim
+      #     - model: attribute
+      #       fields:
+      #         type:
+      #           input: email_address
+      #           from: value
+      #         value:
+      #           input: email_address
+      #           from: claim
+      #     - model: attribute
+      #       fields:
+      #         type:
+      #           input: phone_number
+      #           from: value
+      #         value:
+      #           input: phone_number
+      #           from: claim
 
-      - schema: demo.person_relationship.registries.ca
-        issuer_url: $APPLICATION_URL_DBA
-        description: TODO
-        details:
-          label_en: Relationship
-          url_en: $APPLICATION_URL_DBA
-        credential:
-          effective_date:
-            input: effective_date
-            from: claim
-          revoked_date:
-            input: expiry_date
-            from: claim
-        topic:
-          related_source_id:
-            input: associated_registration_id
-            from: claim
-          related_type:
-            input: registration.registries.ca
-            from: value
-          source_id:
-            input: registration_id
-            from: claim
-          type:
-            input: demo.verified_person.registries.ca
-            from: value
-        cardinality_fields:
-          - associated_registration_id
-          - relationship
-        mapping:
-          - model: attribute
-            fields:
-              type:
-                input: relationship
-                from: value
-              format:
-                input: category
-                from: value
-              value:
-                input: relationship
-                from: claim
-          - model: attribute
-            fields:
-              type:
-                input: relationship_description
-                from: value
-              value:
-                input: relationship_description
-                from: claim
-          - model: attribute
-            fields:
-              type:
-                input: associated_registration_name
-                from: value
-              value:
-                input: associated_registration_name
-                from: claim
-          - model: attribute
-            fields:
-              type:
-                input: relationship_status
-                from: value
-              format:
-                input: category
-                from: value
-              value:
-                input: relationship_status
-                from: claim
-          - model: attribute
-            fields:
-              type:
-                input: relationship_status_effective
-                from: value
-              format:
-                input: datetime
-                from: value
-              value:
-                input: relationship_status_effective
-                from: claim
-          - model: attribute
-            fields:
-              type:
-                input: reason_description
-                from: value
-              format:
-                input: category
-                from: value
-              value:
-                input: reason_description
-                from: claim
+      # - schema: demo.person_relationship.registries.ca
+      #   issuer_url: $APPLICATION_URL_DBA
+      #   description: TODO
+      #   details:
+      #     label_en: Relationship
+      #     url_en: $APPLICATION_URL_DBA
+      #   credential:
+      #     effective_date:
+      #       input: effective_date
+      #       from: claim
+      #     revoked_date:
+      #       input: expiry_date
+      #       from: claim
+      #   topic:
+      #     related_source_id:
+      #       input: associated_registration_id
+      #       from: claim
+      #     related_type:
+      #       input: registration.registries.ca
+      #       from: value
+      #     source_id:
+      #       input: registration_id
+      #       from: claim
+      #     type:
+      #       input: demo.verified_person.registries.ca
+      #       from: value
+      #   cardinality_fields:
+      #     - associated_registration_id
+      #     - relationship
+      #   mapping:
+      #     - model: attribute
+      #       fields:
+      #         type:
+      #           input: relationship
+      #           from: value
+      #         format:
+      #           input: category
+      #           from: value
+      #         value:
+      #           input: relationship
+      #           from: claim
+      #     - model: attribute
+      #       fields:
+      #         type:
+      #           input: relationship_description
+      #           from: value
+      #         value:
+      #           input: relationship_description
+      #           from: claim
+      #     - model: attribute
+      #       fields:
+      #         type:
+      #           input: associated_registration_name
+      #           from: value
+      #         value:
+      #           input: associated_registration_name
+      #           from: claim
+      #     - model: attribute
+      #       fields:
+      #         type:
+      #           input: relationship_status
+      #           from: value
+      #         format:
+      #           input: category
+      #           from: value
+      #         value:
+      #           input: relationship_status
+      #           from: claim
+      #     - model: attribute
+      #       fields:
+      #         type:
+      #           input: relationship_status_effective
+      #           from: value
+      #         format:
+      #           input: datetime
+      #           from: value
+      #         value:
+      #           input: relationship_status_effective
+      #           from: claim
+      #     - model: attribute
+      #       fields:
+      #         type:
+      #           input: reason_description
+      #           from: value
+      #         format:
+      #           input: category
+      #           from: value
+      #         value:
+      #           input: reason_description
+      #           from: claim
 
-      - schema: demo.org_relationship.registries.ca
-        issuer_url: $APPLICATION_URL_DBA
-        description: TODO
-        details:
-          label_en: Relationship
-          url_en: $APPLICATION_URL_DBA
-        credential:
-          effective_date:
-            input: effective_date
-            from: claim
-          revoked_date:
-            input: expiry_date
-            from: claim
-        topic:
-          related_source_id:
-            input: associated_registration_id
-            from: claim
-          related_type:
-            input: demo.verified_person.registries.ca
-            from: value
-          source_id:
-            input: registration_id
-            from: claim
-          type:
-            input: registration.registries.ca
-            from: value
-        cardinality_fields:
-          - associated_registration_id
-          - relationship
-        mapping:
-          - model: attribute
-            fields:
-              type:
-                input: relationship
-                from: value
-              format:
-                input: category
-                from: value
-              value:
-                input: relationship
-                from: claim
-          - model: attribute
-            fields:
-              type:
-                input: relationship_description
-                from: value
-              value:
-                input: relationship_description
-                from: claim
-          - model: attribute
-            fields:
-              type:
-                input: associated_registration_name
-                from: value
-              value:
-                input: associated_registration_name
-                from: claim
-          - model: attribute
-            fields:
-              type:
-                input: relationship_status
-                from: value
-              format:
-                input: category
-                from: value
-              value:
-                input: relationship_status
-                from: claim
-          - model: attribute
-            fields:
-              type:
-                input: relationship_status_effective
-                from: value
-              format:
-                input: datetime
-                from: value
-              value:
-                input: relationship_status_effective
-                from: claim
-          - model: attribute
-            fields:
-              type:
-                input: reason_description
-                from: value
-              format:
-                input: category
-                from: value
-              value:
-                input: reason_description
-                from: claim
+      # - schema: demo.org_relationship.registries.ca
+      #   issuer_url: $APPLICATION_URL_DBA
+      #   description: TODO
+      #   details:
+      #     label_en: Relationship
+      #     url_en: $APPLICATION_URL_DBA
+      #   credential:
+      #     effective_date:
+      #       input: effective_date
+      #       from: claim
+      #     revoked_date:
+      #       input: expiry_date
+      #       from: claim
+      #   topic:
+      #     related_source_id:
+      #       input: associated_registration_id
+      #       from: claim
+      #     related_type:
+      #       input: demo.verified_person.registries.ca
+      #       from: value
+      #     source_id:
+      #       input: registration_id
+      #       from: claim
+      #     type:
+      #       input: registration.registries.ca
+      #       from: value
+      #   cardinality_fields:
+      #     - associated_registration_id
+      #     - relationship
+      #   mapping:
+      #     - model: attribute
+      #       fields:
+      #         type:
+      #           input: relationship
+      #           from: value
+      #         format:
+      #           input: category
+      #           from: value
+      #         value:
+      #           input: relationship
+      #           from: claim
+      #     - model: attribute
+      #       fields:
+      #         type:
+      #           input: relationship_description
+      #           from: value
+      #         value:
+      #           input: relationship_description
+      #           from: claim
+      #     - model: attribute
+      #       fields:
+      #         type:
+      #           input: associated_registration_name
+      #           from: value
+      #         value:
+      #           input: associated_registration_name
+      #           from: claim
+      #     - model: attribute
+      #       fields:
+      #         type:
+      #           input: relationship_status
+      #           from: value
+      #         format:
+      #           input: category
+      #           from: value
+      #         value:
+      #           input: relationship_status
+      #           from: claim
+      #     - model: attribute
+      #       fields:
+      #         type:
+      #           input: relationship_status_effective
+      #           from: value
+      #         format:
+      #           input: datetime
+      #           from: value
+      #         value:
+      #           input: relationship_status_effective
+      #           from: claim
+      #     - model: attribute
+      #       fields:
+      #         type:
+      #           input: reason_description
+      #           from: value
+      #         format:
+      #           input: category
+      #           from: value
+      #         value:
+      #           input: reason_description
+      #           from: claim
 
 verifiers:
   bctob:
