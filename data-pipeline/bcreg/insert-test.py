@@ -1,15 +1,9 @@
 #!/usr/bin/python
- 
-import psycopg2
-import datetime
-import json
-from bcreg.config import config
-from bcreg.eventprocessor import EventProcessor
-from bcreg.eventprocessor import corp_credential, corp_schema, corp_version
-from bcreg.eventprocessor import addr_credential, addr_schema, addr_version
-from bcreg.eventprocessor import dba_credential, dba_schema, dba_version
-from bcreg.bcregistries import system_type
 
+from bcreg.bcregistries import system_type
+from bcreg.eventprocessor import (EventProcessor, corp_credential, corp_schema,
+                                  corp_version, dba_credential, dba_schema,
+                                  dba_version)
 
 CORP_MAPPING = """{
     'legal_entity_id': (S('corp_typ_cd') + S('corp_num')),
@@ -26,8 +20,8 @@ CORP_MAPPING = """{
     'org_type': S('corp_typ_cd'),
     'registered_jurisdiction': Alternation(S('registered_jurisdiction', 'can_jur_typ_cd'), K(None)),
     'registration_type': Alternation(S('tilma_involved', 'tilma_jurisdiction'), K(None)),
-    'home_jurisdiction': Alternation(Switch(S('registered_jurisdiction', 'can_jur_typ_cd'), 
-                            {'OT': Alternation(S('registered_jurisdiction', 'other_juris_desc'))}, 
+    'home_jurisdiction': Alternation(Switch(S('registered_jurisdiction', 'can_jur_typ_cd'),
+                            {'OT': Alternation(S('registered_jurisdiction', 'other_juris_desc'))},
                              default=Alternation(S('registered_jurisdiction', 'can_jur_typ_cd'))), K(None))
 }"""
 
@@ -59,10 +53,10 @@ DBA_MAPPING = """{
 with EventProcessor() as event_processor:
     # insert last event
     event_processor.insert_last_event(system_type, 9240000)
-    
+
     # insert jsonbender mappers
     event_processor.insert_credential_transform(system_type, corp_credential, CORP_MAPPING, corp_schema, corp_version)
-    event_processor.insert_credential_transform(system_type, addr_credential, ADDR_MAPPING, addr_schema, addr_version)
+    # event_processor.insert_credential_transform(system_type, addr_credential, ADDR_MAPPING, addr_schema, addr_version)
     event_processor.insert_credential_transform(system_type, dba_credential, DBA_MAPPING, dba_schema, dba_version)
     print("Seeded initial event processor data")
 

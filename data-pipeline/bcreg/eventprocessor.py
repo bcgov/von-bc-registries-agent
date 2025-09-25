@@ -1,23 +1,26 @@
 #!/usr/bin/python
- 
-import psycopg2
-import datetime
-import pytz
-import json
-import time
-import hashlib
-import traceback
-import logging
-import random
-import os
+
 import csv
+import datetime
+import hashlib
+import json
+import logging
+import os
+import random
+import time
+import traceback
 
-from bcreg.config import config
-from bcreg.bcregistries import BCRegistries, CustomJsonEncoder, event_dict, is_data_conversion_event, system_type, CORP_TYPES_IN_SCOPE
+import psycopg2
+import pytz
 from bcreg.bcreg_core import CORP_WITHDRAWN_STATE
-from bcreg.bcreg_lear import BCReg_Lear, lear_system_type, LEAR_CORP_TYPES_IN_SCOPE, LEAR_CONVERSION_DATE_TZ
-from bcreg.rocketchat_hooks import log_error, log_warning, log_info
-
+from bcreg.bcreg_lear import (LEAR_CONVERSION_DATE_TZ,
+                              LEAR_CORP_TYPES_IN_SCOPE, BCReg_Lear,
+                              lear_system_type)
+from bcreg.bcregistries import (CORP_TYPES_IN_SCOPE, BCRegistries,
+                                CustomJsonEncoder, event_dict,
+                                is_data_conversion_event, system_type)
+from bcreg.config import config
+from bcreg.rocketchat_hooks import log_error, log_info, log_warning
 
 EXTRA_DEMO_CREDS = os.environ.get("EXTRA_DEMO_CREDS")
 if EXTRA_DEMO_CREDS is not None and EXTRA_DEMO_CREDS.upper() == "TRUE":
@@ -40,9 +43,9 @@ corp_credential = 'REG'
 corp_schema = 'registration.registries.ca'
 corp_version = '1.0.42'
 
-addr_credential = 'ADDR'
-addr_schema = 'address.registries.ca'
-addr_version = '1.0.42'
+# addr_credential = 'ADDR'
+# addr_schema = 'address.registries.ca'
+# addr_version = '1.0.42'
 
 dba_credential = 'REL'
 dba_schema = 'relationship.registries.ca'
@@ -53,17 +56,17 @@ bn_credential = 'BNC'
 bn_schema = 'business_number.registries.ca'
 bn_version = '1.0.42'
 
-vp_credential = 'VPC'
-vp_schema = 'demo.verified_person.registries.ca'
-vp_version = '1.0.42'
+# vp_credential = 'VPC'
+# vp_schema = 'demo.verified_person.registries.ca'
+# vp_version = '1.0.42'
 
-vp_rel_credential = 'VPR'
-vp_rel_schema = 'demo.person_relationship.registries.ca'
-vp_rel_version = '1.0.42'
+# vp_rel_credential = 'VPR'
+# vp_rel_schema = 'demo.person_relationship.registries.ca'
+# vp_rel_version = '1.0.42'
 
-org_rel_credential = 'OGR'
-org_rel_schema = 'demo.org_relationship.registries.ca'
-org_rel_version = '1.0.42'
+# org_rel_credential = 'OGR'
+# org_rel_schema = 'demo.org_relationship.registries.ca'
+# org_rel_version = '1.0.42'
 
 CORP_BATCH_SIZE = int(os.environ.get('CORP_BATCH_SIZE', 3000))
 FALLBACK_CORP_BATCH_SIZE = CORP_BATCH_SIZE % 10
@@ -126,7 +129,7 @@ class EventProcessor:
 
     def __exit__(self, exc_type, exc_value, traceback):
         pass
- 
+
     # create our base processing tables
     def do_create_tables(self, commands):
         cur = None
@@ -153,33 +156,33 @@ class EventProcessor:
             """
             CREATE TABLE IF NOT EXISTS LAST_EVENT (
                 RECORD_ID SERIAL PRIMARY KEY,
-                SYSTEM_TYPE_CD VARCHAR(255) NOT NULL, 
+                SYSTEM_TYPE_CD VARCHAR(255) NOT NULL,
                 EVENT_ID INTEGER NOT NULL,
                 EVENT_DATE TIMESTAMP NOT NULL,
                 ENTRY_DATE TIMESTAMP NOT NULL
             )
             """,
             """
-            CREATE INDEX IF NOT EXISTS le_stc ON LAST_EVENT 
+            CREATE INDEX IF NOT EXISTS le_stc ON LAST_EVENT
             (SYSTEM_TYPE_CD);
             """,
             """
-            CREATE INDEX IF NOT EXISTS le_ie ON LAST_EVENT 
+            CREATE INDEX IF NOT EXISTS le_ie ON LAST_EVENT
             (EVENT_ID);
             """,
             """
-            CREATE INDEX IF NOT EXISTS le_stc_ei ON LAST_EVENT 
+            CREATE INDEX IF NOT EXISTS le_stc_ei ON LAST_EVENT
             (SYSTEM_TYPE_CD, EVENT_ID);
             """,
             """
             CREATE TABLE IF NOT EXISTS EVENT_BY_CORP_FILING (
                 RECORD_ID SERIAL PRIMARY KEY,
-                SYSTEM_TYPE_CD VARCHAR(255) NOT NULL, 
+                SYSTEM_TYPE_CD VARCHAR(255) NOT NULL,
                 CORP_NUM VARCHAR(255) NOT NULL,
-                PREV_EVENT_ID INTEGER NOT NULL, 
-                PREV_EVENT_DATE TIMESTAMP NOT NULL, 
-                LAST_EVENT_ID INTEGER NOT NULL, 
-                LAST_EVENT_DATE TIMESTAMP NOT NULL, 
+                PREV_EVENT_ID INTEGER NOT NULL,
+                PREV_EVENT_DATE TIMESTAMP NOT NULL,
+                LAST_EVENT_ID INTEGER NOT NULL,
+                LAST_EVENT_DATE TIMESTAMP NOT NULL,
                 ENTRY_DATE TIMESTAMP NOT NULL,
                 PROCESS_DATE TIMESTAMP,
                 PROCESS_SUCCESS CHAR,
@@ -188,41 +191,41 @@ class EventProcessor:
             """,
             """
             -- Hit for counts and queries
-            CREATE INDEX IF NOT EXISTS ebcf_pd_null ON EVENT_BY_CORP_FILING 
+            CREATE INDEX IF NOT EXISTS ebcf_pd_null ON EVENT_BY_CORP_FILING
             (PROCESS_DATE) WHERE PROCESS_DATE IS NULL;
             """,
             """
             -- Hit for query
-            CREATE INDEX IF NOT EXISTS ebcf_ri_pd_null_asc ON EVENT_BY_CORP_FILING 
+            CREATE INDEX IF NOT EXISTS ebcf_ri_pd_null_asc ON EVENT_BY_CORP_FILING
             (RECORD_ID ASC, PROCESS_DATE) WHERE PROCESS_DATE IS NULL;
             """,
             """
             ALTER TABLE EVENT_BY_CORP_FILING
             SET (autovacuum_vacuum_scale_factor = 0.0);
             """,
-            """ 
+            """
             ALTER TABLE EVENT_BY_CORP_FILING
             SET (autovacuum_vacuum_threshold = 5000);
             """,
             """
-            ALTER TABLE EVENT_BY_CORP_FILING  
+            ALTER TABLE EVENT_BY_CORP_FILING
             SET (autovacuum_analyze_scale_factor = 0.0);
             """,
-            """ 
-            ALTER TABLE EVENT_BY_CORP_FILING  
+            """
+            ALTER TABLE EVENT_BY_CORP_FILING
             SET (autovacuum_analyze_threshold = 5000);
             """,
-            """ 
+            """
             REINDEX TABLE EVENT_BY_CORP_FILING;
             """,
             """
             CREATE TABLE IF NOT EXISTS CORP_HISTORY_LOG (
                 RECORD_ID SERIAL PRIMARY KEY,
-                SYSTEM_TYPE_CD VARCHAR(255) NOT NULL, 
+                SYSTEM_TYPE_CD VARCHAR(255) NOT NULL,
                 CORP_NUM VARCHAR(255) NOT NULL,
                 CORP_STATE VARCHAR(255) NOT NULL,
-                PREV_EVENT JSON NOT NULL, 
-                LAST_EVENT JSON NOT NULL, 
+                PREV_EVENT JSON NOT NULL,
+                LAST_EVENT JSON NOT NULL,
                 CORP_JSON JSON NOT NULL,
                 ENTRY_DATE TIMESTAMP NOT NULL,
                 PROCESS_DATE TIMESTAMP,
@@ -232,37 +235,37 @@ class EventProcessor:
             """,
             """
             -- Hit for counts and queries
-            CREATE INDEX IF NOT EXISTS chl_pd_null ON CORP_HISTORY_LOG 
+            CREATE INDEX IF NOT EXISTS chl_pd_null ON CORP_HISTORY_LOG
             (PROCESS_DATE) WHERE PROCESS_DATE IS NULL;
             """,
             """
             -- Hit for query
-            CREATE INDEX IF NOT EXISTS chl_ri_pd_null_asc ON CORP_HISTORY_LOG 
-            (RECORD_ID ASC, PROCESS_DATE) WHERE PROCESS_DATE IS NULL;	
+            CREATE INDEX IF NOT EXISTS chl_ri_pd_null_asc ON CORP_HISTORY_LOG
+            (RECORD_ID ASC, PROCESS_DATE) WHERE PROCESS_DATE IS NULL;
             """,
             """
             ALTER TABLE CORP_HISTORY_LOG
             SET (autovacuum_vacuum_scale_factor = 0.0);
             """,
-            """ 
+            """
             ALTER TABLE CORP_HISTORY_LOG
             SET (autovacuum_vacuum_threshold = 5000);
             """,
             """
-            ALTER TABLE CORP_HISTORY_LOG  
+            ALTER TABLE CORP_HISTORY_LOG
             SET (autovacuum_analyze_scale_factor = 0.0);
             """,
-            """ 
-            ALTER TABLE CORP_HISTORY_LOG  
+            """
+            ALTER TABLE CORP_HISTORY_LOG
             SET (autovacuum_analyze_threshold = 5000);
             """,
-            """ 
+            """
             REINDEX TABLE CORP_HISTORY_LOG;
             """,
             """
             CREATE TABLE IF NOT EXISTS CREDENTIAL_TRANSFORM (
                 RECORD_ID SERIAL PRIMARY KEY,
-                SYSTEM_TYPE_CD VARCHAR(255) NOT NULL, 
+                SYSTEM_TYPE_CD VARCHAR(255) NOT NULL,
                 CREDENTIAL_TYPE_CD VARCHAR(255) NOT NULL,
                 SCHEMA_NAME VARCHAR(255) NOT NULL,
                 SCHEMA_VERSION VARCHAR(255) NOT NULL,
@@ -271,23 +274,23 @@ class EventProcessor:
             """,
             """
             -- Hit for query
-            CREATE INDEX IF NOT EXISTS ct_stc ON CREDENTIAL_TRANSFORM 
+            CREATE INDEX IF NOT EXISTS ct_stc ON CREDENTIAL_TRANSFORM
             (SYSTEM_TYPE_CD);
             """,
             """
             CREATE TABLE IF NOT EXISTS CREDENTIAL_LOG (
                 RECORD_ID SERIAL PRIMARY KEY,
-                SYSTEM_TYPE_CD VARCHAR(255) NOT NULL, 
+                SYSTEM_TYPE_CD VARCHAR(255) NOT NULL,
                 CORP_NUM VARCHAR(255) NOT NULL,
                 CORP_STATE VARCHAR(255) NOT NULL,
-                PREV_EVENT JSON NOT NULL, 
-                LAST_EVENT JSON NOT NULL, 
+                PREV_EVENT JSON NOT NULL,
+                LAST_EVENT JSON NOT NULL,
                 CREDENTIAL_TYPE_CD VARCHAR(255) NOT NULL,
                 CREDENTIAL_ID VARCHAR(255) NOT NULL,
                 SCHEMA_NAME VARCHAR(255) NOT NULL,
                 SCHEMA_VERSION VARCHAR(255) NOT NULL,
                 CREDENTIAL_JSON JSON NOT NULL,
-                CREDENTIAL_HASH VARCHAR(64) NOT NULL, 
+                CREDENTIAL_HASH VARCHAR(64) NOT NULL,
                 CREDENTIAL_REASON VARCHAR(255),
                 ENTRY_DATE TIMESTAMP NOT NULL,
                 END_DATE TIMESTAMP,
@@ -298,37 +301,37 @@ class EventProcessor:
             """,
             """
             -- Hit duplicate credentials
-            CREATE UNIQUE INDEX IF NOT EXISTS cl_hash_index ON CREDENTIAL_LOG 
+            CREATE UNIQUE INDEX IF NOT EXISTS cl_hash_index ON CREDENTIAL_LOG
             (CREDENTIAL_HASH);
             """,
             """
             -- Hit for counts and queries
-            CREATE INDEX IF NOT EXISTS cl_pd_null ON CREDENTIAL_LOG 
+            CREATE INDEX IF NOT EXISTS cl_pd_null ON CREDENTIAL_LOG
             (PROCESS_DATE) WHERE PROCESS_DATE IS NULL;
             """,
             """
             -- Hit for counts
-            CREATE INDEX IF NOT EXISTS cl_pd_null_cs_act ON CREDENTIAL_LOG 
+            CREATE INDEX IF NOT EXISTS cl_pd_null_cs_act ON CREDENTIAL_LOG
             (PROCESS_DATE, CORP_STATE) WHERE CORP_STATE = 'ACT' and PROCESS_DATE IS NULL;
             """,
             """
             -- Hit for counts
-            CREATE INDEX IF NOT EXISTS cl_cs_act_pd_null_ri_asc ON CREDENTIAL_LOG 
+            CREATE INDEX IF NOT EXISTS cl_cs_act_pd_null_ri_asc ON CREDENTIAL_LOG
             (CORP_STATE, PROCESS_DATE, RECORD_ID ASC) WHERE CORP_STATE = 'ACT' and PROCESS_DATE IS NULL;
             """,
             """
             -- Hit for queries
-            CREATE INDEX IF NOT EXISTS cl_ri_cs_act_pd_null_asc ON CREDENTIAL_LOG 
+            CREATE INDEX IF NOT EXISTS cl_ri_cs_act_pd_null_asc ON CREDENTIAL_LOG
             (RECORD_ID ASC, CORP_STATE, PROCESS_DATE) WHERE CORP_STATE = 'ACT' and PROCESS_DATE IS NULL;
             """,
             """
             -- Hit for query
-            CREATE INDEX IF NOT EXISTS cl_ri_pd_null_asc ON CREDENTIAL_LOG 
+            CREATE INDEX IF NOT EXISTS cl_ri_pd_null_asc ON CREDENTIAL_LOG
             (RECORD_ID ASC, PROCESS_DATE) WHERE PROCESS_DATE IS NULL;
             """,
             #"""
             #-- Hit when checking generated credentials
-            #CREATE INDEX IF NOT EXISTS cl_ri_stc_cn_cs_ctc_ci_desc ON CREDENTIAL_LOG 
+            #CREATE INDEX IF NOT EXISTS cl_ri_stc_cn_cs_ctc_ci_desc ON CREDENTIAL_LOG
             #(RECORD_ID DESC,SYSTEM_TYPE_CD, CORP_NUM, CORP_STATE, CREDENTIAL_TYPE_CD, CREDENTIAL_ID)
             #""",
             """
@@ -345,27 +348,27 @@ class EventProcessor:
             ALTER TABLE CREDENTIAL_LOG
             SET (autovacuum_vacuum_scale_factor = 0.0);
             """,
-            """ 
+            """
             ALTER TABLE CREDENTIAL_LOG
             SET (autovacuum_vacuum_threshold = 5000);
             """,
             """
-            ALTER TABLE CREDENTIAL_LOG  
+            ALTER TABLE CREDENTIAL_LOG
             SET (autovacuum_analyze_scale_factor = 0.0);
             """,
-            """ 
-            ALTER TABLE CREDENTIAL_LOG  
+            """
+            ALTER TABLE CREDENTIAL_LOG
             SET (autovacuum_analyze_threshold = 5000);
             """,
-            """ 
+            """
             REINDEX TABLE CREDENTIAL_LOG;
             """,
             """
             CREATE TABLE IF NOT EXISTS CORP_AUDIT_LOG (
                 RECORD_ID SERIAL PRIMARY KEY,
-                SYSTEM_TYPE_CD VARCHAR(255) NOT NULL, 
+                SYSTEM_TYPE_CD VARCHAR(255) NOT NULL,
                 LAST_CORP_HISTORY_ID INT NOT NULL,
-                LAST_EVENT_DATE TIMESTAMP NOT NULL, 
+                LAST_EVENT_DATE TIMESTAMP NOT NULL,
                 CORP_NUM VARCHAR(255) NOT NULL,
                 CORP_STATE VARCHAR(255) NOT NULL,
                 CORP_TYPE VARCHAR(255) NOT NULL,
@@ -376,26 +379,26 @@ class EventProcessor:
             """,
             """
             -- Hit for query
-            CREATE INDEX IF NOT EXISTS audit_corp_num_asc ON CORP_AUDIT_LOG 
+            CREATE INDEX IF NOT EXISTS audit_corp_num_asc ON CORP_AUDIT_LOG
             (CORP_NUM);
             """,
             """
             ALTER TABLE CORP_AUDIT_LOG
             SET (autovacuum_vacuum_scale_factor = 0.0);
             """,
-            """ 
+            """
             ALTER TABLE CORP_AUDIT_LOG
             SET (autovacuum_vacuum_threshold = 5000);
             """,
             """
-            ALTER TABLE CORP_AUDIT_LOG  
+            ALTER TABLE CORP_AUDIT_LOG
             SET (autovacuum_analyze_scale_factor = 0.0);
             """,
-            """ 
-            ALTER TABLE CORP_AUDIT_LOG  
+            """
+            ALTER TABLE CORP_AUDIT_LOG
             SET (autovacuum_analyze_threshold = 5000);
             """,
-            """ 
+            """
             REINDEX TABLE CORP_AUDIT_LOG;
             """,
         )
@@ -411,7 +414,7 @@ class EventProcessor:
             """
             CREATE TABLE IF NOT EXISTS CORP_CRED_REPROCESS_LOG (
                 RECORD_ID SERIAL PRIMARY KEY,
-                SYSTEM_TYPE_CD VARCHAR(255) NOT NULL, 
+                SYSTEM_TYPE_CD VARCHAR(255) NOT NULL,
                 CORP_HISTORY_ID INT NOT NULL,
                 CORP_NUM VARCHAR(255) NOT NULL,
                 CREDENTIAL_TYPE_CD VARCHAR(255) NOT NULL,
@@ -423,31 +426,31 @@ class EventProcessor:
             """,
             """
             -- Hit for counts and queries
-            CREATE INDEX IF NOT EXISTS crpl_pd_null ON CORP_CRED_REPROCESS_LOG 
+            CREATE INDEX IF NOT EXISTS crpl_pd_null ON CORP_CRED_REPROCESS_LOG
             (PROCESS_DATE) WHERE PROCESS_DATE IS NULL;
             """,
             """
             -- Hit for query
-            CREATE INDEX IF NOT EXISTS crpl_ri_pd_null_asc ON CORP_CRED_REPROCESS_LOG 
-            (RECORD_ID ASC, PROCESS_DATE) WHERE PROCESS_DATE IS NULL;   
+            CREATE INDEX IF NOT EXISTS crpl_ri_pd_null_asc ON CORP_CRED_REPROCESS_LOG
+            (RECORD_ID ASC, PROCESS_DATE) WHERE PROCESS_DATE IS NULL;
             """,
             """
             ALTER TABLE CORP_CRED_REPROCESS_LOG
             SET (autovacuum_vacuum_scale_factor = 0.0);
             """,
-            """ 
+            """
             ALTER TABLE CORP_CRED_REPROCESS_LOG
             SET (autovacuum_vacuum_threshold = 5000);
             """,
             """
-            ALTER TABLE CORP_CRED_REPROCESS_LOG  
+            ALTER TABLE CORP_CRED_REPROCESS_LOG
             SET (autovacuum_analyze_scale_factor = 0.0);
             """,
-            """ 
-            ALTER TABLE CORP_CRED_REPROCESS_LOG  
+            """
+            ALTER TABLE CORP_CRED_REPROCESS_LOG
             SET (autovacuum_analyze_threshold = 5000);
             """,
-            """ 
+            """
             REINDEX TABLE CORP_CRED_REPROCESS_LOG;
             """,
         )
@@ -471,7 +474,7 @@ class EventProcessor:
                 cursor.execute(sql)
             desc = cursor.description
             column_names = [col[0] for col in desc]
-            rows = [dict(zip(column_names, row))  
+            rows = [dict(zip(column_names, row))
                 for row in cursor]
             cursor.close()
             cursor = None
@@ -480,7 +483,7 @@ class EventProcessor:
             LOGGER.error(error)
             LOGGER.error(traceback.print_exc())
             log_error("Event Processor exception reading DB: " + str(error))
-            raise 
+            raise
         finally:
             if cursor is not None:
                 cursor.close()
@@ -575,7 +578,7 @@ class EventProcessor:
                 # LOGGER.info(row)
                 corps.append({
                     'corp_num':row[0],
-                    'prev_event_id':row[1], 
+                    'prev_event_id':row[1],
                     'prev_event_date':row[2],
                     'last_event_id':row[3],
                     'last_event_date':row[4],
@@ -601,7 +604,7 @@ class EventProcessor:
                  VALUES(%s, %s, %s, %s, %s, %s, %s) RETURNING RECORD_ID;"""
         cur = None
         try:
-            for i,corp in enumerate(corps): 
+            for i,corp in enumerate(corps):
                 cur = self.conn.cursor()
                 cur.execute(sql, (system_type_cd, corp['prev_event_id'], corp['prev_event_date'], corp['last_event_id'], corp['last_event_date'], corp['corp_num'], datetime.datetime.now(),))
                 _record_id = cur.fetchone()[0]
@@ -626,7 +629,7 @@ class EventProcessor:
         cur = None
         try:
             cur = self.conn.cursor()
-            cur.execute(sql, (system_type_cd, prev_event_id, prev_event_dt, last_event_id, last_event_dt, 
+            cur.execute(sql, (system_type_cd, prev_event_id, prev_event_dt, last_event_id, last_event_dt,
                                 corp_num, datetime.datetime.now(),))
             _record_id = cur.fetchone()[0]
             self.conn.commit()
@@ -644,7 +647,7 @@ class EventProcessor:
     # insert a list of "unprocessed corporations" into the table
     def insert_corporation_list(self, corporation_list):
         """ insert multiple corps into the corps table  """
-        sql = """INSERT INTO EVENT_BY_CORP_FILING (SYSTEM_TYPE_CD, PREV_EVENT_ID, PREV_EVENT_DATE, LAST_EVENT_ID, LAST_EVENT_DATE, CORP_NUM, ENTRY_DATE) 
+        sql = """INSERT INTO EVENT_BY_CORP_FILING (SYSTEM_TYPE_CD, PREV_EVENT_ID, PREV_EVENT_DATE, LAST_EVENT_ID, LAST_EVENT_DATE, CORP_NUM, ENTRY_DATE)
                  VALUES(%s, %s, %s, %s, %s)"""
         cur = None
         try:
@@ -715,10 +718,10 @@ class EventProcessor:
 
     # insert a generated JSON credential into our log
     def insert_json_credential(self, cur, system_cd, prev_event, last_event, corp_num, corp_state, cred_type, cred_id, schema_name, schema_version, credential, credential_reason):
-        sql = """INSERT INTO CREDENTIAL_LOG (SYSTEM_TYPE_CD, PREV_EVENT, LAST_EVENT, CORP_NUM, CORP_STATE, CREDENTIAL_TYPE_CD, CREDENTIAL_ID, 
+        sql = """INSERT INTO CREDENTIAL_LOG (SYSTEM_TYPE_CD, PREV_EVENT, LAST_EVENT, CORP_NUM, CORP_STATE, CREDENTIAL_TYPE_CD, CREDENTIAL_ID,
                 SCHEMA_NAME, SCHEMA_VERSION, CREDENTIAL_JSON, CREDENTIAL_HASH, CREDENTIAL_REASON, ENTRY_DATE)
                 VALUES(%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s) RETURNING RECORD_ID;"""
-        sql_addr = """INSERT INTO CREDENTIAL_LOG (SYSTEM_TYPE_CD, PREV_EVENT, LAST_EVENT, CORP_NUM, CORP_STATE, CREDENTIAL_TYPE_CD, CREDENTIAL_ID, 
+        sql_addr = """INSERT INTO CREDENTIAL_LOG (SYSTEM_TYPE_CD, PREV_EVENT, LAST_EVENT, CORP_NUM, CORP_STATE, CREDENTIAL_TYPE_CD, CREDENTIAL_ID,
                 SCHEMA_NAME, SCHEMA_VERSION, CREDENTIAL_JSON, CREDENTIAL_HASH, CREDENTIAL_REASON, ENTRY_DATE, PROCESS_DATE, PROCESS_SUCCESS)
                 VALUES(%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s) RETURNING RECORD_ID;"""
         # create row(s) for corp creds json info
@@ -727,20 +730,20 @@ class EventProcessor:
         try:
             cur.execute("savepoint save_" + cred_type)
             # store address creds with a special status, because we don't want to post them yet
-            if (cred_type == addr_credential) and (not GENERATE_EXTRA_DEMO_CREDS):
-                cur.execute(sql_addr, (system_cd, event_json(prev_event), event_json(last_event), corp_num, corp_state, cred_type, cred_id, 
-                            schema_name, schema_version, cred_json, cred_hash, credential_reason, datetime.datetime.now(), datetime.datetime.now(), 'A',))
-                # release credentials with no effective date (for now)
-                #elif self.is_min_date(credential['effective_date']) or credential['effective_date'] is None or credential['effective_date'] == '':
-                #    # create and store credential but don't post it
-                #    cur.execute(sql_addr, (system_cd, event_json(prev_event), event_json(last_event), corp_num, corp_state, cred_type, cred_id, 
-                #                schema_name, schema_version, cred_json, cred_hash, credential_reason, datetime.datetime.now(), datetime.datetime.now(), 'X',))
-            else:
-                # release credentials with no effective date (for now)
-                if self.is_min_date(credential['effective_date']) or credential['effective_date'] is None or credential['effective_date'] == '':
-                    credential['effective_date'] = ''
-                cur.execute(sql, (system_cd, event_json(prev_event), event_json(last_event), corp_num, corp_state, cred_type, cred_id, 
-                            schema_name, schema_version, cred_json, cred_hash, credential_reason, datetime.datetime.now(),))
+            # if (cred_type == addr_credential) and (not GENERATE_EXTRA_DEMO_CREDS):
+            #     cur.execute(sql_addr, (system_cd, event_json(prev_event), event_json(last_event), corp_num, corp_state, cred_type, cred_id,
+            #                 schema_name, schema_version, cred_json, cred_hash, credential_reason, datetime.datetime.now(), datetime.datetime.now(), 'A',))
+            #     # release credentials with no effective date (for now)
+            #     #elif self.is_min_date(credential['effective_date']) or credential['effective_date'] is None or credential['effective_date'] == '':
+            #     #    # create and store credential but don't post it
+            #     #    cur.execute(sql_addr, (system_cd, event_json(prev_event), event_json(last_event), corp_num, corp_state, cred_type, cred_id,
+            #     #                schema_name, schema_version, cred_json, cred_hash, credential_reason, datetime.datetime.now(), datetime.datetime.now(), 'X',))
+            # else:
+            # release credentials with no effective date (for now)
+            if self.is_min_date(credential['effective_date']) or credential['effective_date'] is None or credential['effective_date'] == '':
+                credential['effective_date'] = ''
+            cur.execute(sql, (system_cd, event_json(prev_event), event_json(last_event), corp_num, corp_state, cred_type, cred_id,
+                        schema_name, schema_version, cred_json, cred_hash, credential_reason, datetime.datetime.now(),))
             return 1
         except Exception as e:
             # ignore duplicate hash ("duplicate key value violates unique constraint "cl_hash_index"")
@@ -801,7 +804,7 @@ class EventProcessor:
         elif 'filing_type' in loop_start_event['filing']:
             corp_reason = 'Filing:' + loop_start_event['filing']['filing_type']
         elif 'event_typ_cd' in loop_start_event:
-            corp_reason = 'Event:' + loop_start_event['event_typ_cd'] 
+            corp_reason = 'Event:' + loop_start_event['event_typ_cd']
         else:
             corp_reason = 'N/A'
 
@@ -812,7 +815,7 @@ class EventProcessor:
             corp_reason = corp_reason[:251] + '...' + endch
 
         return corp_reason
-        
+
     # determine reason for address credential - returns reason code only
     def build_lear_corp_reason_code(self, event):
         filing = event['transaction'].get('filing')
@@ -902,8 +905,8 @@ class EventProcessor:
         cred_count = 0
         for corp_cred in corp_creds:
             if corp_cred['credential']['effective_date'] is not None and corp_cred['credential']['effective_date'] != '':
-                cred_count = cred_count + self.insert_json_credential(cur, system_type_cd, prev_event, last_event, corp_num, corp_state, 
-                                                                corp_cred['cred_type'], corp_cred['id'], corp_cred['schema'], corp_cred['version'], 
+                cred_count = cred_count + self.insert_json_credential(cur, system_type_cd, prev_event, last_event, corp_num, corp_state,
+                                                                corp_cred['cred_type'], corp_cred['id'], corp_cred['schema'], corp_cred['version'],
                                                                 corp_cred['credential'], corp_cred['credential_reason'])
             else:
                 LOGGER.error("Error can't issue a credential with no effective date! " + corp_num + " " + corp_cred['cred_type'] + " " + str(corp_cred))
@@ -1139,11 +1142,11 @@ class EventProcessor:
         if org_name is not None:
             if 'start_event' in org_name and 'event_typ_cd' in org_name['start_event']:
                 if org_name['start_event']['event_typ_cd'] == 'FILE':
-                    if ('filing' in org_name['start_event'] 
-                        and org_name['start_event']['filing']['filing_typ_cd'] == 'NOALB' 
-                        or org_name['start_event']['filing']['filing_typ_cd'] == 'NOALC' 
-                        or org_name['start_event']['filing']['filing_typ_cd'] == 'NOALD' 
-                        or org_name['start_event']['filing']['filing_typ_cd'] == 'NOALE' 
+                    if ('filing' in org_name['start_event']
+                        and org_name['start_event']['filing']['filing_typ_cd'] == 'NOALB'
+                        or org_name['start_event']['filing']['filing_typ_cd'] == 'NOALC'
+                        or org_name['start_event']['filing']['filing_typ_cd'] == 'NOALD'
+                        or org_name['start_event']['filing']['filing_typ_cd'] == 'NOALE'
                         or org_name['start_event']['filing']['filing_typ_cd'] == 'NOALR'
                         or org_name['start_event']['filing']['filing_typ_cd'] == 'NOALU'):
                         return True
@@ -1393,7 +1396,7 @@ class EventProcessor:
                     if org_name is not None:
                         #LOGGER.info('org_name', org_name)
                         corp_cred['entity_name'] = org_name['corp_nme']
-                        if (is_data_conversion_event(org_name['start_event']) and 
+                        if (is_data_conversion_event(org_name['start_event']) and
                             org_name['effective_start_date'] == org_name['start_event']['event_timestmp'] and
                             i < (len(effective_events)-1)
                             ):
@@ -1409,7 +1412,7 @@ class EventProcessor:
                     #LOGGER.info("org_name_assumed", org_name_assumed)
                     if org_name_assumed is not None:
                         #LOGGER.info('org_name_assumed', org_name_assumed)
-                        corp_cred['entity_name_assumed'] = org_name_assumed['corp_nme'] 
+                        corp_cred['entity_name_assumed'] = org_name_assumed['corp_nme']
                         if is_data_conversion_event(org_name_assumed['start_event']) and org_name_assumed['effective_start_date'] == org_name_assumed['start_event']['event_timestmp']:
                             corp_cred['entity_name_assumed_effective'] = ''
                         else:
@@ -1435,9 +1438,9 @@ class EventProcessor:
                     jurisdiction = self.corp_rec_at_effective_date(corp_info['jurisdiction'], loop_start_event)
                     corp_cred['home_jurisdiction'] = self.get_corp_jurisdiction(corp_info, jurisdiction)
                     if corp_cred['home_jurisdiction'] and 0 < len(corp_cred['home_jurisdiction']) and corp_cred['home_jurisdiction'] != 'BC':
-                        corp_cred['registered_jurisdiction'] = 'BC' 
+                        corp_cred['registered_jurisdiction'] = 'BC'
                     else:
-                        corp_cred['registered_jurisdiction'] = '' 
+                        corp_cred['registered_jurisdiction'] = ''
                     corp_cred['extra_jurisdictional_registration'] = ''
                     # determine the date to use for jurisdiction effective
                     if jurisdiction is not None:
@@ -1506,17 +1509,17 @@ class EventProcessor:
             if ((prev_event['event_date'] <= office['start_event']['event_timestmp'] and office['start_event']['event_timestmp'] <= last_event['event_date']) or
                 (office['end_event_id'] is not None and prev_event['event_date'] <= office['end_event']['event_timestmp'] and office['end_event']['event_timestmp'] <= last_event['event_date'])):
                 # ensure address history is generated correctly
-                if 'office_typ_cd' in office:
-                    if 'delivery_addr' in office and 'local_addr' in office['delivery_addr']:
-                        addr_cred = self.generate_address_credential(corp_num, corp_info, office, office['delivery_addr'], "", "")
-                        reason_description = self.build_corp_reason_code(office['start_event'])
-                        corp_creds.append(self.build_credential_dict(addr_credential, addr_schema, addr_version, 
-                                                                    corp_num + ',' + office['office_typ_cd'], 
-                                                                    addr_cred, reason_description, addr_cred['effective_date']))
+                # if 'office_typ_cd' in office:
+                #     if 'delivery_addr' in office and 'local_addr' in office['delivery_addr']:
+                #         addr_cred = self.generate_address_credential(corp_num, corp_info, office, office['delivery_addr'], "", "")
+                #         reason_description = self.build_corp_reason_code(office['start_event'])
+                #         corp_creds.append(self.build_credential_dict(addr_credential, addr_schema, addr_version,
+                #                                                     corp_num + ',' + office['office_typ_cd'],
+                #                                                     addr_cred, reason_description, addr_cred['effective_date']))
 
         corp_type = corp_info['corp_typ_cd']
 
-        # generate relationship credential(s) 
+        # generate relationship credential(s)
         if 'parties' in corp_info and 0 < len(corp_info['parties']):
             self.generate_relationship_creds(corp_info, prev_event, last_event, corp_num, corp_creds)
 
@@ -1550,7 +1553,7 @@ class EventProcessor:
                         # TODO hard code the effective date for now
                         vp_cred["effective_date"] = "2000-01-01"
                         vp_cred["expiry_date"] = ""
-                        corp_creds.append(self.build_credential_dict(vp_credential, vp_schema, vp_version, vp_cred['registration_id'], vp_cred, '', vp_cred['effective_date']))
+                        # corp_creds.append(self.build_credential_dict(vp_credential, vp_schema, vp_version, vp_cred['registration_id'], vp_cred, '', vp_cred['effective_date']))
 
                         # generate relationship credentials
                         #print(">>> generate relationship credentials between", corp_num, party["party_typ_cd"], vp_reg_id, vp_email, vp_phone)
@@ -1565,7 +1568,7 @@ class EventProcessor:
                         corp_vp_rel_cred["relationship_status_effective"] = party['effective_start_date']
                         corp_vp_rel_cred["effective_date"] = party['effective_start_date']
                         corp_vp_rel_cred["expiry_date"] = ""
-                        corp_creds.append(self.build_credential_dict(vp_rel_credential, vp_rel_schema, vp_rel_version, corp_vp_rel_cred['registration_id'], corp_vp_rel_cred, '', corp_vp_rel_cred['effective_date']))
+                        # corp_creds.append(self.build_credential_dict(vp_rel_credential, vp_rel_schema, vp_rel_version, corp_vp_rel_cred['registration_id'], corp_vp_rel_cred, '', corp_vp_rel_cred['effective_date']))
 
                         vp_corp_rel_cred["registration_id"] = self.corp_num_with_prefix(corp_info['corp_typ_cd'], corp_info['corp_num'])
                         vp_corp_rel_cred["associated_registration_id"] = vp_reg_id
@@ -1576,7 +1579,7 @@ class EventProcessor:
                         vp_corp_rel_cred["relationship_status_effective"] = party['effective_start_date']
                         vp_corp_rel_cred["effective_date"] = party['effective_start_date']
                         vp_corp_rel_cred["expiry_date"] = ""
-                        corp_creds.append(self.build_credential_dict(org_rel_credential, org_rel_schema, org_rel_version, vp_corp_rel_cred['registration_id'], vp_corp_rel_cred, '', vp_corp_rel_cred['effective_date']))
+                        # corp_creds.append(self.build_credential_dict(org_rel_credential, org_rel_schema, org_rel_version, vp_corp_rel_cred['registration_id'], vp_corp_rel_cred, '', vp_corp_rel_cred['effective_date']))
 
         return corp_creds
 
@@ -1617,12 +1620,12 @@ class EventProcessor:
             corp_cred['entity_type'] = corp_version_info['corp_typ_cd']
             corp_cred['entity_name'] = corp_version_info['corp_nme']
             corp_cred['entity_name_effective'] = corp_version_info['corp_nme_effective_date']
-            corp_cred['entity_name_assumed'] = corp_version_info['corp_nme_as'] 
+            corp_cred['entity_name_assumed'] = corp_version_info['corp_nme_as']
             corp_cred['entity_name_assumed_effective'] = ''
             corp_cred['entity_status'] = corp_version_info['state_typ_cd']
             corp_cred['entity_status_effective'] = corp_version_info['state_typ_effective_date']
             corp_cred['home_jurisdiction'] = 'BC'
-            corp_cred['registered_jurisdiction'] = 'BC' 
+            corp_cred['registered_jurisdiction'] = 'BC'
             corp_cred['extra_jurisdictional_registration'] = ''
             corp_cred['effective_date'] = corp_version_info['effective_date']
 
@@ -1727,20 +1730,20 @@ class EventProcessor:
 
         print(">>> in scope corp types:", corp_types)
 
-        sql1 = """SELECT RECORD_ID, 
-                         SYSTEM_TYPE_CD, 
-                         PREV_EVENT_ID, 
-                         PREV_EVENT_DATE, 
-                         LAST_EVENT_ID, 
-                         LAST_EVENT_DATE, 
-                         CORP_NUM, 
+        sql1 = """SELECT RECORD_ID,
+                         SYSTEM_TYPE_CD,
+                         PREV_EVENT_ID,
+                         PREV_EVENT_DATE,
+                         LAST_EVENT_ID,
+                         LAST_EVENT_DATE,
+                         CORP_NUM,
                          ENTRY_DATE
                   FROM EVENT_BY_CORP_FILING
                   WHERE SYSTEM_TYPE_CD = %s
                   AND RECORD_ID IN
                   (
                     SELECT RECORD_ID
-                    FROM EVENT_BY_CORP_FILING 
+                    FROM EVENT_BY_CORP_FILING
                     WHERE SYSTEM_TYPE_CD = %s
                     AND PROCESS_DATE is null
                     ORDER BY RECORD_ID
@@ -1748,19 +1751,19 @@ class EventProcessor:
                   )
                   ORDER BY RECORD_ID;"""
 
-        sql1a = """SELECT RECORD_ID, 
-                          SYSTEM_TYPE_CD, 
-                          PREV_EVENT, 
-                          LAST_EVENT, 
-                          CORP_NUM, 
-                          CORP_JSON, 
+        sql1a = """SELECT RECORD_ID,
+                          SYSTEM_TYPE_CD,
+                          PREV_EVENT,
+                          LAST_EVENT,
+                          CORP_NUM,
+                          CORP_JSON,
                           ENTRY_DATE
                   FROM CORP_HISTORY_LOG
                   WHERE SYSTEM_TYPE_CD = %s
                   AND RECORD_ID IN
                    (
                      SELECT RECORD_ID
-                     FROM CORP_HISTORY_LOG 
+                     FROM CORP_HISTORY_LOG
                      WHERE SYSTEM_TYPE_CD = %s
                      AND PROCESS_DATE is null
                      ORDER BY RECORD_ID
@@ -1809,7 +1812,7 @@ class EventProcessor:
                     row = cur.fetchone()
                     while row is not None:
                         # include the date(s) for the start and end events
-                        corps.append({'RECORD_ID':row[0], 'SYSTEM_TYPE_CD':row[1], 'PREV_EVENT': event_dict(row[2], row[3]), 'LAST_EVENT': event_dict(row[4], row[5]), 
+                        corps.append({'RECORD_ID':row[0], 'SYSTEM_TYPE_CD':row[1], 'PREV_EVENT': event_dict(row[2], row[3]), 'LAST_EVENT': event_dict(row[4], row[5]),
                                         'CORP_NUM':row[6], 'ENTRY_DATE':row[7]})
                         specific_corps.append(row[6])
                         row = cur.fetchone()
@@ -1834,7 +1837,7 @@ class EventProcessor:
                     row = cur.fetchone()
                     while row is not None:
                         # includes the date(s) for the start and end events
-                        corps.append({'RECORD_ID':row[0], 'SYSTEM_TYPE_CD':row[1], 'PREV_EVENT':row[2], 'LAST_EVENT':row[3], 
+                        corps.append({'RECORD_ID':row[0], 'SYSTEM_TYPE_CD':row[1], 'PREV_EVENT':row[2], 'LAST_EVENT':row[3],
                                     'CORP_NUM':row[4], 'CORP_JSON':row[5], 'ENTRY_DATE':row[6]})
                         specific_corps.append(row[4])
                         row = cur.fetchone()
@@ -1887,7 +1890,7 @@ class EventProcessor:
                                 use_cache = False
 
                     # process each corp in our list
-                    for i,corp in enumerate(corps): 
+                    for i,corp in enumerate(corps):
                         process_success = True
                         process_msg = None
                         corp_in_scope = False
@@ -1969,7 +1972,7 @@ class EventProcessor:
                                                 op_state_typ_cd = corp_active_state['op_state_typ_cd']
                                             else:
                                                 op_state_typ_cd = 'N/A'
-                                            saved_creds = saved_creds + self.store_credentials(cur, corp['SYSTEM_TYPE_CD'], corp['PREV_EVENT'], corp['LAST_EVENT'], 
+                                            saved_creds = saved_creds + self.store_credentials(cur, corp['SYSTEM_TYPE_CD'], corp['PREV_EVENT'], corp['LAST_EVENT'],
                                                                     corp['CORP_NUM'], op_state_typ_cd, corp_info, corp_creds)
                                             cur.close()
                                             cur = None
@@ -1983,7 +1986,7 @@ class EventProcessor:
                                         if cur is not None:
                                             cur.close()
 
-                                # store corporate info 
+                                # store corporate info
                                 if process_success:
                                     flag = 'Y'
                                     if withdrawn_corp:
@@ -2003,8 +2006,8 @@ class EventProcessor:
                                             op_state_typ_cd = corp_active_state['op_state_typ_cd']
                                         else:
                                             op_state_typ_cd = 'N/A'
-                                        cur.execute(sql2a, (corp['SYSTEM_TYPE_CD'], prev_event_json, last_event_json, corp['CORP_NUM'], 
-                                                            op_state_typ_cd, corp_info_json, datetime.datetime.now(), datetime.datetime.now(), 
+                                        cur.execute(sql2a, (corp['SYSTEM_TYPE_CD'], prev_event_json, last_event_json, corp['CORP_NUM'],
+                                                            op_state_typ_cd, corp_info_json, datetime.datetime.now(), datetime.datetime.now(),
                                                             flag, res,))
                                         if flag == 'N':
                                             log_warning('Event processing error:' + res)
@@ -2024,8 +2027,8 @@ class EventProcessor:
                                     future_events = sorted(future_events, key=lambda k: int(k['event_id']))
                                     future_events = sorted(future_events, key=lambda k: k['effective_date'])
                                     cur = self.conn.cursor()
-                                    cur.execute(sql2b, (corp['SYSTEM_TYPE_CD'], future_events[0]['event_id'], future_events[0]['event_timestmp'], 
-                                                        future_events[len(future_events)-1]['event_id'], future_events[len(future_events)-1]['effective_date'],  
+                                    cur.execute(sql2b, (corp['SYSTEM_TYPE_CD'], future_events[0]['event_id'], future_events[0]['event_timestmp'],
+                                                        future_events[len(future_events)-1]['event_id'], future_events[len(future_events)-1]['effective_date'],
                                                         corp['CORP_NUM'], datetime.datetime.now(),))
                                     cur.close()
                                     cur = None
@@ -2033,7 +2036,7 @@ class EventProcessor:
                                 try:
                                     # store corporate info for future generation of credentials
                                     cur = self.conn.cursor()
-                                    cur.execute(sql2, (corp['SYSTEM_TYPE_CD'], prev_event_json, last_event_json, corp['CORP_NUM'], 
+                                    cur.execute(sql2, (corp['SYSTEM_TYPE_CD'], prev_event_json, last_event_json, corp['CORP_NUM'],
                                                         corp_active_state['op_state_typ_cd'], corp_info_json, datetime.datetime.now(),))
                                     cur.close()
                                     cur = None
@@ -2163,7 +2166,7 @@ class EventProcessor:
                         corp_creds = self.generate_credentials_of_type(corp['SYSTEM_TYPE_CD'], corp['CREDENTIAL_TYPE_CD'], corp['CORP_NUM'], corp['CORP_JSON'])
                         if len(corp_creds) > 0:
                             cur = self.conn.cursor()
-                            saved_creds = saved_creds + self.store_credentials(cur, corp['SYSTEM_TYPE_CD'], corp['PREV_EVENT'], corp['LAST_EVENT'], 
+                            saved_creds = saved_creds + self.store_credentials(cur, corp['SYSTEM_TYPE_CD'], corp['PREV_EVENT'], corp['LAST_EVENT'],
                                                     corp['CORP_NUM'], corp['CORP_STATE'], corp['CORP_JSON'], corp_creds)
                             cur.close()
                             cur = None
@@ -2178,7 +2181,7 @@ class EventProcessor:
                         if cur is not None:
                             cur.close()
 
-                    # store corporate info 
+                    # store corporate info
                     if process_success:
                         flag = 'Y'
                         if 0 < len(corp_creds):
@@ -2216,9 +2219,9 @@ class EventProcessor:
 
     def queue_reprocess_credential_type(self, system_type_cd, credential_typ_cd):
         """Queue up all existing orgs to process a credential of a specific type."""
-        sql1 = """SELECT RECORD_ID, 
-                         SYSTEM_TYPE_CD, 
-                         CORP_NUM, 
+        sql1 = """SELECT RECORD_ID,
+                         SYSTEM_TYPE_CD,
+                         CORP_NUM,
                          PROCESS_SUCCESS,
                          PROCESS_DATE
                   FROM CORP_HISTORY_LOG
@@ -2226,7 +2229,7 @@ class EventProcessor:
                     AND SYSTEM_TYPE_CD = %s
                   order by PROCESS_DATE desc;"""
 
-        sql1a = """SELECT RECORD_ID, SYSTEM_TYPE_CD, CORP_NUM, CORP_HISTORY_ID FROM CORP_CRED_REPROCESS_LOG 
+        sql1a = """SELECT RECORD_ID, SYSTEM_TYPE_CD, CORP_NUM, CORP_HISTORY_ID FROM CORP_CRED_REPROCESS_LOG
                    WHERE SYSTEM_TYPE_CD = %s
                      AND CREDENTIAL_TYPE_CD = %s"""
 
@@ -2237,7 +2240,7 @@ class EventProcessor:
         sql2 = """INSERT INTO CORP_CRED_REPROCESS_LOG (SYSTEM_TYPE_CD, CORP_HISTORY_ID, CORP_NUM, CREDENTIAL_TYPE_CD, ENTRY_DATE)
                   VALUES (%s, %s, %s, %s, %s)  RETURNING RECORD_ID;"""
 
-        #sql2a = """SELECT RECORD_ID FROM CORP_CRED_REPROCESS_LOG 
+        #sql2a = """SELECT RECORD_ID FROM CORP_CRED_REPROCESS_LOG
         #           WHERE CORP_NUM = %s
         #             AND SYSTEM_TYPE_CD = %s
         #             AND CREDENTIAL_TYPE_CD = %s"""
@@ -2355,10 +2358,10 @@ class EventProcessor:
 
     def get_outstanding_corps_record_count(self, system_type_cd=system_type):
         return self.get_record_count('event_by_corp_filing', system_type_cd=system_type_cd)
-        
+
     def get_outstanding_creds_record_count(self, system_type_cd=system_type):
         return self.get_record_count('credential_log', system_type_cd=system_type_cd)
-        
+
     def get_record_count(self, table, unprocessed=True, system_type_cd=system_type):
         sql_ct_select = 'select count(*) from'
         where_clause = "where system_type_cd = '" + system_type_cd + "'"
@@ -2411,7 +2414,7 @@ class EventProcessor:
             cursor.execute(sql)
             desc = cursor.description
             column_names = [col[0] for col in desc]
-            rows = [dict(zip(column_names, row))  
+            rows = [dict(zip(column_names, row))
                 for row in cursor]
             cursor.close()
             cursor = None
