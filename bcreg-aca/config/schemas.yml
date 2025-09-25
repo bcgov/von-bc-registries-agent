@@ -134,51 +134,51 @@
 #       description_en: Reason for credential issue/update
 #       required: false
 
-# - name: relationship.registries.ca
-#   version: '1.0.42'
-#   label_en: Relationship
-#   description_en: Relationship Credential
-#   attributes:
-#     registration_id:
-#       label_en: Registration ID
-#       description_en: Unique identifer assigned to entity by registrar
-#       required: true
-#     associated_registration_id:
-#       label_en: Associated Registration ID
-#       description_en: Registry id(s) of associated organizations/individuals
-#       required: true
-#     associated_registration_name:
-#       label_en: Associated Registration Name
-#       description_en: Registered name of associated organizations/individuals
-#       required: false
-#     relationship:
-#       label_en: Relationship
-#       description_en: Name of the relationship
-#       required: true
-#     relationship_description:
-#       label_en: Relationship Description
-#       description_en: Description of the relationship
-#       required: true
-#     relationship_status:
-#       label_en: Relationship Status
-#       description_en: Status of the relationship
-#       required: true
-#     relationship_status_effective:
-#       label_en: Relationship Status Effective
-#       description_en: Date the relationship became/becomes effective
-#       required: false
-#     effective_date:
-#       label_en: Effective Date
-#       description_en: Date Credential is effective
-#       required: true
-#     expiry_date:
-#       label_en: Credential Expiry Date
-#       description_en: Date Credential expires
-#       required: false
-#     reason_description:
-#       label_en: Reason
-#       description_en: Reason for credential issue/update
-#       required: false
+- name: relationship.registries.ca
+  version: '1.0.42'
+  label_en: Relationship
+  description_en: Relationship Credential
+  attributes:
+    registration_id:
+      label_en: Registration ID
+      description_en: Unique identifer assigned to entity by registrar
+      required: true
+    associated_registration_id:
+      label_en: Associated Registration ID
+      description_en: Registry id(s) of associated organizations/individuals
+      required: true
+    associated_registration_name:
+      label_en: Associated Registration Name
+      description_en: Registered name of associated organizations/individuals
+      required: false
+    relationship:
+      label_en: Relationship
+      description_en: Name of the relationship
+      required: true
+    relationship_description:
+      label_en: Relationship Description
+      description_en: Description of the relationship
+      required: true
+    relationship_status:
+      label_en: Relationship Status
+      description_en: Status of the relationship
+      required: true
+    relationship_status_effective:
+      label_en: Relationship Status Effective
+      description_en: Date the relationship became/becomes effective
+      required: false
+    effective_date:
+      label_en: Effective Date
+      description_en: Date Credential is effective
+      required: true
+    expiry_date:
+      label_en: Credential Expiry Date
+      description_en: Date Credential expires
+      required: false
+    reason_description:
+      label_en: Reason
+      description_en: Reason for credential issue/update
+      required: false
 
 - name: business_number.registries.ca
   version: '1.0.42'
