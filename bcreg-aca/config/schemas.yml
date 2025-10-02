@@ -80,59 +80,59 @@
       description_en: Date Credential expired
       required: true
 
-- name: address.registries.ca
-  version: '1.0.42'
-  label_en: Address
-  description_en: Address Credential
-  attributes:
-    registration_id:
-      label_en: Registration ID
-      description_en: Unique identifer assigned to entity by registrar
-      required: true
-    addressee:
-      label_en: Addressee
-      description_en: Legal and principle name assigned to entity by registrar
-      required: true
-    address_type:
-      label_en: Address Type
-      description_en: Type designator for this address
-      required: true
-    civic_address:
-      label_en: Civic Address
-      description_en: Street number, name, direction, suite, etc.
-      required: true
-    municipality:
-      label_en: Municipality
-      description_en: Name of a recognized municipality
-      required: true
-    province:
-      label_en: Province
-      description_en: Name of recognized sub-national territory
-      required: true
-    postal_code:
-      label_en: Postal Code
-      description_en: Identifier issued by postal agency
-      required: true
-    country:
-      label_en: Country
-      description_en: Name of a recognized national territory
-      required: true
-    address_effective_date:
-      label_en: Address Effective Date
-      description_en: Date current address became/becomes effective
-      required: false
-    effective_date:
-      label_en: Credential Effective Date
-      description_en: Date Credential is effective
-      required: true
-    expiry_date:
-      label_en: Credential Expiry Date
-      description_en: Date Credential expires
-      required: false
-    reason_description:
-      label_en: Credential Issue Reason
-      description_en: Reason for credential issue/update
-      required: false
+# - name: address.registries.ca
+#   version: '1.0.42'
+#   label_en: Address
+#   description_en: Address Credential
+#   attributes:
+#     registration_id:
+#       label_en: Registration ID
+#       description_en: Unique identifer assigned to entity by registrar
+#       required: true
+#     addressee:
+#       label_en: Addressee
+#       description_en: Legal and principle name assigned to entity by registrar
+#       required: true
+#     address_type:
+#       label_en: Address Type
+#       description_en: Type designator for this address
+#       required: true
+#     civic_address:
+#       label_en: Civic Address
+#       description_en: Street number, name, direction, suite, etc.
+#       required: true
+#     municipality:
+#       label_en: Municipality
+#       description_en: Name of a recognized municipality
+#       required: true
+#     province:
+#       label_en: Province
+#       description_en: Name of recognized sub-national territory
+#       required: true
+#     postal_code:
+#       label_en: Postal Code
+#       description_en: Identifier issued by postal agency
+#       required: true
+#     country:
+#       label_en: Country
+#       description_en: Name of a recognized national territory
+#       required: true
+#     address_effective_date:
+#       label_en: Address Effective Date
+#       description_en: Date current address became/becomes effective
+#       required: false
+#     effective_date:
+#       label_en: Credential Effective Date
+#       description_en: Date Credential is effective
+#       required: true
+#     expiry_date:
+#       label_en: Credential Expiry Date
+#       description_en: Date Credential expires
+#       required: false
+#     reason_description:
+#       label_en: Credential Issue Reason
+#       description_en: Reason for credential issue/update
+#       required: false
 
 - name: relationship.registries.ca
   version: '1.0.42'
@@ -206,138 +206,138 @@
       description_en: Reason for credential issue/update
       required: false
 
-- name: demo.verified_person.registries.ca
-  version: '1.0.42'
-  label_en: Verified person
-  attributes:
-    registration_id:
-      label_en: Registration ID
-      description_en: Unique identifer assigned to a party by registrar
-      required: true
-    full_name:
-      label_en: Full Name
-      description_en: Full Name
-      required: true
-    entity_status:
-      label_en: Registration Status
-      description_en: Status of the entity (active or historical)
-      required: true
-    first_name:
-      label_en: First Name
-      description_en: First Name
-      required: true
-    last_name:
-      label_en: Last Name
-      description_en: Last Name
-      required: true
-    email_address:
-      label_en: Email Address
-      description_en: Email Address
-      required: true
-    phone_number:
-      label_en: Phone Number
-      description_en: Phone Number
-      required: true
-    effective_date:
-      label_en: Effective Date
-      description_en: Date Credential is effective
-      required: true
-    expiry_date:
-      label_en: Credential Expiry Date
-      description_en: Date Credential expires
-      required: false
-    reason_description:
-      label_en: Credential Issue Reason
-      description_en: Reason for credential issue/update
-      required: false
+# - name: demo.verified_person.registries.ca
+#   version: '1.0.42'
+#   label_en: Verified person
+#   attributes:
+#     registration_id:
+#       label_en: Registration ID
+#       description_en: Unique identifer assigned to a party by registrar
+#       required: true
+#     full_name:
+#       label_en: Full Name
+#       description_en: Full Name
+#       required: true
+#     entity_status:
+#       label_en: Registration Status
+#       description_en: Status of the entity (active or historical)
+#       required: true
+#     first_name:
+#       label_en: First Name
+#       description_en: First Name
+#       required: true
+#     last_name:
+#       label_en: Last Name
+#       description_en: Last Name
+#       required: true
+#     email_address:
+#       label_en: Email Address
+#       description_en: Email Address
+#       required: true
+#     phone_number:
+#       label_en: Phone Number
+#       description_en: Phone Number
+#       required: true
+#     effective_date:
+#       label_en: Effective Date
+#       description_en: Date Credential is effective
+#       required: true
+#     expiry_date:
+#       label_en: Credential Expiry Date
+#       description_en: Date Credential expires
+#       required: false
+#     reason_description:
+#       label_en: Credential Issue Reason
+#       description_en: Reason for credential issue/update
+#       required: false
 
-- name: demo.person_relationship.registries.ca
-  version: '1.0.42'
-  label_en: Verified relationship
-  attributes:
-    registration_id:
-      label_en: Registration ID
-      description_en: Unique identifer assigned to entity by registrar
-      required: true
-    associated_registration_id:
-      label_en: Associated Registration ID
-      description_en: Registry id(s) of associated organizations/individuals
-      required: true
-    associated_registration_name:
-      label_en: Associated Registration Name
-      description_en: Registered name of associated organizations/individuals
-      required: false
-    relationship:
-      label_en: Relationship
-      description_en: Name of the relationship
-      required: true
-    relationship_description:
-      label_en: Relationship Description
-      description_en: Description of the relationship
-      required: true
-    relationship_status:
-      label_en: Relationship Status
-      description_en: Status of the relationship
-      required: true
-    relationship_status_effective:
-      label_en: Relationship Status Effective
-      description_en: Date the relationship became/becomes effective
-      required: false
-    effective_date:
-      label_en: Effective Date
-      description_en: Date Credential is effective
-      required: true
-    expiry_date:
-      label_en: Credential Expiry Date
-      description_en: Date Credential expires
-      required: false
-    reason_description:
-      label_en: Credential Issue Reason
-      description_en: Reason for credential issue/update
-      required: false
+# - name: demo.person_relationship.registries.ca
+#   version: '1.0.42'
+#   label_en: Verified relationship
+#   attributes:
+#     registration_id:
+#       label_en: Registration ID
+#       description_en: Unique identifer assigned to entity by registrar
+#       required: true
+#     associated_registration_id:
+#       label_en: Associated Registration ID
+#       description_en: Registry id(s) of associated organizations/individuals
+#       required: true
+#     associated_registration_name:
+#       label_en: Associated Registration Name
+#       description_en: Registered name of associated organizations/individuals
+#       required: false
+#     relationship:
+#       label_en: Relationship
+#       description_en: Name of the relationship
+#       required: true
+#     relationship_description:
+#       label_en: Relationship Description
+#       description_en: Description of the relationship
+#       required: true
+#     relationship_status:
+#       label_en: Relationship Status
+#       description_en: Status of the relationship
+#       required: true
+#     relationship_status_effective:
+#       label_en: Relationship Status Effective
+#       description_en: Date the relationship became/becomes effective
+#       required: false
+#     effective_date:
+#       label_en: Effective Date
+#       description_en: Date Credential is effective
+#       required: true
+#     expiry_date:
+#       label_en: Credential Expiry Date
+#       description_en: Date Credential expires
+#       required: false
+#     reason_description:
+#       label_en: Credential Issue Reason
+#       description_en: Reason for credential issue/update
+#       required: false
 
-- name: demo.org_relationship.registries.ca
-  version: '1.0.42'
-  label_en: Verified relationship
-  attributes:
-    registration_id:
-      label_en: Registration ID
-      description_en: Unique identifer assigned to entity by registrar
-      required: true
-    associated_registration_id:
-      label_en: Associated Registration ID
-      description_en: Registry id(s) of associated organizations/individuals
-      required: true
-    associated_registration_name:
-      label_en: Associated Registration Name
-      description_en: Registered name of associated organizations/individuals
-      required: false
-    relationship:
-      label_en: Relationship
-      description_en: Name of the relationship
-      required: true
-    relationship_description:
-      label_en: Relationship Description
-      description_en: Description of the relationship
-      required: true
-    relationship_status:
-      label_en: Relationship Status
-      description_en: Status of the relationship
-      required: true
-    relationship_status_effective:
-      label_en: Relationship Status Effective
-      description_en: Date the relationship became/becomes effective
-      required: false
-    effective_date:
-      label_en: Effective Date
-      description_en: Date Credential is effective
-      required: true
-    expiry_date:
-      label_en: Credential Expiry Date
-      description_en: Date Credential expires
-      required: false
-    reason_description:
-      label_en: Credential Issue Reason
-      description_en: Reason for credential issue/update
-      required: false
+# - name: demo.org_relationship.registries.ca
+#   version: '1.0.42'
+#   label_en: Verified relationship
+#   attributes:
+#     registration_id:
+#       label_en: Registration ID
+#       description_en: Unique identifer assigned to entity by registrar
+#       required: true
+#     associated_registration_id:
+#       label_en: Associated Registration ID
+#       description_en: Registry id(s) of associated organizations/individuals
+#       required: true
+#     associated_registration_name:
+#       label_en: Associated Registration Name
+#       description_en: Registered name of associated organizations/individuals
+#       required: false
+#     relationship:
+#       label_en: Relationship
+#       description_en: Name of the relationship
+#       required: true
+#     relationship_description:
+#       label_en: Relationship Description
+#       description_en: Description of the relationship
+#       required: true
+#     relationship_status:
+#       label_en: Relationship Status
+#       description_en: Status of the relationship
+#       required: true
+#     relationship_status_effective:
+#       label_en: Relationship Status Effective
+#       description_en: Date the relationship became/becomes effective
+#       required: false
+#     effective_date:
+#       label_en: Effective Date
+#       description_en: Date Credential is effective
+#       required: true
+#     expiry_date:
+#       label_en: Credential Expiry Date
+#       description_en: Date Credential expires
+#       required: false
+#     reason_description:
+#       label_en: Credential Issue Reason
+#       description_en: Reason for credential issue/update
+#       required: false
 
