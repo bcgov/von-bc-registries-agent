@@ -205,7 +205,7 @@ class BCReg_Core:
             LOGGER.error(error)
             LOGGER.error(traceback.print_exc())
             log_error("BCRegistries exception reading DB: " + str(error))
-            raise 
+            raise
         finally:
             if cursor is not None:
                 cursor.close()
@@ -220,7 +220,7 @@ class BCReg_Core:
             col_name = col[0]
             col_type = self.get_sql_col_type(col[1], use_sec=use_sec)
             _col_len = col[3]
-            table_sql = table_sql + col_name + ' ' + col_type 
+            table_sql = table_sql + col_name + ' ' + col_type
             i = i + 1
             if i < len(table_desc):
                 table_sql = table_sql + ', '
@@ -230,7 +230,7 @@ class BCReg_Core:
 
     def get_sql_col_type(self, pg_type, use_sec=False):
         if pg_type == 1042:  # CHAR
-            return 'text'  
+            return 'text'
         if pg_type == 1043:  # VARCHAR
             return 'text'
         if pg_type == 1700:  # NUMBER(38)
@@ -261,9 +261,9 @@ class BCReg_Core:
         if col_value is None:
             return 'null'
         if pg_type == 1042:  # CHAR
-            return "'" + self.stringify(col_value) + "'"  
+            return "'" + self.stringify(col_value) + "'"
         if pg_type == 1043:  # VARCHAR
-            return "'" + self.stringify(col_value) + "'"  
+            return "'" + self.stringify(col_value) + "'"
         if pg_type == 1700:  # NUMBER(38)
             return str(col_value)
         if pg_type == 23 or pg_type == 21 or pg_type == 20:    # INT*
@@ -289,7 +289,7 @@ class BCReg_Core:
             LOGGER.error(error)
             LOGGER.error(traceback.print_exc())
             log_error("BCRegistries exception reading DB: " + str(error))
-            raise 
+            raise
         finally:
             if cache_cursor is not None:
                 cache_cursor.close()
@@ -439,7 +439,7 @@ class BCReg_Core:
                 LOGGER.error(traceback.print_exc())
                 log_error("BCRegistries exception loading table: " + table)
                 log_error("BCRegistries exception reading DB: " + str(error))
-                raise 
+                raise
             finally:
                 if cache_cursor is not None:
                     cache_cursor.close()
@@ -452,7 +452,7 @@ class BCReg_Core:
             cursor.execute(sql)
             desc = cursor.description
             column_names = [col[0] for col in desc]
-            rows = [dict(zip(column_names, row))  
+            rows = [dict(zip(column_names, row))
                 for row in cursor]
             cursor.close()
             cursor = None
@@ -461,7 +461,7 @@ class BCReg_Core:
             LOGGER.error(error)
             LOGGER.error(traceback.print_exc())
             log_error("BCRegistries exception reading DB: " + str(error))
-            raise 
+            raise
         finally:
             if cursor is not None:
                 cursor.close()
@@ -488,7 +488,7 @@ class BCReg_Core:
             LOGGER.error(error)
             LOGGER.error(traceback.print_exc())
             log_error("BCRegistries exception reading DB: " + str(error))
-            raise 
+            raise
         finally:
             if cursor is not None:
                 cursor.close()
@@ -519,7 +519,8 @@ class BCReg_Core:
         id_list = ''
         i = 0
         for the_id in ids:
-            id_list = id_list + delimiter + str(the_id) + delimiter
+            escaped_id = str(the_id).replace("'", "''") if text else str(the_id)
+            id_list = id_list + delimiter + escaped_id + delimiter
             i = i + 1
             if i < len(ids):
                 id_list = id_list  + ', '
@@ -545,7 +546,7 @@ class BCReg_Core:
             cursor.execute(sql)
             desc = cursor.description
             column_names = [col[0] for col in desc]
-            rows = [dict(zip(column_names, row))  
+            rows = [dict(zip(column_names, row))
                 for row in cursor]
             cursor.close()
             cursor = None
@@ -556,7 +557,7 @@ class BCReg_Core:
             LOGGER.error(error)
             LOGGER.error(traceback.print_exc())
             log_error("BCRegistries exception reading DB: " + str(error))
-            raise 
+            raise
         finally:
             if cursor is not None:
                 cursor.close()
@@ -581,7 +582,7 @@ class BCReg_Core:
     # returns a zero-length array if none found
     # optionally takes a WHERE clause and ORDER BY clause (must be valid SQL)
     def get_bcreg_corp_table(self, table, corp_num, where="", orderby="", cache=False, generate_individual_sql=False, use_sec=False):
-        subwhere = "corp_num = '" + corp_num + "'"
+        subwhere = "corp_num = " + self.id_where_in([corp_num], True)
         if 0 < len(where):
             where = where.replace(UNION_SELECT_PLACEHOLDER, sql)
             subwhere = subwhere + " AND " + where
@@ -589,8 +590,8 @@ class BCReg_Core:
 
 
     ###########################################################################
-    # methods to run corporation-specific queries 
-    # (can run against the in-memory cache 
+    # methods to run corporation-specific queries
+    # (can run against the in-memory cache
     #  or against bc registries database directly)
     ###########################################################################
 
@@ -607,7 +608,7 @@ class BCReg_Core:
             cursor.execute(sql)
             desc = cursor.description
             column_names = [col[0] for col in desc]
-            recs = [dict(zip(column_names, row))  
+            recs = [dict(zip(column_names, row))
                 for row in cursor]
             cursor.close()
             cursor = None
@@ -616,7 +617,7 @@ class BCReg_Core:
             LOGGER.error(error)
             LOGGER.error(traceback.print_exc())
             log_error("BCRegistries exception reading DB: " + str(error))
-            raise 
+            raise
         finally:
             if cursor is not None:
                 cursor.close()

@@ -103,7 +103,7 @@ class CustomJsonEncoder(json.JSONEncoder):
                     return MAX_END_DATE_TZ.astimezone(pytz.utc).isoformat()
                 return o.isoformat()
         elif isinstance(o, (list, dict, str, int, float, bool, type(None))):
-            return JSONEncoder.default(self, o)        
+            return JSONEncoder.default(self, o)
         elif isinstance(o, decimal.Decimal):
             return (str(o) for o in [o])
         elif isinstance(o, set):
@@ -257,7 +257,7 @@ class BCReg_Lear(BCReg_Core):
     # use for initial data load
     def get_unprocessed_corps_data_load(self, last_event_id, last_event_dt, max_event_id, max_event_dt):
         sqls = []
-        
+
         # select *all* corps - we will filter in the next stage
         sqls.append("""SELECT distinct(identifier) from """ + self.DB_TABLE_PREFIX + """businesses""")
 
@@ -369,10 +369,10 @@ class BCReg_Lear(BCReg_Core):
         # since a related corp may be impacted by a corp change, check for related corps via corp_party table
         sql1 = """SELECT parties.identifier corp_num
                   FROM businesses businesses,
-                       parties_version parties, 
+                       parties_version parties,
                        party_roles_version roles
                   WHERE businesses.id = roles.business_id
-                    AND roles.party_id = parties.id 
+                    AND roles.party_id = parties.id
                     AND parties.party_type = 'organization' and roles.role in ('proprietor')
                     AND (parties.identifier = %s
                          OR roles.business_id = (select id from businesses where identifier = %s))"""
@@ -406,7 +406,7 @@ class BCReg_Lear(BCReg_Core):
 
     #return the (unprocessed) event range for each provided corporation
     def get_unprocessed_corp_events(self, last_event_id, last_event_dt, max_event_id, max_event_dt, corps, max=None):
-        for i,corp in enumerate(corps): 
+        for i,corp in enumerate(corps):
             if (i % 100 == 0) or (i+1 == len(corps)):
                 print('>>> Processing ' + str(i+1) + ' of ' + str(len(corps)) + ' corporations. ')
             corp['PREV_EVENT'] = event_dict(last_event_id, last_event_dt)
@@ -417,8 +417,8 @@ class BCReg_Lear(BCReg_Core):
 
 
     ###########################################################################
-    # methods to run corporation-specific queries 
-    # (can run against the in-memory cache 
+    # methods to run corporation-specific queries
+    # (can run against the in-memory cache
     #  or against bc registries database directly)
     ###########################################################################
 
@@ -463,11 +463,11 @@ class BCReg_Lear(BCReg_Core):
         event = self.get_event('0', event_id)
         return self.to_lear_date(event['issued_at'])
 
-    # find a specific event, 
+    # find a specific event,
     # return None if not found
     def get_event(self, corp_num, event_id, corp_type_cd=None, force_query_remote=False):
         sql = """SELECT id, issued_at
-                    FROM """ + self.get_table_prefix(force_query_remote=force_query_remote) + """transaction 
+                    FROM """ + self.get_table_prefix(force_query_remote=force_query_remote) + """transaction
                     WHERE id = """ + self.get_db_sql_param(force_query_remote=force_query_remote)
         ret_event = None
         cursor = None
@@ -476,7 +476,7 @@ class BCReg_Lear(BCReg_Core):
             cursor.execute(sql, (event_id,))
             desc = cursor.description
             column_names = [col[0] for col in desc]
-            event = [dict(zip(column_names, row))  
+            event = [dict(zip(column_names, row))
                 for row in cursor]
             cursor.close()
             cursor = None
@@ -498,14 +498,14 @@ class BCReg_Lear(BCReg_Core):
             LOGGER.error(error)
             LOGGER.error(traceback.print_exc())
             log_error("BCRegistries exception reading DB: " + str(error))
-            raise 
+            raise
         finally:
             if cursor is not None:
                 cursor.close()
 
     def get_filing_event(self, corp_num, event_id, event_type, force_query_remote=False):
-        sql_filing = """SELECT filing.id, filing_type, filing_date, filing_json, filing.transaction_id, effective_date, completion_date, 
-                        status, business_id, corp.identifier as corp_num 
+        sql_filing = """SELECT filing.id, filing_type, filing_date, filing_json, filing.transaction_id, effective_date, completion_date,
+                        status, business_id, corp.identifier as corp_num
                         from """ + self.get_table_prefix(force_query_remote=force_query_remote) + """filings filing, """ + self.get_table_prefix(force_query_remote=force_query_remote) + """businesses corp
                         WHERE filing.transaction_id = """ + self.get_db_sql_param(force_query_remote=force_query_remote) + """ and corp.id = filing.business_id"""
         cursor = None
@@ -514,7 +514,7 @@ class BCReg_Lear(BCReg_Core):
             cursor.execute(sql_filing, (event_id,))
             desc = cursor.description
             column_names = [col[0] for col in desc]
-            filing_event = [dict(zip(column_names, row))  
+            filing_event = [dict(zip(column_names, row))
                 for row in cursor]
             cursor.close()
             cursor = None
@@ -529,7 +529,7 @@ class BCReg_Lear(BCReg_Core):
             LOGGER.error(error)
             LOGGER.error(traceback.print_exc())
             log_error("BCRegistries exception reading DB: " + str(error))
-            raise 
+            raise
         finally:
             if cursor is not None:
                 cursor.close()
@@ -571,7 +571,7 @@ class BCReg_Lear(BCReg_Core):
             LOGGER.error(error)
             LOGGER.error(traceback.print_exc())
             log_error("BCRegistries exception reading corp info from DB: " + str(error))
-            raise 
+            raise
         finally:
             if cur is not None:
                 cur.close()
@@ -592,12 +592,12 @@ class BCReg_Lear(BCReg_Core):
 
     def get_basic_corp_info_from_colin(self, corp_num):
         srch_corp_num = corp_num[2:] if corp_num.startswith('BC') else corp_num
-        sql_corp = """SELECT c.corp_num corp_num, corp_typ_cd, recognition_dts, last_ar_filed_dt, bn_9, bn_15, 
+        sql_corp = """SELECT c.corp_num corp_num, corp_typ_cd, recognition_dts, last_ar_filed_dt, bn_9, bn_15,
                       admin_email, last_ledger_dt, s.state_typ_cd state_typ_cd
                  FROM """ + self.get_sec_table_prefix(force_query_remote=True) + """corporation c,
                       """ + self.get_sec_table_prefix(force_query_remote=True) + """corp_state s
-                 WHERE c.corp_num = '""" + srch_corp_num + """'
-                   AND s.corp_num = c.corp_num and s.end_event_id is null""" 
+                 WHERE c.corp_num = %s
+                   AND s.corp_num = c.corp_num and s.end_event_id is null"""
         # print(">>> looking for COLIN corp:", sql_corp)
         corp = {}
         corp['corp_num'] = ''
@@ -611,7 +611,7 @@ class BCReg_Lear(BCReg_Core):
         try:
             # assume there is just one corp record
             cur = self.get_sec_db_connection(force_query_remote=True).cursor()
-            cur.execute(sql_corp)
+            cur.execute(sql_corp, (srch_corp_num,))
             row = cur.fetchone()
             if row is None:
                 LOGGER.debug("No corp rec found for " + str(corp_num))
@@ -644,7 +644,7 @@ class BCReg_Lear(BCReg_Core):
             LOGGER.error(error)
             LOGGER.error(traceback.print_exc())
             log_error("BCRegistries exception reading corp info from DB: " + str(error))
-            raise 
+            raise
         finally:
             if cur is not None:
                 cur.close()
@@ -787,7 +787,7 @@ class BCReg_Lear(BCReg_Core):
             LOGGER.error(error)
             LOGGER.error(traceback.print_exc())
             log_error("BCRegistries exception reading corp info from DB: " + str(error))
-            raise 
+            raise
         finally:
             if cur is not None:
                 cur.close()
@@ -799,31 +799,31 @@ class BCReg_Lear(BCReg_Core):
 
     def get_lear_relationship_info(self, corp_info):
         sql_party = """SELECT businesses.identifier as corp_num,
-                               parties.id as corp_party_id, 
-                               parties.mailing_address_id as mailing_addr_id, 
-                               parties.delivery_address_id as delivery_addr_id, 
-                               parties.party_type as party_typ_cd, 
+                               parties.id as corp_party_id,
+                               parties.mailing_address_id as mailing_addr_id,
+                               parties.delivery_address_id as delivery_addr_id,
+                               parties.party_type as party_typ_cd,
                                parties.transaction_id as transaction_id,
                                parties.end_transaction_id as end_transaction_id,
                                roles.cessation_date as cessation_dt,
                                roles.appointment_date as appointment_dt,
-                               parties.last_name as last_nme, 
-                               parties.middle_initial as middle_nme, 
-                               parties.first_name as first_nme, 
-                               parties.organization_name as business_nme, 
-                               parties.identifier as bus_company_num, 
-                               parties.email as email_address, 
+                               parties.last_name as last_nme,
+                               parties.middle_initial as middle_nme,
+                               parties.first_name as first_nme,
+                               parties.organization_name as business_nme,
+                               parties.identifier as bus_company_num,
+                               parties.email as email_address,
                                roles.id as role_id,
                                roles.role as role,
                                roles.transaction_id as role_transaction_id,
                                roles.end_transaction_id as role_end_transaction_id
                       FROM """ + self.get_table_prefix() + """businesses businesses,
-                           """ + self.get_table_prefix() + """parties_version parties, 
+                           """ + self.get_table_prefix() + """parties_version parties,
                            """ + self.get_table_prefix() + """party_roles_version roles
                       WHERE businesses.id = roles.business_id
-                        AND roles.party_id = parties.id 
+                        AND roles.party_id = parties.id
                         AND parties.party_type = 'organization' and roles.role in ('proprietor')
-                        AND (parties.identifier = """ + self.get_db_sql_param() + """ 
+                        AND (parties.identifier = """ + self.get_db_sql_param() + """
                              OR roles.business_id = (select id from """ + self.get_table_prefix() + """businesses where identifier = """ + self.get_db_sql_param() + """))
                         """
 
@@ -890,7 +890,7 @@ class BCReg_Lear(BCReg_Core):
                     corp_party['role_end_transaction'] = {}
                     corp_party['role_effective_end_date'] = MAX_END_DATE
 
-                # note we are only issuing a relationship credential (with the two corp_nums) 
+                # note we are only issuing a relationship credential (with the two corp_nums)
                 # ... so just get basic info for the "other" corp in the relationship
                 if corp_num == corp_party['corp_num'] and corp_party['bus_company_num'] is not None:
                     corp_party['corp_info'] = self.get_basic_corp_info(corp_party['bus_company_num'], deep_copy=False, versions=False)

@@ -8,14 +8,14 @@ def test_connect_sqlite3():
 	# connect to an in-mem database and create a cursor
     conn = sqlite3.connect(':memory:')
     c = conn.cursor()
-    
+
     # Create table
     c.execute('''CREATE TABLE stocks
                  (date text, trans text, symbol text, qty real, price real)''')
-    
+
     # Insert a row of data
     c.execute("INSERT INTO stocks VALUES ('2006-01-05','BUY','RHAT',100,35.14)")
-    
+
     # Save (commit) the changes
     conn.commit()
 
@@ -79,22 +79,22 @@ def test_cache_bcreg_table():
         c_rows = bc_registries.get_cache_sql('SELECT * FROM party_type')
         assert len(rows) == len(c_rows)
         assert rows == c_rows
-        
+
         rows = bc_registries.get_bcreg_table('corporation', "corp_num = '0641655'", '', True)
         c_rows = bc_registries.get_cache_sql('SELECT * FROM corporation')
         assert len(rows) == len(c_rows)
         assert rows == c_rows
-        
+
         rows = bc_registries.get_bcreg_table('event', "corp_num = '0641655'", '', True)
         c_rows = bc_registries.get_cache_sql('SELECT * FROM event')
         assert len(rows) == len(c_rows)
         assert rows == c_rows
-        
+
         rows = bc_registries.get_bcreg_table('jurisdiction', "corp_num = 'REG0000185'", '', True)
         c_rows = bc_registries.get_cache_sql('SELECT * FROM jurisdiction')
         assert len(rows) == len(c_rows)
         assert rows == c_rows
-        
+
 def test_cache_bcreg_clients():
     specific_corps = [
                     '0641655',
@@ -131,4 +131,33 @@ def test_cache_bcreg_clients():
         bc_registries.cache_bcreg_corps(specific_corps)
         caching_time = time.perf_counter() - start_time
         print(caching_time)
+
+
+def test_sql_helpers_escape_apostrophes():
+    bc_registries = BCRegistries.__new__(BCRegistries)
+    corp_num = "TSAL'ALH"
+    quoted_ids = bc_registries.id_where_in([corp_num], True)
+    assert quoted_ids == "'TSAL''ALH'"
+
+    conn = sqlite3.connect(':memory:')
+    conn.execute('CREATE TABLE corporations (corp_num text)')
+    conn.execute('INSERT INTO corporations VALUES (?)', (corp_num,))
+    rows = conn.execute(
+        'SELECT corp_num FROM corporations WHERE corp_num IN (' + quoted_ids + ')'
+    ).fetchall()
+    assert rows == [(corp_num,)]
+    conn.close()
+
+
+def test_get_bcreg_corp_table_escapes_apostrophes():
+    bc_registries = BCRegistries.__new__(BCRegistries)
+    captured = {}
+
+    def capture_table_query(table, where, orderby, cache, generate_individual_sql, use_sec=False):
+        captured['where'] = where
+        return []
+
+    bc_registries.get_bcreg_table = capture_table_query
+    bc_registries.get_bcreg_corp_table('corporation', "TSAL'ALH")
+    assert captured['where'] == "corp_num = 'TSAL''ALH'"
 
